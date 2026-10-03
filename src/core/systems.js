@@ -48,13 +48,13 @@ function hurt(player, dmg) {
   player.invuln = 0.5;
 }
 
-// grid must be rebuilt for KIND.ENEMY this tick. Returns the number of enemies killed.
-export function collisionSystem(world, grid, player, maxEnemyRadius) {
+// grid must be rebuilt for KIND.ENEMY this tick; grid.maxRadius sizes the candidate search. Returns the number of enemies killed.
+export function collisionSystem(world, grid, player) {
   let kills = 0;
   for (let i = 0; i < world.high; i++) {
     const k = world.kind[i];
     if (k === KIND.PROJECTILE) {
-      const n = grid.gather(world.x[i], world.y[i], world.radius[i] + maxEnemyRadius);
+      const n = grid.gather(world.x[i], world.y[i], world.radius[i] + grid.maxRadius);
       for (let q = 0; q < n; q++) {
         const j = grid.out[q];
         if (world.kind[j] !== KIND.ENEMY || j === world.lastHit[i]) continue;
@@ -85,7 +85,7 @@ export function collisionSystem(world, grid, player, maxEnemyRadius) {
       }
     }
   }
-  const n = grid.gather(player.x, player.y, player.radius + maxEnemyRadius);
+  const n = grid.gather(player.x, player.y, player.radius + grid.maxRadius);
   for (let q = 0; q < n; q++) {
     const j = grid.out[q];
     if (world.kind[j] !== KIND.ENEMY) continue;

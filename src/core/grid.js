@@ -10,6 +10,7 @@ export class Grid {
     this.items = new Uint32Array(capacity);
     this.cell = new Int32Array(capacity);
     this.out = new Uint32Array(capacity);
+    this.maxRadius = 0; // largest radius among the entities of the last rebuild
   }
 
   _col(x) {
@@ -25,12 +26,15 @@ export class Grid {
   rebuild(world, wantKind) {
     const { start, cursor, items, cell, cols } = this;
     start.fill(0);
+    let maxR = 0;
     for (let i = 0; i < world.high; i++) {
       if (world.kind[i] !== wantKind) continue;
       const c = this._row(world.y[i]) * cols + this._col(world.x[i]);
       cell[i] = c;
       start[c + 1]++;
+      if (world.radius[i] > maxR) maxR = world.radius[i];
     }
+    this.maxRadius = maxR;
     for (let c = 0; c < cursor.length; c++) start[c + 1] += start[c];
     cursor.set(start.subarray(0, cursor.length));
     for (let i = 0; i < world.high; i++) {

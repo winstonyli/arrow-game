@@ -8,7 +8,7 @@ import { createGame, tick, BOUNDS } from '../src/game/game.js';
 import { createStress } from '../src/modes/stress.js';
 import { seeded } from '../src/core/math.js';
 import { KIND } from '../src/core/world.js';
-import { ENEMY, enemyAISystem, MAX_ENEMY_RADIUS } from '../src/game/enemies.js';
+import { ENEMY, enemyAISystem } from '../src/game/enemies.js';
 import { movePlayer, autoFire } from '../src/game/player.js';
 import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.js';
 
@@ -53,7 +53,7 @@ function timedTick(g, t) {
   lap('grid');
   autoFire(player, world, grid, DT);
   lap('fire');
-  g.kills += collisionSystem(world, grid, player, MAX_ENEMY_RADIUS);
+  g.kills += collisionSystem(world, grid, player);
   lap('collide');
   g.mode.update(g, DT);
   lap('mode');

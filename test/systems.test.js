@@ -7,7 +7,6 @@ import { ENEMY, spawnEnemy } from '../src/game/enemies.js';
 import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.js';
 
 const bounds = { w: 900, h: 600 };
-const R = 12;
 
 function scene() {
   return { world: new World(200), grid: new Grid(900, 600, 64, 200), player: createPlayer(450, 500) };
@@ -22,7 +21,7 @@ function shot(world, x, y, { damage = 10, pierce = 0, bounce = 0, vx = 0, vy = 0
 }
 function collide({ world, grid, player }) {
   grid.rebuild(world, KIND.ENEMY);
-  return collisionSystem(world, grid, player, R);
+  return collisionSystem(world, grid, player);
 }
 
 test('a projectile damages an enemy and despawns', () => {
@@ -114,4 +113,12 @@ test('projectiles bounce off walls while bounces remain, else despawn', () => {
   assert.equal(world.vx[b], 100);
   assert.equal(world.bounce[b], 0);
   assert.equal(world.kind[d], KIND.NONE);
+});
+
+test('a projectile reaches a boss across a cell boundary (search radius follows the largest enemy)', () => {
+  const sc = scene();
+  const boss = spawnEnemy(sc.world, ENEMY.BOSS, 100, 100); // radius 36, cell 64: projectile sits one cell over
+  shot(sc.world, 138, 100, { damage: 10 });
+  collide(sc);
+  assert.equal(sc.world.hp[boss], 590);
 });

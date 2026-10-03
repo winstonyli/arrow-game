@@ -10,8 +10,6 @@ export const ENEMY_TYPES = [
   { name: 'dummy', radius: 10, hp: 1e9, speed: 0, contact: 0, keepDist: 1e9, fireInterval: 0, fireRange: 0, projSpeed: 0, projDamage: 0, projCount: 0, ring: false, color: '#8b949e' },
 ];
 
-export const MAX_ENEMY_RADIUS = 36;
-
 export function spawnEnemy(world, type, x, y) {
   const t = ENEMY_TYPES[type];
   const i = world.spawn(KIND.ENEMY, x, y, 0, 0, t.radius, t.hp);

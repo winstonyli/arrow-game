@@ -58,3 +58,17 @@ test('rebuild drops despawned entities', () => {
   grid.rebuild(world, KIND.ENEMY);
   assert.equal(grid.gather(100, 100, 20), 0);
 });
+
+test('maxRadius is the largest radius of the wanted kind at the last rebuild', () => {
+  const { world, grid } = setup();
+  enemy(world, 100, 100);
+  world.spawn(KIND.ENEMY, 200, 200, 0, 0, 36, 10);
+  world.spawn(KIND.PROJECTILE, 300, 300, 0, 0, 50, 0);
+  grid.rebuild(world, KIND.ENEMY);
+  assert.equal(grid.maxRadius, 36);
+  grid.rebuild(world, KIND.PROJECTILE);
+  assert.equal(grid.maxRadius, 50);
+  world.clearKind(KIND.PROJECTILE);
+  grid.rebuild(world, KIND.PROJECTILE);
+  assert.equal(grid.maxRadius, 0);
+});

@@ -2,7 +2,7 @@ import { World, KIND } from '../core/world.js';
 import { Grid } from '../core/grid.js';
 import { moveSystem, projectileSystem, collisionSystem } from '../core/systems.js';
 import { createPlayer, movePlayer, autoFire } from './player.js';
-import { enemyAISystem, MAX_ENEMY_RADIUS } from './enemies.js';
+import { enemyAISystem } from './enemies.js';
 import { applySkill } from './skills.js';
 
 export const BOUNDS = { w: 900, h: 600 };
@@ -34,7 +34,7 @@ export function tick(game, dt) {
   projectileSystem(world, dt, bounds);
   grid.rebuild(world, KIND.ENEMY);
   autoFire(player, world, grid, dt);
-  game.kills += collisionSystem(world, grid, player, MAX_ENEMY_RADIUS);
+  game.kills += collisionSystem(world, grid, player);
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);
   game.time += dt;
