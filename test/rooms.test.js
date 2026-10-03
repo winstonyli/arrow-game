@@ -120,3 +120,19 @@ test('rooms hud and summary name the room', () => {
   assert.equal(g.mode.hud(g), 'Room 1');
   assert.equal(g.mode.summary(g), 'reached room 1');
 });
+
+test('choose tallies owned skills; a new game starts empty', () => {
+  const g = make();
+  assert.deepEqual(g.skills, {});
+  for (const id of ['multishot', 'multishot', 'rapid']) {
+    g.offer = ['multishot', 'rapid', 'power'];
+    choose(g, id);
+  }
+  assert.deepEqual(g.skills, { multishot: 2, rapid: 1 });
+});
+
+test('bossAt is -Infinity until a boss room starts', () => {
+  assert.equal(make().bossAt, -Infinity);
+  const boss = createGame({ capacity: 1000, mode: createRooms({ bossEvery: 1 }), rng: seeded(1), input: { x: 0, y: 0 } });
+  assert.equal(boss.bossAt, 0);
+});

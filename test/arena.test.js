@@ -123,3 +123,11 @@ test('hud and summary describe the run', () => {
   assert.match(g.mode.hud(g), /Lv 1/);
   assert.match(g.mode.summary(g), /level 1/);
 });
+
+test('a boss spawn stamps bossAt with the game time', () => {
+  const g = make();
+  assert.equal(g.bossAt, -Infinity);
+  g.time = BOSS_EVERY;
+  g.mode.update(g, dt);
+  assert.equal(g.bossAt, BOSS_EVERY);
+});

@@ -19,6 +19,7 @@ export function createRooms({ bossEvery = 10 } = {}) {
       player.x = bounds.w / 2;
       player.y = bounds.h - 80;
       const boss = this.room % bossEvery === 0;
+      if (boss) game.bossAt = game.time;
       const n = 4 + this.room * 2;
       for (let i = 0; i < n; i++) {
         let type = ENEMY.CHASER;

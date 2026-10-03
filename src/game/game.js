@@ -31,6 +31,8 @@ export function createGame({ capacity = CAPACITY, bounds = BOUNDS, view, cellSiz
     xp: 0,
     level: 1,
     time: 0,
+    skills: {}, // skill id -> times chosen (the UI's owned-skills strip)
+    bossAt: -Infinity, // game time of the latest boss spawn (the UI's boss banner)
   };
   game.onKill =
     fx || sfx || mode.onKill
@@ -67,6 +69,7 @@ export function tick(game, dt) {
 export function choose(game, skillId) {
   if (!game.offer || !game.offer.includes(skillId)) return;
   applySkill(game.player.stats, skillId);
+  game.skills[skillId] = (game.skills[skillId] ?? 0) + 1;
   game.offer = null;
   game.mode.onChosen(game);
 }
