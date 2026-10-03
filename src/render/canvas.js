@@ -27,8 +27,8 @@ export function createCanvasRenderer(canvas, view) {
     ctx.beginPath();
     for (let i = 0; i < world.high; i++) {
       if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type)) continue;
-      if (kind === KIND.GEM) tailVec(fx.gvx[i], fx.gvy[i], tv);
-      else tailVec(world.vx[i], world.vy[i], tv);
+      if (kind === KIND.GEM) tailVec(fx.gvx[i], fx.gvy[i], tv, world.radius[i]);
+      else tailVec(world.vx[i], world.vy[i], tv, world.radius[i]);
       const l = Math.hypot(tv.x, tv.y);
       if (l < 0.5) continue;
       const r = world.radius[i] * 0.85;

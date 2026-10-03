@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.js';
-import { spawnEnemy, ENEMY } from '../src/game/enemies.js';
+import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.js';
 import { spawnGem } from '../src/game/gems.js';
 import { createFx } from '../src/render/fx.js';
 import { tailVec, TRAIL_TIME, TRAIL_MAX, TRAIL_N, TRAIL_DT } from '../src/render/trail.js';
@@ -36,7 +36,7 @@ test('a moving enemy packs its tail; with no fx (stress) every tail is zero', ()
   world.vx[e] = 90;
   world.vy[e] = 0;
   const r = pack(game).row(0);
-  assert.ok(Math.abs(r[5] + 90 * TRAIL_TIME) < 1e-4 && r[6] === 0, `tail ${r[5]},${r[6]}`);
+  assert.ok(Math.abs(r[5] + (90 * TRAIL_TIME + ENEMY_TYPES[ENEMY.CHASER].radius)) < 1e-4 && r[6] === 0, `tail ${r[5]},${r[6]}`);
   const noFx = pack({ ...game, fx: undefined }).row(0);
   assert.ok(noFx[5] === 0 && noFx[6] === 0);
 });
@@ -110,4 +110,15 @@ test('blade tracks follow the orbit count and are cleared when a blade is gone; 
   fx.observe(game);
   fx.update(TRAIL_DT);
   assert.equal(fx.trail.count[2], 0);
+});
+
+test('the tail starts at the rim: radius is added, ramping in over the first 10 px, and still capped', () => {
+  tailVec(0, 0, out, 10);
+  assert.ok(out.x === 0 && out.y === 0); // a stationary mover has no tail
+  tailVec(-90, 0, out, 10); // 13.5 px of motion
+  assert.ok(Math.abs(out.x - (90 * TRAIL_TIME + 10)) < 1e-9);
+  tailVec(-30, 0, out, 10); // 4.5 px of motion: only part of the radius is added
+  assert.ok(Math.abs(out.x - (4.5 + 10 * 0.45)) < 1e-9);
+  tailVec(-5000, 0, out, 36);
+  assert.ok(Math.abs(out.x - TRAIL_MAX) < 1e-9);
 });

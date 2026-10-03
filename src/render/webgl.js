@@ -67,7 +67,7 @@ export function packInstances(world, player, game, out) {
               ? P_GEM
               : P_ENEMY_PROJECTILE;
       tv.x = tv.y = 0;
-      if (fx) k === KIND.GEM ? tailVec(fx.gvx[i], fx.gvy[i], tv) : tailVec(world.vx[i], world.vy[i], tv);
+      if (fx) k === KIND.GEM ? tailVec(fx.gvx[i], fx.gvy[i], tv, r) : tailVec(world.vx[i], world.vy[i], tv, r);
       put(out, n++ * STRIDE, x, y, r, pal, SOLID, tv.x, tv.y);
     }
   }
@@ -125,7 +125,7 @@ void main() {
 }`;
 
 const FRAG = `#version 300 es
-precision mediump float;
+precision highp float; // the tail's dot products reach ~7000
 uniform vec4 uPalette[${COLORS.length}];
 flat in float vIdx;
 flat in float vR;
@@ -142,7 +142,7 @@ void main() {
     vec3 rgb = mix(c.rgb, c.rgb * 0.55, edge);
     float ca = c.a * a;
     float sa = clamp(vR + 0.5 - length(vOff - vec2(2.0, 3.0)), 0.0, 1.0) * 0.35;
-    // Tail: a tapered capsule from the centre along vTail, fading toward its tip, under the shadow and body.
+    // Tail: a tapered capsule from the centre along vTail, fading toward its tip, over the shadow, under the body.
     float tl2 = dot(vTail, vTail);
     float ta = 0.0;
     if (tl2 > 0.25) {
