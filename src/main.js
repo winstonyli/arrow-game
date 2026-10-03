@@ -32,7 +32,7 @@ function makeRenderer() {
   const canvas = document.getElementById('game');
   if (params.get('renderer') !== 'canvas2d') {
     try {
-      const r = createWebGLRenderer(canvas, document.getElementById('hud'), VIEW);
+      const r = createWebGLRenderer(canvas, document.getElementById('hud'), document.getElementById('bg'), VIEW);
       console.info('renderer: webgl2 on', r.adapter);
       r.kind = 'webgl';
       return r;

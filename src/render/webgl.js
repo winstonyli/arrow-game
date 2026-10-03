@@ -20,11 +20,13 @@ const P_BLADE = P_FLASH + 1;
 const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9'];
 const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));
 
+const LAYERS = [KIND.GEM, KIND.ENEMY, KIND.ENEMY_PROJECTILE, KIND.PROJECTILE];
 const bp = { x: 0, y: 0 };
 
-// Fills `out` with one instance per live entity that is at least partly inside the view, then the live
-// fx particles, then the player (drawn last). Returns the count. Instances draw in slot order, so enemies
-// and projectiles interleave (canvas.js layers them by kind).
+// Layers, bottom to top (canvas.js uses the same order): gems, enemies, enemy projectiles, player
+// projectiles, fx particles, blades, player. The background and grid are on a canvas below; the HP bar,
+// vignette and HUD text on one above. Within a layer instances draw in slot order.
+// Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
 export function packInstances(world, player, game, out) {
   const { camera, view, fx } = game;
   const pad = fx ? SHAKE_PAD : 0;
@@ -33,28 +35,30 @@ export function packInstances(world, player, game, out) {
   const y0 = camera.y - pad;
   const y1 = camera.y + view.h + pad;
   let n = 0;
-  for (let i = 0; i < world.high; i++) {
-    const k = world.kind[i];
-    if (k === KIND.NONE) continue;
-    const x = world.x[i];
-    const y = world.y[i];
-    const r = world.radius[i];
-    if (x + r < x0 || x - r > x1 || y + r < y0 || y - r > y1) continue;
-    const o = n++ * STRIDE;
-    out[o] = x;
-    out[o + 1] = y;
-    out[o + 2] = r;
-    out[o + 3] =
-      k === KIND.ENEMY
-        ? fx && fx.flashing(i)
-          ? P_FLASH
-          : world.type[i]
-        : k === KIND.PROJECTILE
-          ? P_PROJECTILE
-          : k === KIND.GEM
-            ? P_GEM
-            : P_ENEMY_PROJECTILE;
-    out[o + 4] = SOLID;
+  for (const layer of LAYERS) {
+    for (let i = 0; i < world.high; i++) {
+      const k = world.kind[i];
+      if (k !== layer) continue;
+      const x = world.x[i];
+      const y = world.y[i];
+      const r = world.radius[i];
+      if (x + r < x0 || x - r > x1 || y + r < y0 || y - r > y1) continue;
+      const o = n++ * STRIDE;
+      out[o] = x;
+      out[o + 1] = y;
+      out[o + 2] = r;
+      out[o + 3] =
+        k === KIND.ENEMY
+          ? fx && fx.flashing(i)
+            ? P_FLASH
+            : world.type[i]
+          : k === KIND.PROJECTILE
+            ? P_PROJECTILE
+            : k === KIND.GEM
+              ? P_GEM
+              : P_ENEMY_PROJECTILE;
+      out[o + 4] = SOLID;
+    }
   }
   if (fx) {
     const p = fx.p;
@@ -144,12 +148,12 @@ function compile(gl, type, src) {
 }
 
 // Same render(game, hud) contract as createCanvasRenderer. Throws if WebGL2 is unavailable.
-// `hudCanvas` is a separate 2D canvas for the world grid, the player's HP bar, the damage vignette and
-// the HUD text.
-export function createWebGLRenderer(canvas, hudCanvas, view) {
-  canvas.width = hudCanvas.width = view.w;
-  canvas.height = hudCanvas.height = view.h;
-  const gl = canvas.getContext('webgl2', { antialias: false, alpha: false });
+// `bgCanvas` (below) holds the background and world grid; `hudCanvas` (above) holds the player's HP bar,
+// the damage vignette and the HUD text, so the grid never draws over entities.
+export function createWebGLRenderer(canvas, hudCanvas, bgCanvas, view) {
+  canvas.width = hudCanvas.width = bgCanvas.width = view.w;
+  canvas.height = hudCanvas.height = bgCanvas.height = view.h;
+  const gl = canvas.getContext('webgl2', { antialias: false, alpha: true }); // transparent: the background and grid sit on bgCanvas below
   if (!gl) throw new Error('WebGL2 unavailable');
   const ext = gl.getExtension('WEBGL_debug_renderer_info');
   const adapter = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : 'unknown';
@@ -177,7 +181,8 @@ export function createWebGLRenderer(canvas, hudCanvas, view) {
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.viewport(0, 0, view.w, view.h);
-  gl.clearColor(0x16 / 255, 0x1b / 255, 0x22 / 255, 1);
+  gl.clearColor(0, 0, 0, 0);
+  const bg2d = bgCanvas.getContext('2d');
 
   let data = null; // sized on first frame from the world's capacity
   const hud2d = hudCanvas.getContext('2d');
@@ -200,8 +205,11 @@ export function createWebGLRenderer(canvas, hudCanvas, view) {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
 
+    bg2d.fillStyle = '#161b22';
+    bg2d.fillRect(0, 0, view.w, view.h);
+    drawWorldGrid(bg2d, cam, view, bounds);
+
     hud2d.clearRect(0, 0, view.w, view.h);
-    drawWorldGrid(hud2d, cam, view, bounds);
     const bw = 40;
     const bx = player.x - cam.x - bw / 2;
     const by = player.y - cam.y - player.radius - 10;

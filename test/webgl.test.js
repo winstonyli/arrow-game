@@ -8,7 +8,7 @@ import { createFx } from '../src/render/fx.js';
 const player = (over = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0 }, ...over });
 const G = (o = {}) => ({ time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 }, ...o });
 
-test('packInstances writes live entities in slot order, player last, skipping free slots', () => {
+test('packInstances writes live entities by layer, player last, skipping free slots', () => {
   const w = new World(10);
   const a = spawnEnemy(w, ENEMY.SHOOTER, 1, 2);
   const b = spawnEnemy(w, ENEMY.CHASER, 3, 4);
@@ -21,8 +21,8 @@ test('packInstances writes live entities in slot order, player last, skipping fr
   const row = (k) => Array.from(out.subarray(k * STRIDE, (k + 1) * STRIDE));
   const T = ENEMY_TYPES.length;
   assert.deepEqual(row(0), [1, 2, ENEMY_TYPES[ENEMY.SHOOTER].radius, ENEMY.SHOOTER, 2]);
-  assert.deepEqual(row(1), [7, 8, 4, T + 1, 2]);
-  assert.deepEqual(row(2), [9, 10, 5, T, 2]);
+  assert.deepEqual(row(1), [9, 10, 5, T, 2]); // enemy projectile, then the player's arrow
+  assert.deepEqual(row(2), [7, 8, 4, T + 1, 2]);
   assert.deepEqual(row(3), [5, 6, 12, T + 2, 2]);
   assert.ok(a >= 0);
 });
@@ -104,4 +104,23 @@ test('with fx the cull pad keeps entities just outside the view for shake', () =
   const out = new Float32Array(20 * STRIDE);
   assert.equal(packInstances(w, player(), G(), out), 1); // player only
   assert.equal(packInstances(w, player(), G({ fx: createFx(10) }), out), 2);
+});
+
+test('layers draw gems, enemies, enemy projectiles, arrows, then particles, blades and the player, whatever the slot order', () => {
+  const w = new World(20);
+  w.spawn(KIND.PROJECTILE, 1, 0, 0, 0, 4, 0); // slot 0: arrow
+  w.spawn(KIND.ENEMY_PROJECTILE, 2, 0, 0, 0, 4, 0);
+  spawnEnemy(w, ENEMY.CHASER, 3, 0);
+  w.spawn(KIND.GEM, 4, 0, 0, 0, 5, 0); // slot 3: gem
+  const fx = createFx(20, () => 0.5);
+  fx.burst(5, 0); // 5 particles
+  const out = new Float32Array(30 * STRIDE);
+  const pl = player({ x: 7, stats: { orbit: 1 } });
+  const n = packInstances(w, pl, G({ fx }), out);
+  assert.equal(n, 4 + 5 + 1 + 1); // entities, particles, one blade, player
+  const T = ENEMY_TYPES.length;
+  const pal = (k) => out[k * STRIDE + 3];
+  assert.deepEqual([0, 1, 2, 3].map(pal), [T + 4, ENEMY.CHASER, T, T + 1]); // gem, enemy, enemy arrow, arrow
+  assert.equal(pal(9), T + 6); // blade
+  assert.equal(pal(10), T + 2); // player
 });

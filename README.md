@@ -19,6 +19,8 @@ In arena the player auto-fires while moving at half rate (`stats.moveFireRate = 
 ## Effects
 Hit flash, kill pop, gem burst, screen shake and a damage vignette come from `src/render/fx.js` (presentation-only, `game.fx` optional, absent in stress mode, which still draws the WebGL outline and shadow). The WebGL renderer adds an outline and soft shadow in the circle shader. The Canvas2D fallback draws flash, pop, shake and vignette but no outline or shadow.
 
+Layer order, bottom to top, is the same in both renderers: background and grid, gems, enemies, enemy projectiles, arrows, fx particles, orbit blades, player, then HP bar, damage vignette and HUD text. The WebGL renderer puts the background and grid on a `#bg` canvas below a transparent `#game` canvas, and the HP bar, vignette and HUD on `#hud` above it. Within a layer, WebGL draws in slot order and Canvas2D by enemy type.
+
 ## Content
 Arena enemy mix (`MIX` in `src/modes/arena.js`, first match wins, the rest are chasers): shooters from 60 s (30%), swarmers from 30 s (15%, spawn as a pack of 4), bruisers from 90 s (8%), splitters from 150 s (8%, leave 2 swarmers). Skills (10 total, `src/game/skills.js`): Regeneration (+1 HP/s), Magnet (+50% pickup range), Homing (arrows steer toward the nearest enemy within 300 px at up to 4 rad/s; `world.type` = 1 flags the arrow) and Orbit Blade (up to 8 blades at 60 px, 30 damage/s each to every enemy they overlap; blades are not entities, `src/game/orbit.js` computes positions for both the sim and the renderers). All numbers are first guesses. Smart-bot soak (seeds 1-3) died at 211, 132 and 184 s, so difficulty is in the same range as before; the bot picks skills by priority, not cleverly.
 
