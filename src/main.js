@@ -32,7 +32,7 @@ const makeMode = () =>
 
 function frameStats() {
   const s = Float32Array.from(frames.subarray(0, Math.min(frameCount, frames.length))).sort();
-  return { n: s.length, medianMs: s[s.length >> 1], p95Ms: s[Math.floor(s.length * 0.95)] };
+  return { n: s.length, medianMs: s[s.length >> 1], p95Ms: s[Math.floor(s.length * 0.95)], simMs, drawMs };
 }
 
 function newGame() {
