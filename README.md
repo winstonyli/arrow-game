@@ -56,3 +56,14 @@ Median frame ms (p95), same machine and load as above (iGPU 780M, ~46% CPU busy)
 | converge | 20k | 393 (466) | 169 (239) |
 
 WebGL draw CPU time is ~0.5 ms at every N, so rendering no longer limits frame time. At 20k the frame time is about 4-5 sim steps (the stepper's catch-up cap) at 37-46 ms each: the sim's collision cost under 900x600 crowding is the remaining limit. Spikes at 10k converge (p95 84 ms) come from the same sim cost as chasers pile up.
+
+## Collision search radius (plan 2c)
+The candidate search used a fixed boss-sized radius (36) for every projectile; it now uses `grid.maxRadius`, the largest radius among the enemies of the current tick (boss rooms still pay for the boss). Sim median ms per tick at 20k, two alternating before/after runs on the same loaded machine (`npm run bench`):
+
+| scenario | before | after |
+|---|---|---|
+| dense | 46 / 41 | 15 / 23 |
+| converge | 88 / 52 | 21 / 33 |
+| sparse | 6.2 / 4.7 | 2.7 / 4.6 |
+
+Cell size re-swept at the new radius (16/32/64): 32 stays the default (64 is ~2x worse in dense and converge; 16 is similar in the crowded cases and worse when sparse). Run-to-run noise is about ±40% under the current machine load.
