@@ -74,7 +74,7 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
           const victim = oldestOf(next, entry);
           if (!victim) throw e;
           next.splice(next.indexOf(victim), 1);
-          evicted.push(victim);
+          drop(victim); // free its data before retrying
           put(); // a second failure propagates to the outer catch
         }
         evicted.forEach(drop);

@@ -77,7 +77,7 @@ test('the cap drops the oldest replay and its stored data', () => {
 
 test('on a full store it drops the oldest and retries once', () => {
   const one = JSON.stringify(arena(1, 10)).length;
-  const st = memory(one * 3 + 600); // room for three replays plus the index (the retry briefly holds the victim's data too)
+  const st = memory(one * 2 + 600); // room for about two replays plus the index
   const s = createStore(st);
   for (const seed of [1, 2, 3, 4]) s.submit(arena(seed, 10));
   const seeds = s.list().map((e) => e.seed);
