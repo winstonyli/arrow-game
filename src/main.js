@@ -106,7 +106,7 @@ startLoop(
     syncUI();
     if (game.fx) {
       game.fx.observe(game);
-      game.fx.update(frameDt);
+      game.fx.update(game.offer || game.over ? 0 : frameDt); // freeze effects while paused
     }
     render(game, [
       `${game.mode.hud?.(game) ?? ''}  HP ${Math.max(0, Math.ceil(game.player.hp))}  Kills ${game.kills}`,

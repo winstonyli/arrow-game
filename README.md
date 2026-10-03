@@ -17,7 +17,7 @@ In arena the player auto-fires while moving at half rate (`stats.moveFireRate = 
 `node scripts/soak-arena.js --bot=kite --seed=N` runs a crude mortal kiting bot (flees nearby enemies, avoids walls, chases gems, always takes the first offered skill) and reports when it dies. Seeds 1-5 died at 69, 99, 131, 157 and 171 s, all at level 1-2. `--bot=smart` adds a skill priority (multishot, rapid, power before speed), keeps collecting gems while fleeing and sidesteps so it circles instead of pinning itself on a wall: seeds 1-5 died at 131, 252, 199, 220 and 217 s, level 2-4. Both are yardsticks for later tuning, not targets; a human should do better.
 
 ## Effects
-Hit flash, kill pop, gem burst, screen shake and a damage vignette come from `src/render/fx.js` (presentation-only, `game.fx` optional, absent in stress mode so benchmarks are unaffected). The WebGL renderer adds an outline and soft shadow in the circle shader. The Canvas2D fallback draws flash, pop, shake and vignette but no outline or shadow.
+Hit flash, kill pop, gem burst, screen shake and a damage vignette come from `src/render/fx.js` (presentation-only, `game.fx` optional, absent in stress mode, which still draws the WebGL outline and shadow). The WebGL renderer adds an outline and soft shadow in the circle shader. The Canvas2D fallback draws flash, pop, shake and vignette but no outline or shadow.
 
 ## Arena soak
 `npm run soak` (`node scripts/soak-arena.js --minutes=10`) runs the arena headless with a stationary invulnerable player, taking the first offered skill at each level-up, and prints one line per game minute (node v26.10.0, seed 1, Defender real-time protection off, machine CPU ~30% busy at the time):

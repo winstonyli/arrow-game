@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.js';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.js';
 import { createFx, FLASH_TIME, POOL, RING, DOT, PAL_GEM } from '../src/render/fx.js';
-import { createGame } from '../src/game/game.js';
+import { createGame, tick, choose } from '../src/game/game.js';
 import { createRooms } from '../src/modes/rooms.js';
 import { createArena, BOSS_EVERY } from '../src/modes/arena.js';
 import { seeded } from '../src/core/math.js';
@@ -108,4 +108,32 @@ test('game.onKill drives fx.kill for any mode; arena also bursts gems and shakes
   arena.time = BOSS_EVERY;
   arena.mode.update(arena, 1 / 60);
   assert.ok(fx2.trauma >= 0.6);
+});
+
+test('fx never changes the simulation: a seeded arena runs identically with and without it', () => {
+  const run = (withFx) => {
+    const game = createGame({
+      capacity: 5000,
+      bounds: { w: 3000, h: 2000 },
+      mode: createArena(),
+      rng: seeded(3),
+      input: { x: 0, y: 0 },
+      fx: withFx ? createFx(5000, seeded(99)) : undefined,
+    });
+    game.player.hp = game.player.maxHp = 1e9; // survive the whole run
+    for (let k = 0; k < 1800; k++) {
+      if (game.offer) choose(game, game.offer[0]);
+      tick(game, 1 / 60);
+      if (withFx) {
+        game.fx.observe(game);
+        game.fx.update(1 / 60);
+      }
+    }
+    let h = 0;
+    for (let i = 0; i < game.world.high; i++) h += game.world.x[i] * 31 + game.world.y[i] * 17 + game.world.kind[i];
+    return [game.kills, game.level, game.world.kindCount[KIND.ENEMY], Math.round(h)];
+  };
+  const base = run(false);
+  assert.ok(base[0] > 0, 'the run must kill something to exercise the hooks');
+  assert.deepEqual(run(true), base);
 });
