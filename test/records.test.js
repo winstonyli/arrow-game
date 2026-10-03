@@ -37,6 +37,11 @@ test('bad JSON, throwing and null storage never throw', () => {
   assert.deepEqual(submit(null, 'rooms', { room: 3 }).best, { room: 3 });
 });
 
+test('non-numeric stored fields are dropped', () => {
+  const s = { getItem: () => '{"room":"abc","time":5}', setItem() {} };
+  assert.deepEqual(loadBest(s, 'rooms'), { time: 5 });
+});
+
 test('non-finite results are never a best', () => {
   assert.deepEqual(submit(mem(), 'rooms', { room: NaN }).isNew, { room: false });
 });

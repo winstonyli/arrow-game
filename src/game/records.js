@@ -5,7 +5,9 @@ const key = (kind) => `arrow-best-${kind}`;
 export function loadBest(storage, kind) {
   try {
     const v = JSON.parse(storage?.getItem(key(kind)) ?? 'null');
-    return v && typeof v === 'object' ? v : {};
+    if (!v || typeof v !== 'object') return {};
+    for (const k of Object.keys(v)) if (!Number.isFinite(v[k])) delete v[k]; // stored values are untrusted
+    return v;
   } catch {
     return {};
   }

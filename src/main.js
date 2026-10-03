@@ -74,7 +74,7 @@ function frameStats() {
 let sfx;
 if (!stressN) {
   try {
-    sfx = createSfx(new AudioContext(), localStorage);
+    sfx = createSfx(new AudioContext(), storage);
     const unlock = () => sfx.resume();
     addEventListener('keydown', unlock);
     addEventListener('pointerdown', unlock);
@@ -115,7 +115,7 @@ function quit() {
   refreshBests();
 }
 function finish() {
-  const rec = stressN ? null : submit(storage, kind, resultOf(game, kind));
+  const rec = direct ? null : submit(storage, kind, resultOf(game, kind));
   ui.showOver(overModel(game, kind, rec));
   setScreen('over');
 }

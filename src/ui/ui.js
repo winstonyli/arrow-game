@@ -68,9 +68,7 @@ export function createUi(root, on) {
   title.append(titlePanel);
 
   const pause = h('div', 'overlay');
-  const soundBtn = button('', 'g', () => {
-    soundBtn.textContent = `Sound: ${on.onToggleSound() ? 'off' : 'on'}`;
-  });
+  const soundBtn = button('', 'g', () => on.onToggleSound());
   const pausePanel = h('div', 'panel');
   pausePanel.append(
     h('h2', 'glow-text', 'Paused'),
@@ -108,7 +106,6 @@ export function createUi(root, on) {
     hud.inert = name !== 'play' || !!offer;
     if (name === 'title') focusFirst(title);
     else if (name === 'pause') {
-      soundBtn.textContent = `Sound: ${el.snd._muted ? 'off' : 'on'}`;
       focusFirst(pause);
     } else if (name === 'over') focusFirst(over);
     else document.activeElement?.blur();
@@ -172,14 +169,19 @@ export function createUi(root, on) {
       el.banner._on = m.boss;
       el.banner.classList.toggle('on', m.boss);
     }
-    el.snd._muted = muted;
     setText(el.snd, muted ? 'off' : 'on');
+    setText(soundBtn, `Sound: ${muted ? 'off' : 'on'}`);
   }
 
   function showOver(m) {
     overPanel.replaceChildren(
       h('h2', 'over-title glow-text', m.title),
-      ...m.rows.map(([k, v]) => h('div', 'stat', `<span>${k}</span><span>${v}</span>`)),
+      ...m.rows.map(([k, v]) => {
+        const row = h('div', 'stat');
+        row.append(h('span', '', k), h('span', ''));
+        row.lastChild.textContent = v;
+        return row;
+      }),
       ...m.newBest.map((s) => h('div', 'new-best glow-text', s)),
       button('Play again', 'primary', () => on.onAgain()),
       button('Title', 'b', () => on.onQuit()),

@@ -56,7 +56,7 @@ Caveat (table above, taken before the kiting change): the player is stationary, 
 
 ## Stress benchmarks (plan 2)
 - Sim: `npm run bench` (headless, per-system ms/tick; `--n=`, `--scenario=`, `--ticks=`). N is total entities, half enemies and half player projectiles.
-- Browser: open `/?stress=N` (add `&scenario=converge` for chasers). The HUD shows sim, draw and frame ms; `arrowGame.frameStats()` returns median and p95 frame interval.
+- Browser: open `/?stress=N` (add `&scenario=converge` for chasers). Add `&debug` to show sim, draw and frame ms at the bottom; `arrowGame.frameStats()` returns median and p95 frame interval.
 
 Sim results, node v26.10.0, median ms per tick (budget 16.7), Defender real-time protection off, machine CPU ~46% busy from stray python processes, so treat as upper bounds:
 
