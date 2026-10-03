@@ -8,6 +8,7 @@ import { seeded } from '../src/core/math.js';
 import { createRooms } from '../src/modes/rooms.js';
 import { stateHash } from '../src/replay/hash.js';
 
+// Same seed and input script must give the same state, whatever the frame times or presentation attached.
 function run({ seed, seconds, frameDts = [1 / 60], fx }) {
   const input = { x: 0, y: 0 };
   const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(seed), input, fx });
