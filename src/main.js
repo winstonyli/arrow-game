@@ -1,6 +1,6 @@
 import { createInput } from './input/input.js';
 import { createRooms } from './modes/rooms.js';
-import { createGame, tick, choose, BOUNDS } from './game/game.js';
+import { createGame, tick, choose, VIEW } from './game/game.js';
 import { createStepper, startLoop } from './core/loop.js';
 import { createCanvasRenderer } from './render/canvas.js';
 import { createWebGLRenderer } from './render/webgl.js';
@@ -30,7 +30,7 @@ function makeRenderer() {
   const canvas = document.getElementById('game');
   if (params.get('renderer') !== 'canvas2d') {
     try {
-      const r = createWebGLRenderer(canvas, document.getElementById('hud'), BOUNDS);
+      const r = createWebGLRenderer(canvas, document.getElementById('hud'), VIEW);
       console.info('renderer: webgl2 on', r.adapter);
       r.kind = 'webgl';
       return r;
@@ -38,7 +38,7 @@ function makeRenderer() {
       console.warn('WebGL renderer unavailable, using Canvas2D:', e.message);
     }
   }
-  const r = createCanvasRenderer(canvas, BOUNDS);
+  const r = createCanvasRenderer(canvas, VIEW);
   r.kind = 'canvas2d';
   return r;
 }

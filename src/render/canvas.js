@@ -1,11 +1,12 @@
 import { KIND } from '../core/world.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
+import { drawWorldGrid } from './grid-lines.js';
 
 const TAU = Math.PI * 2;
 
-export function createCanvasRenderer(canvas, bounds) {
-  canvas.width = bounds.w;
-  canvas.height = bounds.h;
+export function createCanvasRenderer(canvas, view) {
+  canvas.width = view.w;
+  canvas.height = view.h;
   const ctx = canvas.getContext('2d');
 
   // type < 0 matches any type. One path and one fill per colour group.
@@ -21,10 +22,15 @@ export function createCanvasRenderer(canvas, bounds) {
     ctx.fill();
   }
 
+  // The fallback renderer does not cull; the WebGL renderer is the one built for large counts.
   return function render(game, hud) {
-    const { world, player } = game;
+    const { world, player, camera, bounds } = game;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#161b22';
-    ctx.fillRect(0, 0, bounds.w, bounds.h);
+    ctx.fillRect(0, 0, view.w, view.h);
+    drawWorldGrid(ctx, camera, view, bounds);
+
+    ctx.setTransform(1, 0, 0, 1, -camera.x, -camera.y);
     for (let t = 0; t < ENEMY_TYPES.length; t++) circles(world, KIND.ENEMY, t, ENEMY_TYPES[t].color);
     circles(world, KIND.ENEMY_PROJECTILE, -1, '#ff7b72');
     circles(world, KIND.PROJECTILE, -1, '#58a6ff');
@@ -44,6 +50,7 @@ export function createCanvasRenderer(canvas, bounds) {
     ctx.fillStyle = '#3fb950';
     ctx.fillRect(bx, by, (bw * Math.max(0, player.hp)) / player.maxHp, 4);
 
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#c9d1d9';
     ctx.font = '14px monospace';
     hud.forEach((line, k) => ctx.fillText(line, 10, 20 + k * 18));
