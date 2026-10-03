@@ -32,7 +32,7 @@ const TRIES = 32;
 export const xpFor = (level) => 5 + 5 * level;
 export const spawnRate = (t) => BASE_RATE + RATE_PER_SEC * t;
 
-const clock = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+export const clock = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
 // Writes a spawn position to `out` and returns true. The point is on a ring just outside the view
 // around the player and inside the world; points that miss are rejected, not clamped, so a player

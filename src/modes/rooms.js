@@ -4,6 +4,7 @@ import { pickChoices } from '../game/skills.js';
 
 export function createRooms({ bossEvery = 10 } = {}) {
   return {
+    bossEvery,
     room: 0,
 
     start(game) {

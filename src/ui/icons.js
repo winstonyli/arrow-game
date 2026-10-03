@@ -1,0 +1,22 @@
+// Inline SVG glyphs (24x24, stroked in currentColor). Plain geometry; swap for a real icon set later.
+const PATHS = {
+  multishot: '<path d="M12 20V6M12 20L5 8M12 20L19 8"/>',
+  rapid: '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
+  power: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+  pierce: '<path d="M3 12h18M15 6l6 6-6 6"/>',
+  ricochet: '<path d="M4 6l8 12 8-12"/>',
+  swift: '<path d="M6 6l6 6-6 6M13 6l6 6-6 6"/>',
+  regen: '<path d="M12 5v14M5 12h14"/>',
+  magnet: '<path d="M6 4v8a6 6 0 0012 0V4M6 8h3M15 8h3"/>',
+  homing: '<circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+  blade: '<circle cx="12" cy="12" r="3"/><path d="M12 3a9 9 0 019 9"/>',
+  heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 10c0 5.5-7 10-7 10z"/>',
+  skull: '<path d="M5 12a7 7 0 1114 0v4H5z"/><path d="M9 20v-4M15 20v-4"/><circle cx="9.5" cy="12" r="1"/><circle cx="14.5" cy="12" r="1"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
+};
+
+export function icon(id) {
+  const p = PATHS[id];
+  if (!p) throw new Error(`unknown icon: ${id}`);
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+}
