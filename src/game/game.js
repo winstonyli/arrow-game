@@ -7,10 +7,10 @@ import { applySkill } from './skills.js';
 
 export const BOUNDS = { w: 900, h: 600 };
 
-export function createGame({ capacity = 50000, bounds = BOUNDS, rng = Math.random, mode, input }) {
+export function createGame({ capacity = 50000, bounds = BOUNDS, cellSize = 32, rng = Math.random, mode, input }) {
   const game = {
     world: new World(capacity),
-    grid: new Grid(bounds.w, bounds.h, 64, capacity),
+    grid: new Grid(bounds.w, bounds.h, cellSize, capacity),
     bounds,
     rng,
     input,

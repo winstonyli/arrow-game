@@ -16,6 +16,7 @@ const arg = (name, dflt) => (process.argv.find((a) => a.startsWith(`--${name}=`)
 const ns = arg('n', '1000,5000,10000,20000').split(',').map(Number);
 const scenarios = arg('scenario', 'dense,sparse,converge').split(',');
 const ticks = Number(arg('ticks', 300));
+const cellSize = Number(arg('cell', 32));
 const WARMUP = 120;
 const DT = 1 / 60;
 const STAGES = ['ai', 'move', 'proj', 'grid', 'fire', 'collide', 'mode'];
@@ -28,7 +29,7 @@ function build(scenario, n) {
     bounds = { w, h: Math.round(area / w) };
   }
   const mode = createStress({ enemies: n / 2, projectiles: n / 2, enemyType: scenario === 'converge' ? ENEMY.CHASER : ENEMY.DUMMY });
-  return createGame({ capacity: n * 2, bounds, mode, rng: seeded(1), input: { x: 0, y: 0 } });
+  return createGame({ capacity: n * 2, bounds, cellSize, mode, rng: seeded(1), input: { x: 0, y: 0 } });
 }
 
 // Same order as game.js tick(), with a clock around each stage. The cross-check against the
@@ -62,7 +63,7 @@ const sorted = (a) => Float64Array.from(a).sort();
 const pct = (s, p) => s[Math.min(s.length - 1, Math.floor(s.length * p))];
 const f = (v) => v.toFixed(2).padStart(7);
 
-console.log(`node ${process.version}, ${ticks} ticks after ${WARMUP} warmup, ms per tick`);
+console.log(`cell ${cellSize}, node ${process.version}, ${ticks} ticks after ${WARMUP} warmup, ms per tick`);
 console.log(['scenario', 'N', 'tick', 'tick p95', ...STAGES, 'dropped'].map((h) => h.padStart(9)).join(''));
 for (const scenario of scenarios) {
   for (const n of ns) {
