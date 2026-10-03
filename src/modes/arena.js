@@ -11,6 +11,16 @@ export const RATE_PER_SEC = 0.015; // added per second survived
 export const ENEMY_CAP = 800; // live enemies; the director stops spawning above this
 export const SHOOTER_AFTER = 60; // seconds before shooters join the mix
 export const SHOOTER_SHARE = 0.3;
+// Enemy mix: from `after` seconds a type takes `share` of spawns (first match wins, in this order);
+// the rest are chasers. A swarmer spawn is a pack of `pack` enemies and costs that much of the director's debt.
+export const MIX = [
+  { type: ENEMY.SHOOTER, after: SHOOTER_AFTER, share: SHOOTER_SHARE, pack: 1 },
+  { type: ENEMY.SWARMER, after: 30, share: 0.15, pack: 4 },
+  { type: ENEMY.BRUISER, after: 90, share: 0.08, pack: 1 },
+  { type: ENEMY.SPLITTER, after: 150, share: 0.08, pack: 1 },
+];
+const SPLIT_COUNT = 2;
+const PACK_SPREAD = 30; // px
 export const BOSS_EVERY = 120; // seconds
 const SPAWN_MARGIN = 60; // px beyond the view's corner
 const SPAWN_DEPTH = 300; // spawn distances run from the ring to ring + depth
@@ -44,6 +54,20 @@ export function spawnPoint(game, out) {
   return false;
 }
 
+// The mix entry a spawn at time `t` uses, or null for a chaser. Rolls rng once if any entry is unlocked.
+export function pickMix(t, rng) {
+  let open = false;
+  for (const m of MIX) if (t >= m.after) open = true;
+  if (!open) return null;
+  let r = rng();
+  for (const m of MIX) {
+    if (t < m.after) continue;
+    if (r < m.share) return m;
+    r -= m.share;
+  }
+  return null;
+}
+
 export function createArena() {
   const pt = { x: 0, y: 0 };
   return {
@@ -69,8 +93,14 @@ export function createArena() {
         }
         if (!spawnPoint(game, pt)) break;
         this.debt -= 1;
-        const shooter = game.time >= SHOOTER_AFTER && rng() < SHOOTER_SHARE;
-        spawnEnemy(world, shooter ? ENEMY.SHOOTER : ENEMY.CHASER, pt.x, pt.y);
+        const pick = pickMix(game.time, rng);
+        const count = pick ? pick.pack : 1;
+        for (let k = 0; k < count; k++) {
+          const dx = k === 0 ? 0 : (rng() - 0.5) * 2 * PACK_SPREAD;
+          const dy = k === 0 ? 0 : (rng() - 0.5) * 2 * PACK_SPREAD;
+          spawnEnemy(world, pick ? pick.type : ENEMY.CHASER, pt.x + dx, pt.y + dy);
+        }
+        this.debt -= count - 1;
       }
       if (game.time >= this.nextBoss && spawnPoint(game, pt)) {
         spawnEnemy(world, ENEMY.BOSS, pt.x, pt.y);
@@ -88,7 +118,14 @@ export function createArena() {
     onChosen() {},
 
     onKill(game, j) {
-      const value = ENEMY_TYPES[game.world.type[j]].xp;
+      const { world } = game;
+      if (world.type[j] === ENEMY.SPLITTER) {
+        for (let k = 0; k < SPLIT_COUNT; k++) {
+          const a = game.rng() * Math.PI * 2;
+          spawnEnemy(world, ENEMY.SWARMER, world.x[j] + Math.cos(a) * 14, world.y[j] + Math.sin(a) * 14);
+        }
+      }
+      const value = ENEMY_TYPES[world.type[j]].xp;
       if (value > 0) {
         spawnGem(game.world, game.world.x[j], game.world.y[j], value);
         game.fx?.burst(game.world.x[j], game.world.y[j]);

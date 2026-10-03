@@ -21,7 +21,7 @@ const g = createGame({ capacity: 50000, bounds: ARENA_BOUNDS, mode: createArena(
 if (bot === 'still') g.player.hp = g.player.maxHp = 1e9;
 
 // Flee enemies within FLEE px (1/d weighting), push off walls, and with nothing near, chase the nearest gem.
-const PRIORITY = ['multishot', 'rapid', 'power', 'pierce', 'ricochet', 'swift'];
+const PRIORITY = ['multishot', 'rapid', 'power', 'blade', 'homing', 'pierce', 'regen', 'ricochet', 'magnet', 'swift'];
 const pick = (offer) => (bot === 'smart' ? [...offer].sort((a, b) => PRIORITY.indexOf(a) - PRIORITY.indexOf(b))[0] : offer[0]);
 
 function steer(g) {

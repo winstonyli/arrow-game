@@ -6,6 +6,7 @@ import { createPlayer, movePlayer, autoFire } from './player.js';
 import { enemyAISystem } from './enemies.js';
 import { applySkill } from './skills.js';
 import { gemSystem } from './gems.js';
+import { orbitSystem } from './orbit.js';
 
 export const BOUNDS = { w: 900, h: 600 };
 export const VIEW = { w: 900, h: 600 };
@@ -46,12 +47,14 @@ export function tick(game, dt) {
   if (game.over || game.offer) return;
   const { world, grid, player, bounds } = game;
   movePlayer(player, game.input, dt, bounds);
+  player.hp = Math.min(player.maxHp, player.hp + player.stats.regen * dt);
   enemyAISystem(world, player, dt, game.enemyFireOnScreen ? game.camera : null, game.view);
   moveSystem(world, dt);
-  projectileSystem(world, dt, bounds);
+  projectileSystem(world, dt, bounds, grid);
   grid.rebuild(world, KIND.ENEMY);
   autoFire(player, world, grid, dt);
   game.kills += collisionSystem(world, grid, player, game.onKill);
+  game.kills += orbitSystem(world, grid, player, game.time, dt, game.onKill);
   game.xp += gemSystem(world, player, dt);
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);

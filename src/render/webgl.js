@@ -2,6 +2,7 @@ import { KIND } from '../core/world.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
+import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.js';
 
 export const STRIDE = 5; // floats per instance: x, y, radius, palette index, fade
 // fade: SOLID = entity (outline + shadow); (0, 1] = dot particle alpha; [-1, 0) = ring particle, alpha -fade.
@@ -15,8 +16,11 @@ const P_PLAYER = P_PROJECTILE + 1;
 const P_PLAYER_BLINK = P_PLAYER + 1;
 const P_GEM = P_PLAYER_BLINK + 1;
 const P_FLASH = P_GEM + 1;
-const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff'];
+const P_BLADE = P_FLASH + 1;
+const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9'];
 const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));
+
+const bp = { x: 0, y: 0 };
 
 // Fills `out` with one instance per live entity that is at least partly inside the view, then the live
 // fx particles, then the player (drawn last). Returns the count. Instances draw in slot order, so enemies
@@ -64,6 +68,15 @@ export function packInstances(world, player, game, out) {
       const a = Math.min(1, p.life[k] / p.max[k]);
       out[o + 4] = p.shape[k] === RING ? -a : a;
     }
+  }
+  for (let k = 0; k < player.stats.orbit; k++) {
+    bladePos(player, game.time, k, bp);
+    const o = n++ * STRIDE;
+    out[o] = bp.x;
+    out[o + 1] = bp.y;
+    out[o + 2] = BLADE_RADIUS;
+    out[o + 3] = P_BLADE;
+    out[o + 4] = SOLID;
   }
   const o = n++ * STRIDE;
   out[o] = player.x;
@@ -176,7 +189,7 @@ export function createWebGLRenderer(canvas, hudCanvas, view) {
   function render(game, hud) {
     const { world, player, camera, bounds, fx } = game;
     if (!data) {
-      data = new Float32Array((world.capacity + 1 + POOL) * STRIDE);
+      data = new Float32Array((world.capacity + 1 + POOL + MAX_BLADES) * STRIDE);
       gl.bufferData(gl.ARRAY_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
     }
     cam.x = camera.x + (fx ? fx.sx : 0);

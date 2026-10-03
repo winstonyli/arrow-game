@@ -9,7 +9,38 @@ export function moveSystem(world, dt) {
   }
 }
 
-export function projectileSystem(world, dt, bounds) {
+export const HOMING_RANGE = 300;
+export const HOMING_TURN = 4; // rad/s
+
+// Turns a homing projectile's velocity toward the nearest enemy in range, keeping its speed. The grid was
+// last rebuilt before this tick's moves, so slots are checked by kind.
+function steer(world, grid, i, dt) {
+  const n = grid.gather(world.x[i], world.y[i], HOMING_RANGE);
+  let best = -1;
+  let bestD = HOMING_RANGE * HOMING_RANGE;
+  for (let q = 0; q < n; q++) {
+    const j = grid.out[q];
+    if (world.kind[j] !== KIND.ENEMY) continue;
+    const dx = world.x[j] - world.x[i];
+    const dy = world.y[j] - world.y[i];
+    const d = dx * dx + dy * dy;
+    if (d < bestD) {
+      bestD = d;
+      best = j;
+    }
+  }
+  if (best < 0) return;
+  const speed = Math.hypot(world.vx[i], world.vy[i]);
+  const cur = Math.atan2(world.vy[i], world.vx[i]);
+  let diff = Math.atan2(world.y[best] - world.y[i], world.x[best] - world.x[i]) - cur;
+  diff = Math.atan2(Math.sin(diff), Math.cos(diff)); // wrap to (-PI, PI]
+  const a = cur + clamp(diff, -HOMING_TURN * dt, HOMING_TURN * dt);
+  world.vx[i] = Math.cos(a) * speed;
+  world.vy[i] = Math.sin(a) * speed;
+}
+
+// `grid` (optional): enables steering of projectiles flagged homing (world.type = 1).
+export function projectileSystem(world, dt, bounds, grid = null) {
   for (let i = 0; i < world.high; i++) {
     const k = world.kind[i];
     if (k !== KIND.PROJECTILE && k !== KIND.ENEMY_PROJECTILE) continue;
@@ -18,6 +49,7 @@ export function projectileSystem(world, dt, bounds) {
       world.despawn(i);
       continue;
     }
+    if (grid && k === KIND.PROJECTILE && world.type[i] === 1) steer(world, grid, i, dt);
     const r = world.radius[i];
     let out = false;
     if (world.x[i] < r || world.x[i] > bounds.w - r) {

@@ -2,6 +2,7 @@ import { KIND } from '../core/world.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
+import { bladePos, BLADE_RADIUS } from '../game/orbit.js';
 
 const TAU = Math.PI * 2;
 const GEM_COLOR = '#f2cc60';
@@ -63,6 +64,7 @@ export function createCanvasRenderer(canvas, view) {
 
   // The fallback renderer does not cull and draws no outline or shadow; the WebGL renderer is the one
   // built for large counts and depth.
+  const bp = { x: 0, y: 0 };
   return function render(game, hud) {
     const { world, player, camera, bounds, fx } = game;
     cam.x = camera.x + (fx ? fx.sx : 0);
@@ -80,6 +82,13 @@ export function createCanvasRenderer(canvas, view) {
     circles(world, KIND.PROJECTILE, -1, '#58a6ff');
     if (fx) particles(fx);
 
+    ctx.fillStyle = '#c9d1d9';
+    for (let k = 0; k < player.stats.orbit; k++) {
+      bladePos(player, game.time, k, bp);
+      ctx.beginPath();
+      ctx.arc(bp.x, bp.y, BLADE_RADIUS, 0, TAU);
+      ctx.fill();
+    }
     ctx.globalAlpha = player.invuln > 0 && Math.floor(game.time * 20) % 2 ? 0.4 : 1;
     ctx.fillStyle = '#3fb950';
     ctx.beginPath();

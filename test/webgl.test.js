@@ -5,7 +5,7 @@ import { World, KIND } from '../src/core/world.js';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.js';
 import { createFx } from '../src/render/fx.js';
 
-const player = (over = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, ...over });
+const player = (over = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0 }, ...over });
 const G = (o = {}) => ({ time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 }, ...o });
 
 test('packInstances writes live entities in slot order, player last, skipping free slots', () => {

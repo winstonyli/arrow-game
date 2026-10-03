@@ -13,6 +13,9 @@ export function baseStats() {
     moveSpeed: 220,
     range: 600,
     pickupRadius: 80,
+    regen: 0, // hp per second
+    homing: 0, // 1 = arrows steer toward the nearest enemy
+    orbit: 0, // blades circling the player
     moveFireRate: 0, // fire-rate multiplier while moving; 0 = no shooting on the move (rooms), arena sets 0.5
   };
 }
@@ -48,6 +51,7 @@ export function fireVolley(world, p, angle) {
     if (i < 0) continue;
     world.damage[i] = s.damage;
     world.life[i] = s.range / s.projectileSpeed;
+    world.type[i] = s.homing; // projectile flag read by projectileSystem; the slot may hold a stale enemy type
     world.pierce[i] = s.pierce;
     world.bounce[i] = s.bounce;
     n++;

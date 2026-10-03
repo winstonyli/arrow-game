@@ -1,3 +1,5 @@
+import { MAX_BLADES } from './orbit.js';
+
 export const SKILLS = [
   { id: 'multishot', name: 'Multishot', desc: '+1 arrow per volley', apply: (s) => { s.projectileCount += 1; } },
   { id: 'rapid', name: 'Rapid Fire', desc: '+30% attack speed', apply: (s) => { s.attackInterval /= 1.3; } },
@@ -5,6 +7,10 @@ export const SKILLS = [
   { id: 'pierce', name: 'Piercing', desc: 'Arrows pierce 1 more enemy', apply: (s) => { s.pierce += 1; } },
   { id: 'ricochet', name: 'Ricochet', desc: 'Arrows bounce off walls 2 times', apply: (s) => { s.bounce += 2; } },
   { id: 'swift', name: 'Swift Feet', desc: '+15% move speed', apply: (s) => { s.moveSpeed *= 1.15; } },
+  { id: 'regen', name: 'Regeneration', desc: '+1 HP per second', apply: (s) => { s.regen += 1; } },
+  { id: 'magnet', name: 'Magnet', desc: '+50% gem pickup range', apply: (s) => { s.pickupRadius *= 1.5; } },
+  { id: 'homing', name: 'Homing', desc: 'Arrows curve toward enemies', apply: (s) => { s.homing = 1; } },
+  { id: 'blade', name: 'Orbit Blade', desc: '+1 blade circling you', apply: (s) => { s.orbit = Math.min(MAX_BLADES, s.orbit + 1); } },
 ];
 
 export const SKILLS_BY_ID = Object.fromEntries(SKILLS.map((s) => [s.id, s]));
