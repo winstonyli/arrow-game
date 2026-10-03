@@ -65,6 +65,19 @@ test('spawnPoint reports failure instead of spawning in view when nothing fits',
   assert.equal(spawnPoint(g, out), false);
 });
 
+test('spawnPoint keeps the whole enemy off screen when the camera is clamped at a wall', () => {
+  const g = make();
+  g.player.x = 50;
+  g.player.y = 50;
+  g.camera.x = 0;
+  g.camera.y = 0;
+  const out = { x: 0, y: 0 };
+  for (let k = 0; k < 300; k++) {
+    if (!spawnPoint(g, out)) continue;
+    assert.ok(out.x > g.view.w + 40 || out.y > g.view.h + 40, 'centre is at least 40px past the view edge');
+  }
+});
+
 test('a boss spawns every BOSS_EVERY seconds', () => {
   const g = make();
   g.time = BOSS_EVERY;

@@ -15,6 +15,7 @@ export const BOSS_EVERY = 120; // seconds
 const SPAWN_MARGIN = 60; // px beyond the view's corner
 const SPAWN_DEPTH = 300; // spawn distances run from the ring to ring + depth
 const WALL_PAD = 20;
+const VIEW_PAD = 40; // spawn centres stay this far outside the view so a big enemy is not partly on screen
 const TRIES = 32;
 
 export const xpFor = (level) => 5 + 5 * level;
@@ -35,7 +36,7 @@ export function spawnPoint(game, out) {
     const x = player.x + Math.cos(a) * d;
     const y = player.y + Math.sin(a) * d;
     if (x < WALL_PAD || x > bounds.w - WALL_PAD || y < WALL_PAD || y > bounds.h - WALL_PAD) continue;
-    if (x >= camera.x && x <= camera.x + view.w && y >= camera.y && y <= camera.y + view.h) continue;
+    if (x >= camera.x - VIEW_PAD && x <= camera.x + view.w + VIEW_PAD && y >= camera.y - VIEW_PAD && y <= camera.y + view.h + VIEW_PAD) continue;
     out.x = x;
     out.y = y;
     return true;
