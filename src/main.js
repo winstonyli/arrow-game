@@ -1,9 +1,10 @@
 import { createInput } from './input/input.js';
 import { createRooms } from './modes/rooms.js';
-import { createGame, tick, choose, VIEW } from './game/game.js';
+import { createGame, tick, choose, VIEW, CAPACITY } from './game/game.js';
 import { createStepper, startLoop } from './core/loop.js';
 import { createCanvasRenderer } from './render/canvas.js';
 import { createWebGLRenderer } from './render/webgl.js';
+import { createFx } from './render/fx.js';
 import { SKILLS_BY_ID } from './game/skills.js';
 import { createStress } from './modes/stress.js';
 import { ENEMY } from './game/enemies.js';
@@ -59,7 +60,7 @@ function frameStats() {
 }
 
 function newGame() {
-  game = createGame({ mode: makeMode(), bounds: arena ? ARENA_BOUNDS : undefined, input });
+  game = createGame({ mode: makeMode(), bounds: arena ? ARENA_BOUNDS : undefined, input, fx: stressN ? undefined : createFx(CAPACITY) });
   shownOffer = undefined;
 }
 document.getElementById('restart').onclick = newGame;
@@ -100,8 +101,13 @@ startLoop(
       frameMs = frameMs * 0.9 + (t0 - lastFrame) * 0.1;
       frames[frameCount++ % frames.length] = t0 - lastFrame;
     }
+    const frameDt = lastFrame ? Math.min(0.05, (t0 - lastFrame) / 1000) : 0;
     lastFrame = t0;
     syncUI();
+    if (game.fx) {
+      game.fx.observe(game);
+      game.fx.update(frameDt);
+    }
     render(game, [
       `${game.mode.hud?.(game) ?? ''}  HP ${Math.max(0, Math.ceil(game.player.hp))}  Kills ${game.kills}`,
       `entities ${game.world.count}  dropped ${game.world.dropped}  sim ${simMs.toFixed(2)} ms  draw ${drawMs.toFixed(2)} ms  frame ${frameMs.toFixed(1)} ms`,
