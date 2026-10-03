@@ -2,6 +2,8 @@
 // this; it only calls kill/burst/shake from hooks. main.js calls observe(game) then update(frameDt) once
 // per frame; the renderers read the state.
 import { KIND } from '../core/world.js';
+import { bladePos, MAX_BLADES } from '../game/orbit.js';
+import { TRAIL_N, TRAIL_DT } from './trail.js';
 
 export const FLASH_TIME = 0.08; // seconds an enemy stays white after a hit
 export const POOL = 512;
@@ -12,7 +14,7 @@ const TAU = Math.PI * 2;
 
 export function createFx(capacity, rng = Math.random) {
   const lastHp = new Float32Array(capacity);
-  const lastGen = new Uint16Array(capacity);
+  const lastGen = new Int32Array(capacity).fill(-1); // -1: slot not seen yet (gen starts at 0)
   const flashUntil = new Float32Array(capacity);
   const p = {
     x: new Float32Array(POOL),
@@ -26,6 +28,26 @@ export function createFx(capacity, rng = Math.random) {
     shape: new Uint8Array(POOL),
     pal: new Int16Array(POOL),
   };
+  // Gems have no velocity in the sim (the magnet moves them directly), so it is derived per sim tick.
+  const gvx = new Float32Array(capacity);
+  const gvy = new Float32Array(capacity);
+  const gpx = new Float32Array(capacity);
+  const gpy = new Float32Array(capacity);
+  let simTime = 0;
+  // Position history of the player (track 0) and each orbit blade (track 1 + k): a ring of TRAIL_N samples.
+  const TRACKS = 1 + MAX_BLADES;
+  const trail = { x: new Float32Array(TRACKS * TRAIL_N), y: new Float32Array(TRACKS * TRAIL_N), count: new Uint8Array(TRACKS), head: new Uint8Array(TRACKS) };
+  let lastSample = -Infinity;
+  const bp = { x: 0, y: 0 };
+
+  function record(t, x, y) {
+    const h = (trail.head[t] + 1) % TRAIL_N;
+    trail.head[t] = h;
+    trail.x[t * TRAIL_N + h] = x;
+    trail.y[t * TRAIL_N + h] = y;
+    if (trail.count[t] < TRAIL_N) trail.count[t]++;
+  }
+
   let next = 0;
   let lastPlayerHp = null;
 
@@ -59,7 +81,20 @@ export function createFx(capacity, rng = Math.random) {
     sy: 0,
     hurt: 0, // damage vignette strength, 1 right after a hit
 
+    gvx,
+    gvy,
+    trail,
+
     flashing: (i) => flashUntil[i] > fx.clock,
+
+    // Sample `age` steps back (0 = newest) of history track `t`; false if there is no such sample yet.
+    sample(t, age, out) {
+      if (age >= trail.count[t]) return false;
+      const k = t * TRAIL_N + ((trail.head[t] - age + TRAIL_N) % TRAIL_N);
+      out.x = trail.x[k];
+      out.y = trail.y[k];
+      return true;
+    },
 
     kill(x, y, r, pal) {
       emit(x, y, 0, 0, r, 70, 0.3, RING, pal);
@@ -77,8 +112,25 @@ export function createFx(capacity, rng = Math.random) {
     // Derives flashes and the hurt vignette from sim state. hp only ever falls on a hit, so a drop is a hit.
     observe(game) {
       const { world, player } = game;
+      const dtSim = game.time - simTime;
+      if (dtSim > 0) simTime = game.time;
       for (let i = 0; i < world.high; i++) {
-        if (world.kind[i] !== KIND.ENEMY) continue;
+        const kind = world.kind[i];
+        if (kind === KIND.GEM) {
+          if (world.gen[i] !== lastGen[i]) {
+            lastGen[i] = world.gen[i];
+            gpx[i] = world.x[i];
+            gpy[i] = world.y[i];
+            gvx[i] = gvy[i] = 0;
+          } else if (dtSim > 0) {
+            gvx[i] = (world.x[i] - gpx[i]) / dtSim;
+            gvy[i] = (world.y[i] - gpy[i]) / dtSim;
+            gpx[i] = world.x[i];
+            gpy[i] = world.y[i];
+          }
+          continue;
+        }
+        if (kind !== KIND.ENEMY) continue;
         if (world.gen[i] !== lastGen[i]) {
           lastGen[i] = world.gen[i]; // a new occupant of this slot
           lastHp[i] = world.hp[i];
@@ -93,6 +145,19 @@ export function createFx(capacity, rng = Math.random) {
         fx.shake(0.35);
       }
       lastPlayerHp = player.hp;
+      if (fx.clock - lastSample >= TRAIL_DT - 1e-6) { // epsilon: summed frame dts land a hair under TRAIL_DT
+        lastSample = fx.clock;
+        record(0, player.x, player.y);
+        const orbit = player.stats.orbit;
+        for (let k = 0; k < MAX_BLADES; k++) {
+          if (k >= orbit) {
+            trail.count[1 + k] = 0;
+            continue;
+          }
+          bladePos(player, game.time, k, bp);
+          record(1 + k, bp.x, bp.y);
+        }
+      }
     },
 
     update(dt) {

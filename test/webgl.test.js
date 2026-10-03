@@ -20,10 +20,10 @@ test('packInstances writes live entities by layer, player last, skipping free sl
   assert.equal(n, 4); // shooter, projectile, enemy projectile, player
   const row = (k) => Array.from(out.subarray(k * STRIDE, (k + 1) * STRIDE));
   const T = ENEMY_TYPES.length;
-  assert.deepEqual(row(0), [1, 2, ENEMY_TYPES[ENEMY.SHOOTER].radius, ENEMY.SHOOTER, 2]);
-  assert.deepEqual(row(1), [9, 10, 5, T, 2]); // enemy projectile, then the player's arrow
-  assert.deepEqual(row(2), [7, 8, 4, T + 1, 2]);
-  assert.deepEqual(row(3), [5, 6, 12, T + 2, 2]);
+  assert.deepEqual(row(0), [1, 2, ENEMY_TYPES[ENEMY.SHOOTER].radius, ENEMY.SHOOTER, 2, 0, 0]);
+  assert.deepEqual(row(1), [9, 10, 5, T, 2, 0, 0]); // enemy projectile, then the player's arrow
+  assert.deepEqual(row(2), [7, 8, 4, T + 1, 2, 0, 0]);
+  assert.deepEqual(row(3), [5, 6, 12, T + 2, 2, 0, 0]);
   assert.ok(a >= 0);
 });
 
@@ -72,7 +72,7 @@ test('a flashing enemy packs the flash palette entry', () => {
   const w = new World(10);
   const a = spawnEnemy(w, ENEMY.CHASER, 100, 100);
   const fx = createFx(10, () => 0.5);
-  const sim = { world: w, player: { hp: 100 } };
+  const sim = { world: w, player: { hp: 100, x: 0, y: 0, stats: { orbit: 0 } }, time: 0 };
   const game = G({ fx });
   const out = new Float32Array(20 * STRIDE);
   const T = ENEMY_TYPES.length;

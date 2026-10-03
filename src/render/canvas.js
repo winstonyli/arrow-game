@@ -3,6 +3,7 @@ import { ENEMY_TYPES } from '../game/enemies.js';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.js';
+import { tailVec, TRAIL_N, TRAIL_ALPHA } from './trail.js';
 
 const TAU = Math.PI * 2;
 const GEM_COLOR = '#f2cc60';
@@ -15,6 +16,51 @@ export function createCanvasRenderer(canvas, view) {
   vignette.addColorStop(0, 'rgba(248,81,73,0)');
   vignette.addColorStop(1, 'rgba(248,81,73,0.85)');
   const cam = { x: 0, y: 0 }; // the camera plus the current shake offset
+
+  const tv = { x: 0, y: 0 };
+  const sp = { x: 0, y: 0 };
+
+  // Tapered tails (see trail.js): a triangle from each mover's flanks to its tail tip, one fill per group.
+  function tails(world, kind, type, color, fx) {
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    for (let i = 0; i < world.high; i++) {
+      if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type)) continue;
+      if (kind === KIND.GEM) tailVec(fx.gvx[i], fx.gvy[i], tv);
+      else tailVec(world.vx[i], world.vy[i], tv);
+      const l = Math.hypot(tv.x, tv.y);
+      if (l < 0.5) continue;
+      const r = world.radius[i] * 0.85;
+      const nx = (-tv.y / l) * r;
+      const ny = (tv.x / l) * r;
+      const x = world.x[i];
+      const y = world.y[i];
+      ctx.moveTo(x + nx, y + ny);
+      ctx.lineTo(x + tv.x, y + tv.y);
+      ctx.lineTo(x - nx, y - ny);
+      ctx.closePath();
+    }
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Position-history dots of the player (track 0) and each blade, oldest first.
+  function history(fx, player, color, bladeColor) {
+    for (let t = 0; t <= player.stats.orbit; t++) {
+      ctx.fillStyle = t === 0 ? color : bladeColor;
+      const r0 = t === 0 ? player.radius : BLADE_RADIUS;
+      for (let age = TRAIL_N - 1; age >= 1; age--) {
+        if (!fx.sample(t, age, sp)) continue;
+        const f = 1 - age / TRAIL_N;
+        ctx.globalAlpha = TRAIL_ALPHA * f;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, r0 * (0.4 + 0.6 * f), 0, TAU);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
 
   // type < 0 matches any type. One path and one fill per colour group.
   function circles(world, kind, type, color) {
@@ -76,12 +122,21 @@ export function createCanvasRenderer(canvas, view) {
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
     // Same layer order as webgl.js: gems, enemies (then their flash), enemy projectiles, arrows, particles, blades, player.
+    if (fx) tails(world, KIND.GEM, -1, GEM_COLOR, fx);
     circles(world, KIND.GEM, -1, GEM_COLOR);
-    for (let t = 0; t < ENEMY_TYPES.length; t++) circles(world, KIND.ENEMY, t, ENEMY_TYPES[t].color);
+    for (let t = 0; t < ENEMY_TYPES.length; t++) {
+      if (fx) tails(world, KIND.ENEMY, t, ENEMY_TYPES[t].color, fx);
+      circles(world, KIND.ENEMY, t, ENEMY_TYPES[t].color);
+    }
     if (fx) flashed(world, fx);
+    if (fx) tails(world, KIND.ENEMY_PROJECTILE, -1, '#ff7b72', fx);
     circles(world, KIND.ENEMY_PROJECTILE, -1, '#ff7b72');
+    if (fx) tails(world, KIND.PROJECTILE, -1, '#58a6ff', fx);
     circles(world, KIND.PROJECTILE, -1, '#58a6ff');
-    if (fx) particles(fx);
+    if (fx) {
+      particles(fx);
+      history(fx, player, '#3fb950', '#c9d1d9');
+    }
 
     ctx.fillStyle = '#c9d1d9';
     for (let k = 0; k < player.stats.orbit; k++) {

@@ -3,11 +3,12 @@ import { ENEMY_TYPES } from '../game/enemies.js';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
 import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.js';
+import { tailVec, TRAIL_MAX, TRAIL_N, TRAIL_ALPHA } from './trail.js';
 
-export const STRIDE = 5; // floats per instance: x, y, radius, palette index, fade
+export const STRIDE = 7; // floats per instance: x, y, radius, palette index, fade, tail x, tail y
 // fade: SOLID = entity (outline + shadow); (0, 1] = dot particle alpha; [-1, 0) = ring particle, alpha -fade.
 const SOLID = 2;
-const SHAKE_PAD = 12; // cull pad when fx can shake the view (max offset is 10 px)
+const SHAKE_PAD = 12; // cull pad when fx can shake the view (max offset is 10 px); a tail can also reach this far into the view
 
 // Palette index: enemy types 0..n-1, then these.
 const P_ENEMY_PROJECTILE = ENEMY_TYPES.length;
@@ -22,14 +23,26 @@ const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));
 
 const LAYERS = [KIND.GEM, KIND.ENEMY, KIND.ENEMY_PROJECTILE, KIND.PROJECTILE];
 const bp = { x: 0, y: 0 };
+const tv = { x: 0, y: 0 };
+
+function put(out, o, x, y, r, pal, fade, tx, ty) {
+  out[o] = x;
+  out[o + 1] = y;
+  out[o + 2] = r;
+  out[o + 3] = pal;
+  out[o + 4] = fade;
+  out[o + 5] = tx;
+  out[o + 6] = ty;
+}
 
 // Layers, bottom to top (canvas.js uses the same order): gems, enemies, enemy projectiles, player
-// projectiles, fx particles, blades, player. The background and grid are on a canvas below; the HP bar,
-// vignette and HUD text on one above. Within a layer instances draw in slot order.
+// projectiles, fx particles, trail dots of the player and blades, blades, player. The background and grid
+// are on a canvas below; the HP bar, vignette and HUD text on one above. Within a layer instances draw in
+// slot order. Entities carry their tail vector (see trail.js); it is zero without fx.
 // Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
 export function packInstances(world, player, game, out) {
   const { camera, view, fx } = game;
-  const pad = fx ? SHAKE_PAD : 0;
+  const pad = fx ? SHAKE_PAD + TRAIL_MAX : 0;
   const x0 = camera.x - pad;
   const x1 = camera.x + view.w + pad;
   const y0 = camera.y - pad;
@@ -43,11 +56,7 @@ export function packInstances(world, player, game, out) {
       const y = world.y[i];
       const r = world.radius[i];
       if (x + r < x0 || x - r > x1 || y + r < y0 || y - r > y1) continue;
-      const o = n++ * STRIDE;
-      out[o] = x;
-      out[o + 1] = y;
-      out[o + 2] = r;
-      out[o + 3] =
+      const pal =
         k === KIND.ENEMY
           ? fx && fx.flashing(i)
             ? P_FLASH
@@ -57,37 +66,34 @@ export function packInstances(world, player, game, out) {
             : k === KIND.GEM
               ? P_GEM
               : P_ENEMY_PROJECTILE;
-      out[o + 4] = SOLID;
+      tv.x = tv.y = 0;
+      if (fx) k === KIND.GEM ? tailVec(fx.gvx[i], fx.gvy[i], tv) : tailVec(world.vx[i], world.vy[i], tv);
+      put(out, n++ * STRIDE, x, y, r, pal, SOLID, tv.x, tv.y);
     }
   }
   if (fx) {
     const p = fx.p;
     for (let k = 0; k < POOL; k++) {
       if (p.life[k] <= 0) continue;
-      const o = n++ * STRIDE;
-      out[o] = p.x[k];
-      out[o + 1] = p.y[k];
-      out[o + 2] = p.r[k];
-      out[o + 3] = p.pal[k] < 0 ? P_GEM : p.pal[k];
       const a = Math.min(1, p.life[k] / p.max[k]);
-      out[o + 4] = p.shape[k] === RING ? -a : a;
+      put(out, n++ * STRIDE, p.x[k], p.y[k], p.r[k], p.pal[k] < 0 ? P_GEM : p.pal[k], p.shape[k] === RING ? -a : a, 0, 0);
+    }
+    // Position history of the player (track 0) and blades, oldest first so newer dots land on top.
+    for (let t = 0; t <= player.stats.orbit; t++) {
+      const r0 = t === 0 ? player.radius : BLADE_RADIUS;
+      const pal = t === 0 ? P_PLAYER : P_BLADE;
+      for (let age = TRAIL_N - 1; age >= 1; age--) {
+        if (!fx.sample(t, age, bp)) continue;
+        const f = 1 - age / TRAIL_N;
+        put(out, n++ * STRIDE, bp.x, bp.y, r0 * (0.4 + 0.6 * f), pal, TRAIL_ALPHA * f, 0, 0);
+      }
     }
   }
   for (let k = 0; k < player.stats.orbit; k++) {
     bladePos(player, game.time, k, bp);
-    const o = n++ * STRIDE;
-    out[o] = bp.x;
-    out[o + 1] = bp.y;
-    out[o + 2] = BLADE_RADIUS;
-    out[o + 3] = P_BLADE;
-    out[o + 4] = SOLID;
+    put(out, n++ * STRIDE, bp.x, bp.y, BLADE_RADIUS, P_BLADE, SOLID, 0, 0);
   }
-  const o = n++ * STRIDE;
-  out[o] = player.x;
-  out[o + 1] = player.y;
-  out[o + 2] = player.radius;
-  out[o + 3] = player.invuln > 0 && Math.floor(game.time * 20) % 2 ? P_PLAYER_BLINK : P_PLAYER;
-  out[o + 4] = SOLID;
+  put(out, n++ * STRIDE, player.x, player.y, player.radius, player.invuln > 0 && Math.floor(game.time * 20) % 2 ? P_PLAYER_BLINK : P_PLAYER, SOLID, 0, 0);
   return n;
 }
 
@@ -96,20 +102,26 @@ const hex = (c) => [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16) / 255);
 const VERT = `#version 300 es
 in vec4 aInst; // x, y, radius, palette index (world coordinates)
 in float aFade;
+in vec2 aTail; // offset from the centre back along the mover's path (zero for most instances)
 uniform vec2 uSize; // view size in px
 uniform vec2 uCam; // view's top-left in world coordinates
 flat out float vIdx;
 flat out float vR;
 flat out float vFade;
+flat out vec2 vTail;
 out vec2 vOff;
 void main() {
   vec2 corner = vec2(gl_VertexID & 1, gl_VertexID >> 1) * 2.0 - 1.0;
   vOff = corner * (aInst.z + 4.0); // margin for anti-aliasing and the shadow offset
+  // Grow the quad on the tail side so it covers the body and the whole tail.
+  vOff.x += corner.x * aTail.x > 0.0 ? aTail.x : 0.0;
+  vOff.y += corner.y * aTail.y > 0.0 ? aTail.y : 0.0;
   vec2 p = aInst.xy - uCam + vOff;
   gl_Position = vec4(p.x / uSize.x * 2.0 - 1.0, 1.0 - p.y / uSize.y * 2.0, 0.0, 1.0);
   vIdx = aInst.w;
   vR = aInst.z;
   vFade = aFade;
+  vTail = aTail;
 }`;
 
 const FRAG = `#version 300 es
@@ -118,6 +130,7 @@ uniform vec4 uPalette[${COLORS.length}];
 flat in float vIdx;
 flat in float vR;
 flat in float vFade;
+flat in vec2 vTail;
 in vec2 vOff;
 out vec4 outColor;
 void main() {
@@ -129,7 +142,16 @@ void main() {
     vec3 rgb = mix(c.rgb, c.rgb * 0.55, edge);
     float ca = c.a * a;
     float sa = clamp(vR + 0.5 - length(vOff - vec2(2.0, 3.0)), 0.0, 1.0) * 0.35;
-    outColor = vec4(rgb * ca, ca + (1.0 - ca) * sa); // premultiplied; the shadow is black
+    // Tail: a tapered capsule from the centre along vTail, fading toward its tip, under the shadow and body.
+    float tl2 = dot(vTail, vTail);
+    float ta = 0.0;
+    if (tl2 > 0.25) {
+      float s = clamp(dot(vOff, vTail) / tl2, 0.0, 1.0);
+      float tr = vR * 0.85 * (1.0 - s);
+      ta = clamp(tr + 0.5 - length(vOff - vTail * s), 0.0, 1.0) * 0.4 * (1.0 - s);
+    }
+    vec4 under = vec4(c.rgb * c.a * ta, c.a * ta) + (1.0 - ta) * vec4(0.0, 0.0, 0.0, sa);
+    outColor = vec4(rgb * ca, ca) + (1.0 - ca) * under; // premultiplied; the shadow is black
   } else if (vFade < 0.0) { // expanding ring
     float a = clamp(1.5 - abs(len - (vR - 1.0)), 0.0, 1.0) * -vFade;
     outColor = vec4(c.rgb * c.a * a, c.a * a);
@@ -178,6 +200,10 @@ export function createWebGLRenderer(canvas, hudCanvas, bgCanvas, view) {
   gl.enableVertexAttribArray(locFade);
   gl.vertexAttribPointer(locFade, 1, gl.FLOAT, false, STRIDE * 4, 16);
   gl.vertexAttribDivisor(locFade, 1);
+  const locTail = gl.getAttribLocation(prog, 'aTail');
+  gl.enableVertexAttribArray(locTail);
+  gl.vertexAttribPointer(locTail, 2, gl.FLOAT, false, STRIDE * 4, 20);
+  gl.vertexAttribDivisor(locTail, 1);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.viewport(0, 0, view.w, view.h);
@@ -194,7 +220,7 @@ export function createWebGLRenderer(canvas, hudCanvas, bgCanvas, view) {
   function render(game, hud) {
     const { world, player, camera, bounds, fx } = game;
     if (!data) {
-      data = new Float32Array((world.capacity + 1 + POOL + MAX_BLADES) * STRIDE);
+      data = new Float32Array((world.capacity + 1 + POOL + MAX_BLADES + (1 + MAX_BLADES) * TRAIL_N) * STRIDE);
       gl.bufferData(gl.ARRAY_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
     }
     cam.x = camera.x + (fx ? fx.sx : 0);

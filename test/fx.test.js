@@ -11,8 +11,8 @@ import { seeded } from '../src/core/math.js';
 const mk = () => {
   const world = new World(20);
   const fx = createFx(20, () => 0.5);
-  const player = { hp: 100, maxHp: 100 };
-  return { world, fx, player, game: { world, player } };
+  const player = { hp: 100, maxHp: 100, x: 0, y: 0, stats: { orbit: 0 } };
+  return { world, fx, player, game: { world, player, time: 0 } };
 };
 const live = (fx) => {
   let n = 0;
