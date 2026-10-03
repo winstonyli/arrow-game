@@ -4,6 +4,8 @@ import { createGame, tick, choose } from '../src/game/game.js';
 import { createRooms } from '../src/modes/rooms.js';
 import { KIND } from '../src/core/world.js';
 import { ENEMY } from '../src/game/enemies.js';
+import { baseStats } from '../src/game/player.js';
+import { applySkill } from '../src/game/skills.js';
 
 function seeded(seed) {
   let a = seed >>> 0;
@@ -76,4 +78,31 @@ test('a standing player auto-kills enemies', () => {
   const g = make();
   for (let i = 0; i < 60 * 5; i++) tick(g, 1 / 60);
   assert.ok(g.kills > 0, `kills=${g.kills}`);
+});
+
+test('choose ignores repeats and ids not on offer', () => {
+  const g = make();
+  killAll(g);
+  tick(g, 1 / 60);
+  const id = g.offer[0];
+  choose(g, id);
+  choose(g, id);
+  assert.equal(g.mode.room, 2);
+  assert.equal(g.world.kindCount[KIND.ENEMY], 8);
+  const expected = baseStats();
+  applySkill(expected, id);
+  assert.deepEqual(g.player.stats, expected);
+  assert.equal(g.offer, null);
+  const before = g.player.stats.projectileCount;
+  choose(g, 'multishot');
+  assert.equal(g.player.stats.projectileCount, before);
+});
+
+test('death on the clearing tick ends the game without an offer', () => {
+  const g = make();
+  killAll(g);
+  g.player.hp = 0;
+  tick(g, 1 / 60);
+  assert.equal(g.over, true);
+  assert.equal(g.offer, null);
 });

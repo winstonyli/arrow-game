@@ -17,7 +17,7 @@ let simMs = 0;
 
 function newGame() {
   game = createGame({ mode: createRooms(), input });
-  shownOffer = null;
+  shownOffer = undefined;
 }
 document.getElementById('restart').onclick = newGame;
 

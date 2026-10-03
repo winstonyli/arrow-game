@@ -35,12 +35,13 @@ export function tick(game, dt) {
   grid.rebuild(world, KIND.ENEMY);
   autoFire(player, world, grid, dt);
   game.kills += collisionSystem(world, grid, player, MAX_ENEMY_RADIUS);
-  game.mode.update(game, dt);
-  game.time += dt;
   if (player.hp <= 0) game.over = true;
+  else game.mode.update(game, dt);
+  game.time += dt;
 }
 
 export function choose(game, skillId) {
+  if (!game.offer || !game.offer.includes(skillId)) return;
   applySkill(game.player.stats, skillId);
   game.offer = null;
   game.mode.onChosen(game);
