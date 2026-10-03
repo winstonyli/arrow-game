@@ -11,6 +11,13 @@ Browser archer roguelite (Archero / arrow.io style). Plain JS, typed-array simul
 Plan 1 (core + rooms mode) implemented; playable at `npm start`. Gameplay feel not yet tuned.
 Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Plan 3 (arena mode + camera) implemented; play it at `/?mode=arena` (rooms stays the default at `/`).
 
+## UI
+`/` opens a title screen (Arena or Rooms); `/?mode=arena` and `/?mode=rooms` skip it, as does `?stress=N` (those never auto-pause, so benchmarks run unfocused). Esc or P pauses (also on tab blur when started from the title); M mutes; 1-3 or a click picks a skill. Personal bests are kept in `localStorage` (`arrow-best-arena`, `arrow-best-rooms`). `?debug` shows the entity and frame-time line at the bottom.
+
+The screens and HUD are DOM overlays (`src/ui/`): `model.js` holds the pure view-models, `ui.js` the DOM controller, `ui.css` the Synthwave theme (tokens as custom properties). Fonts are self-hosted in `assets/fonts/` (Orbitron, Share Tech Mono; SIL OFL). The sim only exposes `game.skills` (owned-skill counts) and `game.bossAt` (last boss spawn time) for the UI. Spec: `docs/superpowers/specs/2026-10-03-ui-design.md`.
+
+Parked: a volume slider and settings screen, a real icon set (the glyphs are simple inline SVG), key rebinding, gamepad, a tutorial, an attract-mode title background, Rooms difficulty select. Touch: a tap on the HUD pause button also starts the move stick (harmless, not fixed).
+
 ## Arena balance (kiting)
 In arena the player auto-fires while moving at half rate (`stats.moveFireRate = 0.5`; rooms keeps stand-still-to-fire, `moveFireRate = 0`), shooters and bosses only fire while on screen (`game.enemyFireOnScreen`), the early spawn ramp is gentler (`BASE_RATE 0.6`, `RATE_PER_SEC 0.015`), and the gem magnet is at least 1.5x the player's speed. A stationary player used to die at about 0:30.
 
