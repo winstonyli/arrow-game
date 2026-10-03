@@ -157,3 +157,33 @@ test('new skills are registered with unique ids', () => {
   for (const id of ['regen', 'magnet', 'homing', 'blade']) assert.ok(ids.includes(id), id);
   assert.equal(new Set(ids).size, ids.length);
 });
+
+test('a homing arrow does not turn back toward the enemy it just pierced', () => {
+  const { world, grid } = rig();
+  const a = spawnEnemy(world, ENEMY.CHASER, 100, 130);
+  grid.rebuild(world, KIND.ENEMY);
+  const p = world.spawn(KIND.PROJECTILE, 100, 100, 0, 500, 4, 0); // heading at the enemy
+  world.life[p] = 5;
+  world.type[p] = 1;
+  world.lastHit[p] = a;
+  world.lastHitGen[p] = world.gen[a];
+  world.y[p] = 160; // already past it, enemy now behind
+  projectileSystem(world, 1 / 60, BOUNDS, grid);
+  assert.equal(world.vx[p], 0);
+});
+
+test('packs and splits respect ENEMY_CAP and stay inside the world', () => {
+  const g = arena();
+  g.time = 40;
+  g.mode.debt = 1;
+  for (let k = 0; k < 799; k++) spawnEnemy(g.world, ENEMY.CHASER, 1500, 1000);
+  g.mode.update(g, 0);
+  assert.equal(g.world.kindCount[KIND.ENEMY], 800); // pack trimmed to the one free slot
+  const s = spawnEnemy(g.world, ENEMY.SPLITTER, 5, 5); // corner: split offsets would leave the world
+  g.mode.onKill(g, s);
+  for (let i = 0; i < g.world.high; i++) {
+    if (g.world.kind[i] !== KIND.ENEMY) continue;
+    assert.ok(g.world.x[i] >= 20 && g.world.y[i] >= 20 || g.world.x[i] === 5);
+  }
+  assert.equal(count(g, ENEMY.SWARMER), 1); // at the cap before the split: none added beyond the pack's one
+});

@@ -54,7 +54,7 @@ export function tick(game, dt) {
   grid.rebuild(world, KIND.ENEMY);
   autoFire(player, world, grid, dt);
   game.kills += collisionSystem(world, grid, player, game.onKill);
-  game.kills += orbitSystem(world, grid, player, game.time, dt, game.onKill);
+  game.kills += orbitSystem(world, grid, player, game.time + dt, dt, game.onKill) // the renderers draw at the post-tick time;
   game.xp += gemSystem(world, player, dt);
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);

@@ -2,6 +2,7 @@ import { KIND } from '../core/world.js';
 import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../game/enemies.js';
 import { spawnGem } from '../game/gems.js';
 import { pickChoices } from '../game/skills.js';
+import { clamp } from '../core/math.js';
 
 export const ARENA_BOUNDS = { w: 3000, h: 2000 };
 
@@ -94,11 +95,11 @@ export function createArena() {
         if (!spawnPoint(game, pt)) break;
         this.debt -= 1;
         const pick = pickMix(game.time, rng);
-        const count = pick ? pick.pack : 1;
+        const count = pick ? Math.max(1, Math.min(pick.pack, ENEMY_CAP - world.kindCount[KIND.ENEMY])) : 1;
         for (let k = 0; k < count; k++) {
           const dx = k === 0 ? 0 : (rng() - 0.5) * 2 * PACK_SPREAD;
           const dy = k === 0 ? 0 : (rng() - 0.5) * 2 * PACK_SPREAD;
-          spawnEnemy(world, pick ? pick.type : ENEMY.CHASER, pt.x + dx, pt.y + dy);
+          spawnEnemy(world, pick ? pick.type : ENEMY.CHASER, clamp(pt.x + dx, WALL_PAD, game.bounds.w - WALL_PAD), clamp(pt.y + dy, WALL_PAD, game.bounds.h - WALL_PAD));
         }
         this.debt -= count - 1;
       }
@@ -120,9 +121,9 @@ export function createArena() {
     onKill(game, j) {
       const { world } = game;
       if (world.type[j] === ENEMY.SPLITTER) {
-        for (let k = 0; k < SPLIT_COUNT; k++) {
+        for (let k = 0; k < SPLIT_COUNT && world.kindCount[KIND.ENEMY] < ENEMY_CAP; k++) {
           const a = game.rng() * Math.PI * 2;
-          spawnEnemy(world, ENEMY.SWARMER, world.x[j] + Math.cos(a) * 14, world.y[j] + Math.sin(a) * 14);
+          spawnEnemy(world, ENEMY.SWARMER, clamp(world.x[j] + Math.cos(a) * 14, WALL_PAD, game.bounds.w - WALL_PAD), clamp(world.y[j] + Math.sin(a) * 14, WALL_PAD, game.bounds.h - WALL_PAD));
         }
       }
       const value = ENEMY_TYPES[world.type[j]].xp;

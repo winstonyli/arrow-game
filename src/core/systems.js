@@ -21,6 +21,7 @@ function steer(world, grid, i, dt) {
   for (let q = 0; q < n; q++) {
     const j = grid.out[q];
     if (world.kind[j] !== KIND.ENEMY) continue;
+    if (j === world.lastHit[i] && world.gen[j] === world.lastHitGen[i]) continue; // just pierced it
     const dx = world.x[j] - world.x[i];
     const dy = world.y[j] - world.y[i];
     const d = dx * dx + dy * dy;
