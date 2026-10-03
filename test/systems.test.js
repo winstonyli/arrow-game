@@ -1,0 +1,117 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { World, KIND } from '../src/core/world.js';
+import { Grid } from '../src/core/grid.js';
+import { createPlayer } from '../src/game/player.js';
+import { ENEMY, spawnEnemy } from '../src/game/enemies.js';
+import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.js';
+
+const bounds = { w: 900, h: 600 };
+const R = 12;
+
+function scene() {
+  return { world: new World(200), grid: new Grid(900, 600, 64, 200), player: createPlayer(450, 500) };
+}
+function shot(world, x, y, { damage = 10, pierce = 0, bounce = 0, vx = 0, vy = 0, life = 5 } = {}) {
+  const i = world.spawn(KIND.PROJECTILE, x, y, vx, vy, 4, 0);
+  world.damage[i] = damage;
+  world.life[i] = life;
+  world.pierce[i] = pierce;
+  world.bounce[i] = bounce;
+  return i;
+}
+function collide({ world, grid, player }) {
+  grid.rebuild(world, KIND.ENEMY);
+  return collisionSystem(world, grid, player, R);
+}
+
+test('a projectile damages an enemy and despawns', () => {
+  const sc = scene();
+  const e = spawnEnemy(sc.world, ENEMY.CHASER, 100, 100);
+  const s = shot(sc.world, 105, 100, { damage: 10 });
+  assert.equal(collide(sc), 0);
+  assert.equal(sc.world.hp[e], 10);
+  assert.equal(sc.world.kind[s], KIND.NONE);
+});
+
+test('a lethal hit despawns the enemy and counts a kill', () => {
+  const sc = scene();
+  const e = spawnEnemy(sc.world, ENEMY.CHASER, 100, 100);
+  shot(sc.world, 105, 100, { damage: 25 });
+  assert.equal(collide(sc), 1);
+  assert.equal(sc.world.kind[e], KIND.NONE);
+});
+
+test('a miss changes nothing', () => {
+  const sc = scene();
+  const e = spawnEnemy(sc.world, ENEMY.CHASER, 100, 100);
+  const s = shot(sc.world, 300, 300);
+  collide(sc);
+  assert.equal(sc.world.hp[e], 20);
+  assert.equal(sc.world.kind[s], KIND.PROJECTILE);
+});
+
+test('pierce 1 hits two overlapping enemies then despawns', () => {
+  const sc = scene();
+  const a = spawnEnemy(sc.world, ENEMY.CHASER, 100, 100);
+  const b = spawnEnemy(sc.world, ENEMY.CHASER, 115, 100);
+  const s = shot(sc.world, 107, 100, { damage: 5, pierce: 1 });
+  collide(sc);
+  assert.equal(sc.world.hp[a], 15);
+  assert.equal(sc.world.hp[b], 15);
+  assert.equal(sc.world.kind[s], KIND.NONE);
+});
+
+test('a piercing projectile does not re-hit the same enemy next tick', () => {
+  const sc = scene();
+  const e = spawnEnemy(sc.world, ENEMY.CHASER, 100, 100);
+  const s = shot(sc.world, 105, 100, { damage: 5, pierce: 1 });
+  collide(sc);
+  collide(sc);
+  assert.equal(sc.world.hp[e], 15);
+  assert.equal(sc.world.kind[s], KIND.PROJECTILE);
+});
+
+test('enemy contact hurts the player once per invulnerability window', () => {
+  const sc = scene();
+  spawnEnemy(sc.world, ENEMY.CHASER, 450, 500);
+  collide(sc);
+  assert.equal(sc.player.hp, 90);
+  collide(sc);
+  assert.equal(sc.player.hp, 90);
+});
+
+test('an enemy projectile hurts the player and despawns', () => {
+  const sc = scene();
+  const p = sc.world.spawn(KIND.ENEMY_PROJECTILE, 450, 500, 0, 0, 5, 0);
+  sc.world.damage[p] = 8;
+  collide(sc);
+  assert.equal(sc.player.hp, 92);
+  assert.equal(sc.world.kind[p], KIND.NONE);
+});
+
+test('moveSystem integrates velocity', () => {
+  const w = new World(4);
+  const i = w.spawn(KIND.ENEMY, 10, 10, 10, -20, 5, 1);
+  moveSystem(w, 0.5);
+  assert.equal(w.x[i], 15);
+  assert.equal(w.y[i], 0);
+});
+
+test('projectiles expire when their life runs out', () => {
+  const { world } = scene();
+  const s = shot(world, 300, 300, { life: 0.05 });
+  projectileSystem(world, 0.1, bounds);
+  assert.equal(world.kind[s], KIND.NONE);
+});
+
+test('projectiles bounce off walls while bounces remain, else despawn', () => {
+  const { world } = scene();
+  const b = shot(world, 3, 300, { vx: -100, bounce: 1 });
+  const d = shot(world, 3, 300, { vx: -100, bounce: 0 });
+  projectileSystem(world, 0.016, bounds);
+  assert.equal(world.kind[b], KIND.PROJECTILE);
+  assert.equal(world.vx[b], 100);
+  assert.equal(world.bounce[b], 0);
+  assert.equal(world.kind[d], KIND.NONE);
+});
