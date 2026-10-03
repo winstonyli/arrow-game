@@ -82,3 +82,17 @@ test('multishot fans out symmetrically', () => {
   assert.ok(Math.abs(vys.reduce((a, b) => a + b, 0)) < 1e-3);
   assert.ok(vys.some((v) => Math.abs(v) < 1e-3));
 });
+
+test('moveFireRate lets the player shoot on the move at a slower cadence', () => {
+  const { world, grid, player } = scene();
+  addEnemy(world, grid, 650, 300);
+  player.stats.moveFireRate = 0.5;
+  player.moving = true;
+  assert.equal(autoFire(player, world, grid, 0.016), 1);
+  assert.equal(autoFire(player, world, grid, 0.6), 0); // attackInterval 0.5 doubles to 1.0 while moving
+  assert.equal(autoFire(player, world, grid, 0.45), 1);
+  player.moving = false;
+  assert.equal(autoFire(player, world, grid, 0.016), 0); // still on the slow cooldown from the last shot
+  assert.equal(autoFire(player, world, grid, 1), 1);
+  assert.equal(autoFire(player, world, grid, 0.55), 1); // standing still: back to 0.5 s
+});

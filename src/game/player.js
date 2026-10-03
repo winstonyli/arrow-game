@@ -13,6 +13,7 @@ export function baseStats() {
     moveSpeed: 220,
     range: 600,
     pickupRadius: 80,
+    moveFireRate: 0, // fire-rate multiplier while moving; 0 = no shooting on the move (rooms), arena sets 0.5
   };
 }
 
@@ -56,9 +57,10 @@ export function fireVolley(world, p, angle) {
 
 export function autoFire(p, world, grid, dt) {
   p.cd = Math.max(0, p.cd - dt);
-  if (p.moving || p.cd > 0) return 0;
+  const rate = p.moving ? p.stats.moveFireRate : 1;
+  if (rate <= 0 || p.cd > 0) return 0;
   const t = grid.nearest(world, p.x, p.y, p.stats.range);
   if (t < 0) return 0;
-  p.cd = p.stats.attackInterval;
+  p.cd = p.stats.attackInterval / rate;
   return fireVolley(world, p, Math.atan2(world.y[t] - p.y, world.x[t] - p.x));
 }

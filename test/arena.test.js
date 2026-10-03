@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, tick } from '../src/game/game.js';
-import { createArena, ARENA_BOUNDS, spawnRate, xpFor, spawnPoint, BOSS_EVERY } from '../src/modes/arena.js';
+import { createArena, ARENA_BOUNDS, spawnRate, xpFor, spawnPoint, BOSS_EVERY, BASE_RATE, RATE_PER_SEC } from '../src/modes/arena.js';
 import { KIND } from '../src/core/world.js';
 import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../src/game/enemies.js';
 import { seeded } from '../src/core/math.js';
@@ -27,13 +27,13 @@ test('the spawn rate ramps with time', () => {
   assert.ok(spawnRate(100) > spawnRate(0));
 });
 
-test('the director spawns about the integral of the rate (5 enemies in the first 5 s)', () => {
+test('the director spawns about the integral of the rate over the first 5 s', () => {
   const g = make();
   for (let k = 0; k < 300; k++) {
     g.time += dt;
     g.mode.update(g, dt);
   }
-  assert.equal(enemies(g).length, 5);
+  assert.equal(enemies(g).length, Math.floor(BASE_RATE * 5 + (RATE_PER_SEC * 25) / 2));
 });
 
 test('spawns land outside the view and inside the world, in the open and near a corner', () => {

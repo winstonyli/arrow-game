@@ -3,6 +3,7 @@ import { KIND } from '../core/world.js';
 export const GEM_RADIUS = 5;
 export const GEM_LIFE = 60; // seconds before an uncollected gem despawns
 const MAGNET_SPEED = 360; // px/s toward the player once inside the pickup radius
+const MAGNET_OVER_MOVE = 1.5; // ...and never slower than this multiple of the player's speed
 
 export function spawnGem(world, x, y, value) {
   const i = world.spawn(KIND.GEM, x, y, 0, 0, GEM_RADIUS, 0);
@@ -16,6 +17,7 @@ export function spawnGem(world, x, y, value) {
 // far fewer than enemies, so it needs no grid.
 export function gemSystem(world, player, dt) {
   const reach = player.stats.pickupRadius;
+  const speed = Math.max(MAGNET_SPEED, MAGNET_OVER_MOVE * player.stats.moveSpeed);
   let xp = 0;
   for (let i = 0; i < world.high; i++) {
     if (world.kind[i] !== KIND.GEM) continue;
@@ -31,7 +33,7 @@ export function gemSystem(world, player, dt) {
       xp += world.damage[i];
       world.despawn(i);
     } else if (d <= reach) {
-      const step = Math.min(MAGNET_SPEED * dt, d);
+      const step = Math.min(speed * dt, d);
       world.x[i] += (dx / d) * step;
       world.y[i] += (dy / d) * step;
     }

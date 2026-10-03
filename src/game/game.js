@@ -38,7 +38,7 @@ export function tick(game, dt) {
   if (game.over || game.offer) return;
   const { world, grid, player, bounds } = game;
   movePlayer(player, game.input, dt, bounds);
-  enemyAISystem(world, player, dt);
+  enemyAISystem(world, player, dt, game.enemyFireOnScreen ? game.camera : null, game.view);
   moveSystem(world, dt);
   projectileSystem(world, dt, bounds);
   grid.rebuild(world, KIND.ENEMY);

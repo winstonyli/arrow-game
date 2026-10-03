@@ -11,6 +11,11 @@ Browser archer roguelite (Archero / arrow.io style). Plain JS, typed-array simul
 Plan 1 (core + rooms mode) implemented; playable at `npm start`. Gameplay feel not yet tuned.
 Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Plan 3 (arena mode + camera) implemented; play it at `/?mode=arena` (rooms stays the default at `/`).
 
+## Arena balance (kiting)
+In arena the player auto-fires while moving at half rate (`stats.moveFireRate = 0.5`; rooms keeps stand-still-to-fire, `moveFireRate = 0`), shooters and bosses only fire while on screen (`game.enemyFireOnScreen`), the early spawn ramp is gentler (`BASE_RATE 0.6`, `RATE_PER_SEC 0.015`), and the gem magnet is at least 1.5x the player's speed. A stationary player used to die at about 0:30.
+
+`node scripts/soak-arena.js --bot=kite --seed=N` runs a crude mortal kiting bot (flees nearby enemies, avoids walls, chases gems, always takes the first offered skill) and reports when it dies. Seeds 1-5 died at 69, 99, 131, 157 and 171 s, all at level 1-2. That is a yardstick for later tuning, not a target: the bot never farms XP deliberately, so a human should do better.
+
 ## Arena soak
 `npm run soak` (`node scripts/soak-arena.js --minutes=10`) runs the arena headless with a stationary invulnerable player, taking the first offered skill at each level-up, and prints one line per game minute (node v26.10.0, seed 1, Defender real-time protection off, machine CPU ~30% busy at the time):
 
@@ -27,7 +32,7 @@ Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?rende
 | 9 | 90 | 622 | 762 | 0 | 17 | 3369 | 0.05 / 0.10 |
 | 10 | 112 | 673 | 838 | 0 | 17 | 4091 | 0.04 / 0.08 |
 
-Caveat: the player is stationary (real play moves, and the player only auto-fires while stationary), so this is a load proxy, not a difficulty measure. Entity counts stay far below the 50k capacity and nothing is dropped.
+Caveat (table above, taken before the kiting change): the player is stationary, so this is a load proxy, not a difficulty measure. The table predates the balance pass below; spawn rates and kiting have changed since. Entity counts stay far below the 50k capacity and nothing is dropped.
 
 ## Stress benchmarks (plan 2)
 - Sim: `npm run bench` (headless, per-system ms/tick; `--n=`, `--scenario=`, `--ticks=`). N is total entities, half enemies and half player projectiles.

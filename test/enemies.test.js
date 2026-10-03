@@ -47,3 +47,16 @@ test('boss fires a ring of 12', () => {
   enemyAISystem(w, { x: 400, y: 100 }, 2);
   assert.equal(w.kindCount[KIND.ENEMY_PROJECTILE], 12);
 });
+
+test('with a camera, a shooter outside the view holds fire and inside it fires', () => {
+  const view = { w: 900, h: 600 };
+  const player = { x: 300, y: 100 };
+  const off = new World(10);
+  spawnEnemy(off, ENEMY.SHOOTER, 100, 100);
+  enemyAISystem(off, player, 2.1, { x: 500, y: 0 }, view); // shooter at x=100 is left of the view
+  assert.equal(off.kindCount[KIND.ENEMY_PROJECTILE], 0);
+  const on = new World(10);
+  spawnEnemy(on, ENEMY.SHOOTER, 100, 100);
+  enemyAISystem(on, player, 2.1, { x: 0, y: 0 }, view);
+  assert.equal(on.kindCount[KIND.ENEMY_PROJECTILE], 1);
+});

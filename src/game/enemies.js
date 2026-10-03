@@ -38,7 +38,8 @@ function enemyFire(world, i, t, aim) {
   }
 }
 
-export function enemyAISystem(world, player, dt) {
+// `camera` (optional, with `view`): when given, enemies only fire while inside the view.
+export function enemyAISystem(world, player, dt, camera = null, view = null) {
   for (let i = 0; i < world.high; i++) {
     if (world.kind[i] !== KIND.ENEMY) continue;
     const t = ENEMY_TYPES[world.type[i]];
@@ -54,7 +55,8 @@ export function enemyAISystem(world, player, dt) {
     }
     if (t.fireInterval > 0) {
       world.cd[i] -= dt;
-      if (world.cd[i] <= 0 && d <= t.fireRange) {
+      const seen = !camera || (world.x[i] >= camera.x && world.x[i] <= camera.x + view.w && world.y[i] >= camera.y && world.y[i] <= camera.y + view.h);
+      if (world.cd[i] <= 0 && d <= t.fireRange && seen) {
         world.cd[i] = t.fireInterval;
         enemyFire(world, i, t, Math.atan2(dy, dx));
       }

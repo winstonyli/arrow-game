@@ -6,8 +6,8 @@ import { pickChoices } from '../game/skills.js';
 export const ARENA_BOUNDS = { w: 3000, h: 2000 };
 
 // Initial tuning; expect to change these in play.
-export const BASE_RATE = 1; // enemies per second at t = 0
-export const RATE_PER_SEC = 0.02; // added per second survived
+export const BASE_RATE = 0.6; // enemies per second at t = 0
+export const RATE_PER_SEC = 0.015; // added per second survived
 export const ENEMY_CAP = 800; // live enemies; the director stops spawning above this
 export const SHOOTER_AFTER = 60; // seconds before shooters join the mix
 export const SHOOTER_SHARE = 0.3;
@@ -53,6 +53,8 @@ export function createArena() {
     start(game) {
       this.debt = 0;
       this.nextBoss = BOSS_EVERY;
+      game.player.stats.moveFireRate = 0.5; // kiting: half fire rate while moving
+      game.enemyFireOnScreen = true;
       game.player.x = game.bounds.w / 2;
       game.player.y = game.bounds.h / 2;
     },

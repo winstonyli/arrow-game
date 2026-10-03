@@ -45,3 +45,11 @@ test('an uncollected gem expires', () => {
   gemSystem(world, player, GEM_LIFE + 1);
   assert.equal(world.kind[g], KIND.NONE);
 });
+
+test('the magnet outpaces a fast player', () => {
+  const { world, player } = setup();
+  player.stats.moveSpeed = 500; // 1.5x = 750 px/s, above the 360 floor
+  const g = spawnGem(world, 450, 440, 1); // 60 away
+  gemSystem(world, player, 0.04); // 750*0.04 = 30 px
+  assert.ok(Math.abs(world.y[g] - 470) < 1e-3);
+});
