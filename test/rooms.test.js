@@ -106,3 +106,11 @@ test('death on the clearing tick ends the game without an offer', () => {
   assert.equal(g.over, true);
   assert.equal(g.offer, null);
 });
+
+test('createGame sets a view and centres the camera inside a larger world', () => {
+  const g = createGame({ capacity: 1000, bounds: { w: 3000, h: 2000 }, mode: createRooms(), rng: seeded(1), input: { x: 0, y: 0 } });
+  assert.deepEqual(g.view, { w: 900, h: 600 });
+  assert.deepEqual(g.camera, { x: 1050, y: 1400 }); // player at (1500, 1920)
+  const rooms = make();
+  assert.deepEqual(rooms.camera, { x: 0, y: 0 });
+});

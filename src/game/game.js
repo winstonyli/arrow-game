@@ -1,17 +1,21 @@
 import { World, KIND } from '../core/world.js';
 import { Grid } from '../core/grid.js';
+import { followCamera } from '../core/camera.js';
 import { moveSystem, projectileSystem, collisionSystem } from '../core/systems.js';
 import { createPlayer, movePlayer, autoFire } from './player.js';
 import { enemyAISystem } from './enemies.js';
 import { applySkill } from './skills.js';
 
 export const BOUNDS = { w: 900, h: 600 };
+export const VIEW = { w: 900, h: 600 };
 
-export function createGame({ capacity = 50000, bounds = BOUNDS, cellSize = 32, rng = Math.random, mode, input }) {
+export function createGame({ capacity = 50000, bounds = BOUNDS, view, cellSize = 32, rng = Math.random, mode, input }) {
   const game = {
     world: new World(capacity),
     grid: new Grid(bounds.w, bounds.h, cellSize, capacity),
     bounds,
+    view: view ?? { w: Math.min(bounds.w, VIEW.w), h: Math.min(bounds.h, VIEW.h) },
+    camera: { x: 0, y: 0 },
     rng,
     input,
     mode,
@@ -22,6 +26,7 @@ export function createGame({ capacity = 50000, bounds = BOUNDS, cellSize = 32, r
     time: 0,
   };
   mode.start(game);
+  followCamera(game.camera, game.player, game.bounds, game.view);
   return game;
 }
 
@@ -38,6 +43,7 @@ export function tick(game, dt) {
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);
   game.time += dt;
+  followCamera(game.camera, player, bounds, game.view);
 }
 
 export function choose(game, skillId) {
