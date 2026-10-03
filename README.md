@@ -9,7 +9,25 @@ Browser archer roguelite (Archero / arrow.io style). Plain JS, typed-array simul
 
 ## Status
 Plan 1 (core + rooms mode) implemented; playable at `npm start`. Gameplay feel not yet tuned.
-Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Next: plan 3 (arena mode + camera).
+Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Plan 3 (arena mode + camera) implemented; play it at `/?mode=arena` (rooms stays the default at `/`).
+
+## Arena soak
+`npm run soak` (`node scripts/soak-arena.js --minutes=10`) runs the arena headless with a stationary invulnerable player, taking the first offered skill at each level-up, and prints one line per game minute (node v26.10.0, seed 1, Defender real-time protection off, machine CPU ~30% busy at the time):
+
+| min | enemies | gems | high | dropped | level | kills | tick ms (median / p95) |
+|---|---|---|---|---|---|---|---|
+| 1 | 43 | 14 | 60 | 0 | 3 | 52 | 0.01 / 0.03 |
+| 2 | 141 | 0 | 168 | 0 | 6 | 122 | 0.02 / 0.05 |
+| 3 | 307 | 0 | 407 | 0 | 8 | 197 | 0.05 / 0.09 |
+| 4 | 421 | 0 | 575 | 0 | 11 | 395 | 0.04 / 0.07 |
+| 5 | 61 | 478 | 583 | 0 | 15 | 1140 | 0.03 / 0.07 |
+| 6 | 63 | 423 | 680 | 0 | 16 | 1594 | 0.04 / 0.06 |
+| 7 | 77 | 483 | 680 | 0 | 16 | 2109 | 0.05 / 0.09 |
+| 8 | 91 | 553 | 682 | 0 | 16 | 2695 | 0.05 / 0.09 |
+| 9 | 90 | 622 | 762 | 0 | 17 | 3369 | 0.05 / 0.10 |
+| 10 | 112 | 673 | 838 | 0 | 17 | 4091 | 0.04 / 0.08 |
+
+Caveat: the player is stationary (real play moves, and the player only auto-fires while stationary), so this is a load proxy, not a difficulty measure. Entity counts stay far below the 50k capacity and nothing is dropped.
 
 ## Stress benchmarks (plan 2)
 - Sim: `npm run bench` (headless, per-system ms/tick; `--n=`, `--scenario=`, `--ticks=`). N is total entities, half enemies and half player projectiles.

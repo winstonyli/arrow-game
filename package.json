@@ -5,6 +5,7 @@
   "scripts": {
     "test": "node --test",
     "start": "node scripts/serve.js",
-    "bench": "node scripts/bench-sim.js"
+    "bench": "node scripts/bench-sim.js",
+    "soak": "node scripts/soak-arena.js"
   }
 }

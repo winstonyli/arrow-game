@@ -7,6 +7,7 @@ import { createWebGLRenderer } from './render/webgl.js';
 import { SKILLS_BY_ID } from './game/skills.js';
 import { createStress } from './modes/stress.js';
 import { ENEMY } from './game/enemies.js';
+import { createArena, ARENA_BOUNDS } from './modes/arena.js';
 
 const picker = document.getElementById('picker');
 const over = document.getElementById('over');
@@ -44,10 +45,13 @@ function makeRenderer() {
 }
 const render = makeRenderer();
 const stressN = Number(params.get('stress')) || 0;
+const arena = params.get('mode') === 'arena' && !stressN;
 const makeMode = () =>
   stressN
     ? createStress({ enemies: stressN / 2, projectiles: stressN / 2, enemyType: params.get('scenario') === 'converge' ? ENEMY.CHASER : ENEMY.DUMMY })
-    : createRooms();
+    : arena
+      ? createArena()
+      : createRooms();
 
 function frameStats() {
   const s = Float32Array.from(frames.subarray(0, Math.min(frameCount, frames.length))).sort();
@@ -55,7 +59,7 @@ function frameStats() {
 }
 
 function newGame() {
-  game = createGame({ mode: makeMode(), input });
+  game = createGame({ mode: makeMode(), bounds: arena ? ARENA_BOUNDS : undefined, input });
   shownOffer = undefined;
 }
 document.getElementById('restart').onclick = newGame;
@@ -74,11 +78,14 @@ function syncUI() {
     picker.hidden = !game.offer;
   }
   over.hidden = !game.over;
-  if (game.over) overText.textContent = `Game over: reached room ${game.mode.room}, ${game.kills} kills`;
+  if (game.over) {
+    const parts = [game.mode.summary?.(game), `${game.kills} kills`].filter(Boolean);
+    overText.textContent = `Game over: ${parts.join(', ')}`;
+  }
 }
 
 newGame();
-window.arrowGame = { get game() { return game; }, frameStats, renderer: render.kind };
+window.arrowGame = { get game() { return game; }, frameStats, renderer: render.kind, mode: params.get('mode') ?? 'rooms' };
 
 startLoop(
   createStepper(),
@@ -96,7 +103,7 @@ startLoop(
     lastFrame = t0;
     syncUI();
     render(game, [
-      `Room ${game.mode.room}  HP ${Math.max(0, Math.ceil(game.player.hp))}  Kills ${game.kills}`,
+      `${game.mode.hud?.(game) ?? ''}  HP ${Math.max(0, Math.ceil(game.player.hp))}  Kills ${game.kills}`,
       `entities ${game.world.count}  dropped ${game.world.dropped}  sim ${simMs.toFixed(2)} ms  draw ${drawMs.toFixed(2)} ms  frame ${frameMs.toFixed(1)} ms`,
     ]);
     drawMs = drawMs * 0.9 + (performance.now() - t0) * 0.1;
