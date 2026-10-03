@@ -1,0 +1,60 @@
+export const KIND = { NONE: 0, ENEMY: 1, PROJECTILE: 2, ENEMY_PROJECTILE: 3 };
+
+export class World {
+  constructor(capacity) {
+    this.capacity = capacity;
+    for (const f of ['x', 'y', 'vx', 'vy', 'radius', 'hp', 'damage', 'life', 'cd']) {
+      this[f] = new Float32Array(capacity);
+    }
+    this.type = new Uint8Array(capacity);
+    this.pierce = new Uint8Array(capacity);
+    this.bounce = new Uint8Array(capacity);
+    this.lastHit = new Int32Array(capacity);
+    this.kind = new Uint8Array(capacity); // 0 = free slot
+    this.free = new Uint32Array(capacity);
+    for (let k = 0; k < capacity; k++) this.free[k] = capacity - 1 - k;
+    this.freeCount = capacity;
+    this.high = 0; // one past the highest slot ever used; iterate 0..high
+    this.dropped = 0;
+    this.kindCount = new Uint32Array(4);
+  }
+
+  get count() {
+    return this.capacity - this.freeCount;
+  }
+
+  spawn(kind, x, y, vx, vy, radius, hp) {
+    if (this.freeCount === 0) {
+      this.dropped++;
+      return -1;
+    }
+    const i = this.free[--this.freeCount];
+    this.kind[i] = kind;
+    this.x[i] = x;
+    this.y[i] = y;
+    this.vx[i] = vx;
+    this.vy[i] = vy;
+    this.radius[i] = radius;
+    this.hp[i] = hp;
+    this.damage[i] = 0;
+    this.life[i] = 0;
+    this.cd[i] = 0;
+    this.type[i] = 0;
+    this.pierce[i] = 0;
+    this.bounce[i] = 0;
+    this.lastHit[i] = -1;
+    if (i >= this.high) this.high = i + 1;
+    this.kindCount[kind]++;
+    return i;
+  }
+
+  despawn(i) {
+    this.kindCount[this.kind[i]]--;
+    this.kind[i] = KIND.NONE;
+    this.free[this.freeCount++] = i;
+  }
+
+  clearKind(kind) {
+    for (let i = 0; i < this.high; i++) if (this.kind[i] === kind) this.despawn(i);
+  }
+}
