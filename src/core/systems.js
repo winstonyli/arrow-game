@@ -48,8 +48,8 @@ function hurt(player, dmg) {
   player.invuln = 0.5;
 }
 
-// grid must be rebuilt for KIND.ENEMY this tick; grid.maxRadius sizes the candidate search. Returns the number of enemies killed.
-export function collisionSystem(world, grid, player) {
+// grid must be rebuilt for KIND.ENEMY this tick; grid.maxRadius sizes the candidate search. onKill(enemyIndex), if given, runs before a killed enemy is despawned. Returns the number of enemies killed.
+export function collisionSystem(world, grid, player, onKill) {
   let kills = 0;
   for (let i = 0; i < world.high; i++) {
     const k = world.kind[i];
@@ -66,6 +66,7 @@ export function collisionSystem(world, grid, player) {
         if (dx * dx + dy * dy > rr * rr) continue;
         world.hp[j] -= world.damage[i];
         if (world.hp[j] <= 0) {
+          if (onKill) onKill(j);
           world.despawn(j);
           kills++;
         }

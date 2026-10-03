@@ -5,6 +5,7 @@ import { moveSystem, projectileSystem, collisionSystem } from '../core/systems.j
 import { createPlayer, movePlayer, autoFire } from './player.js';
 import { enemyAISystem } from './enemies.js';
 import { applySkill } from './skills.js';
+import { gemSystem } from './gems.js';
 
 export const BOUNDS = { w: 900, h: 600 };
 export const VIEW = { w: 900, h: 600 };
@@ -23,8 +24,11 @@ export function createGame({ capacity = 50000, bounds = BOUNDS, view, cellSize =
     offer: null,
     over: false,
     kills: 0,
+    xp: 0,
+    level: 1,
     time: 0,
   };
+  game.onKill = mode.onKill ? (j) => mode.onKill(game, j) : undefined;
   mode.start(game);
   followCamera(game.camera, game.player, game.bounds, game.view);
   return game;
@@ -39,7 +43,8 @@ export function tick(game, dt) {
   projectileSystem(world, dt, bounds);
   grid.rebuild(world, KIND.ENEMY);
   autoFire(player, world, grid, dt);
-  game.kills += collisionSystem(world, grid, player);
+  game.kills += collisionSystem(world, grid, player, game.onKill);
+  game.xp += gemSystem(world, player, dt);
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);
   game.time += dt;

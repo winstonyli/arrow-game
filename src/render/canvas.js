@@ -32,6 +32,7 @@ export function createCanvasRenderer(canvas, view) {
 
     ctx.setTransform(1, 0, 0, 1, -camera.x, -camera.y);
     for (let t = 0; t < ENEMY_TYPES.length; t++) circles(world, KIND.ENEMY, t, ENEMY_TYPES[t].color);
+    circles(world, KIND.GEM, -1, '#f2cc60');
     circles(world, KIND.ENEMY_PROJECTILE, -1, '#ff7b72');
     circles(world, KIND.PROJECTILE, -1, '#58a6ff');
 

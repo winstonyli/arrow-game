@@ -9,7 +9,8 @@ const P_ENEMY_PROJECTILE = ENEMY_TYPES.length;
 const P_PROJECTILE = P_ENEMY_PROJECTILE + 1;
 const P_PLAYER = P_PROJECTILE + 1;
 const P_PLAYER_BLINK = P_PLAYER + 1;
-const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950'];
+const P_GEM = P_PLAYER_BLINK + 1;
+const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60'];
 const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));
 
 // Fills `out` with one instance per live entity that is at least partly inside the view, plus the
@@ -33,7 +34,8 @@ export function packInstances(world, player, game, out) {
     out[o] = x;
     out[o + 1] = y;
     out[o + 2] = r;
-    out[o + 3] = k === KIND.ENEMY ? world.type[i] : k === KIND.PROJECTILE ? P_PROJECTILE : P_ENEMY_PROJECTILE;
+    out[o + 3] =
+      k === KIND.ENEMY ? world.type[i] : k === KIND.PROJECTILE ? P_PROJECTILE : k === KIND.GEM ? P_GEM : P_ENEMY_PROJECTILE;
   }
   const o = n++ * STRIDE;
   out[o] = player.x;

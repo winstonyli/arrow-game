@@ -132,3 +132,19 @@ test('a piercing projectile hits a new enemy that reuses the slot of the one it 
   assert.equal(n, e); // LIFO free list reuses the slot
   assert.equal(collide(sc), 1); // the new enemy is a different occupant, so it is hit
 });
+
+test('onKill is called once, before the enemy is despawned, only for lethal hits', () => {
+  const sc = scene();
+  const e = spawnEnemy(sc.world, ENEMY.CHASER, 100, 100);
+  const seen = [];
+  const run = () => {
+    sc.grid.rebuild(sc.world, KIND.ENEMY);
+    return collisionSystem(sc.world, sc.grid, sc.player, (j) => seen.push([j, sc.world.kind[j]]));
+  };
+  shot(sc.world, 105, 100, { damage: 10 }); // hp 20 -> 10: not lethal
+  run();
+  assert.deepEqual(seen, []);
+  shot(sc.world, 105, 100, { damage: 10 }); // lethal
+  assert.equal(run(), 1);
+  assert.deepEqual(seen, [[e, KIND.ENEMY]]);
+});

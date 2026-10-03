@@ -12,6 +12,7 @@ export function baseStats() {
     bounce: 0,
     moveSpeed: 220,
     range: 600,
+    pickupRadius: 80,
   };
 }
 

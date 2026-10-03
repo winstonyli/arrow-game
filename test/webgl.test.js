@@ -58,3 +58,11 @@ test('packInstances follows the camera', () => {
   assert.equal(packInstances(w, player(), G(), out), 1); // player only
   assert.equal(packInstances(w, player(), G({ camera: { x: 1500, y: 0 } }), out), 2);
 });
+
+test('gems pack with their own palette index', () => {
+  const w = new World(2);
+  w.spawn(KIND.GEM, 10, 10, 0, 0, 5, 0);
+  const out = new Float32Array(3 * STRIDE);
+  packInstances(w, player(), G(), out);
+  assert.equal(out[3], ENEMY_TYPES.length + 4);
+});
