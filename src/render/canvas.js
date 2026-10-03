@@ -170,6 +170,8 @@ export function createCanvasRenderer(canvas, view) {
     }
     ctx.fillStyle = '#c9d1d9';
     ctx.font = '14px monospace';
-    hud.forEach((line, k) => ctx.fillText(line, 10, 20 + k * 18));
+    ctx.textAlign = 'center';
+    hud.forEach((line, k) => ctx.fillText(line, view.w / 2, view.h - 8 - (hud.length - 1 - k) * 18));
+    ctx.textAlign = 'left';
   };
 }

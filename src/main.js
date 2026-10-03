@@ -6,14 +6,13 @@ import { createCanvasRenderer } from './render/canvas.js';
 import { createWebGLRenderer } from './render/webgl.js';
 import { createFx } from './render/fx.js';
 import { createSfx } from './audio/sfx.js';
-import { SKILLS_BY_ID } from './game/skills.js';
+import { createUi } from './ui/ui.js';
+import { hudModel, overModel, resultOf, bestLine } from './ui/model.js';
+import { loadBest, submit } from './game/records.js';
 import { createStress } from './modes/stress.js';
 import { ENEMY } from './game/enemies.js';
 import { createArena, ARENA_BOUNDS } from './modes/arena.js';
 
-const picker = document.getElementById('picker');
-const over = document.getElementById('over');
-const overText = document.getElementById('over-text');
 const input = createInput();
 
 let game;
@@ -47,11 +46,21 @@ function makeRenderer() {
 }
 const render = makeRenderer();
 const stressN = Number(params.get('stress')) || 0;
-const arena = params.get('mode') === 'arena' && !stressN;
+const debug = params.has('debug');
+const direct = !!stressN || params.has('mode'); // benchmarks and verify scripts: no title, no auto-pause
+let kind = params.get('mode') === 'arena' ? 'arena' : 'rooms';
+let screen = 'title'; // title | play | pause | over | none (stress: no UI, the sim always runs)
+const storage = (() => {
+  try {
+    return localStorage;
+  } catch {
+    return null;
+  }
+})();
 const makeMode = () =>
   stressN
     ? createStress({ enemies: stressN / 2, projectiles: stressN / 2, enemyType: params.get('scenario') === 'converge' ? ENEMY.CHASER : ENEMY.DUMMY })
-    : arena
+    : kind === 'arena'
       ? createArena()
       : createRooms();
 
@@ -78,39 +87,84 @@ if (!stressN) {
 }
 
 function newGame() {
-  game = createGame({ mode: makeMode(), bounds: arena ? ARENA_BOUNDS : undefined, input, fx: stressN ? undefined : createFx(CAPACITY), sfx });
+  game = createGame({ mode: makeMode(), bounds: kind === 'arena' && !stressN ? ARENA_BOUNDS : undefined, input, fx: stressN ? undefined : createFx(CAPACITY), sfx });
   shownOffer = undefined;
 }
-document.getElementById('restart').onclick = newGame;
+
+function setScreen(next) {
+  screen = next;
+  ui.show(next);
+}
+function play(k) {
+  kind = k;
+  newGame();
+  setScreen('play');
+}
+function pause() {
+  if (screen === 'play' && !game.offer && !game.over) setScreen('pause');
+}
+function resume() {
+  if (screen === 'pause') setScreen('play');
+}
+function refreshBests() {
+  ui.setBests({ arena: bestLine('arena', loadBest(storage, 'arena')), rooms: bestLine('rooms', loadBest(storage, 'rooms')) });
+}
+function quit() {
+  newGame();
+  setScreen('title');
+  refreshBests();
+}
+function finish() {
+  const rec = stressN ? null : submit(storage, kind, resultOf(game, kind));
+  ui.showOver(overModel(game, kind, rec));
+  setScreen('over');
+}
+
+const ui = createUi(document.getElementById('ui'), {
+  onPlay: play,
+  onResume: resume,
+  onQuit: quit,
+  onAgain: () => play(kind),
+  onPause: pause,
+  onPick: (id) => choose(game, id),
+  onToggleSound: () => (sfx ? sfx.toggleMute() : false),
+});
+
+addEventListener('keydown', (e) => {
+  if (e.repeat || (e.code !== 'Escape' && e.code !== 'KeyP')) return;
+  if (screen === 'play') pause();
+  else if (screen === 'pause') resume();
+});
+if (!direct) {
+  addEventListener('blur', pause);
+  document.addEventListener('visibilitychange', () => document.hidden && pause());
+}
 
 function syncUI() {
+  if (screen === 'play' && game.over) finish();
   if (game.offer !== shownOffer) {
     shownOffer = game.offer;
-    picker.replaceChildren(
-      ...(game.offer ?? []).map((id) => {
-        const b = document.createElement('button');
-        b.textContent = `${SKILLS_BY_ID[id].name}: ${SKILLS_BY_ID[id].desc}`;
-        b.onclick = () => choose(game, id);
-        return b;
-      }),
-    );
-    picker.hidden = !game.offer;
+    ui.setOffer(game.offer, kind === 'rooms' ? 'Room cleared' : `Level ${game.level}`);
   }
-  over.hidden = !game.over;
-  if (game.over) {
-    const parts = [game.mode.summary?.(game), `${game.kills} kills`].filter(Boolean);
-    overText.textContent = `Game over: ${parts.join(', ')}`;
-  }
+  if (screen === 'play' || screen === 'pause') ui.update(hudModel(game, kind), sfx?.muted);
 }
 
 newGame();
-window.arrowGame = { get game() { return game; }, frameStats, renderer: render.kind, mode: params.get('mode') ?? 'rooms' };
+refreshBests();
+setScreen(stressN ? 'none' : direct ? 'play' : 'title');
+window.arrowGame = {
+  get game() { return game; },
+  get screen() { return screen; },
+  get mode() { return kind; },
+  frameStats,
+  renderer: render.kind,
+};
 
 startLoop(
   createStepper(),
   (dt) => {
     const t0 = performance.now();
-    tick(game, dt);
+    if (screen === 'play' || screen === 'none') tick(game, dt);
     simMs = simMs * 0.9 + (performance.now() - t0) * 0.1;
   },
   () => {
@@ -124,13 +178,18 @@ startLoop(
     syncUI();
     if (game.fx) {
       game.fx.observe(game);
-      game.fx.update(game.offer || game.over ? 0 : frameDt); // freeze effects while paused
+      game.fx.update((screen === 'play' || screen === 'none') && !game.offer && !game.over ? frameDt : 0); // freeze effects while paused
     }
     sfx?.observe(game);
-    render(game, [
-      `${game.mode.hud?.(game) ?? ''}  HP ${Math.max(0, Math.ceil(game.player.hp))}  Kills ${game.kills}${sfx?.muted ? "  [muted, M]" : ""}`,
-      `entities ${game.world.count}  dropped ${game.world.dropped}  sim ${simMs.toFixed(2)} ms  draw ${drawMs.toFixed(2)} ms  frame ${frameMs.toFixed(1)} ms`,
-    ]);
+    render(
+      game,
+      debug
+        ? [
+            `${game.mode.hud?.(game) ?? ''}  HP ${Math.max(0, Math.ceil(game.player.hp))}  Kills ${game.kills}`,
+            `entities ${game.world.count}  dropped ${game.world.dropped}  sim ${simMs.toFixed(2)} ms  draw ${drawMs.toFixed(2)} ms  frame ${frameMs.toFixed(1)} ms`,
+          ]
+        : [],
+    );
     drawMs = drawMs * 0.9 + (performance.now() - t0) * 0.1;
   },
 );

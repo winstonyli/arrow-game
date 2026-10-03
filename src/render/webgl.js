@@ -252,7 +252,9 @@ export function createWebGLRenderer(canvas, hudCanvas, bgCanvas, view) {
     }
     hud2d.fillStyle = '#c9d1d9';
     hud2d.font = '14px monospace';
-    hud.forEach((line, k) => hud2d.fillText(line, 10, 20 + k * 18));
+    hud2d.textAlign = 'center';
+    hud.forEach((line, k) => hud2d.fillText(line, view.w / 2, view.h - 8 - (hud.length - 1 - k) * 18));
+    hud2d.textAlign = 'left';
   }
   render.adapter = adapter;
   return render;
