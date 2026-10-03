@@ -34,3 +34,20 @@ test('pickChoices returns distinct valid ids for any rng', () => {
     for (const id of picks) assert.ok(ids.has(id));
   }
 });
+
+test('rooms never offers arena skills; arena does, minus owned or maxed ones', () => {
+  const arenaIds = SKILLS.filter((s) => s.arena).map((s) => s.id);
+  for (const rng of [() => 0, () => 0.5, () => 0.999]) {
+    for (const id of pickChoices(rng, 3)) assert.ok(!arenaIds.includes(id), id);
+  }
+  const seen = new Set();
+  for (let k = 0; k < 200; k++) pickChoices(Math.random, 3, baseStats(), true).forEach((id) => seen.add(id));
+  for (const id of arenaIds) assert.ok(seen.has(id), id);
+  const s = baseStats();
+  applySkill(s, 'homing');
+  s.orbit = 8;
+  for (let k = 0; k < 100; k++) {
+    const picks = pickChoices(Math.random, 3, s, true);
+    assert.ok(!picks.includes('homing') && !picks.includes('blade'));
+  }
+});

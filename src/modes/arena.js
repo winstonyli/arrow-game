@@ -112,7 +112,7 @@ export function createArena() {
       if (game.xp >= need) {
         game.xp -= need;
         game.level++;
-        game.offer = pickChoices(rng, 3);
+        game.offer = pickChoices(rng, 3, game.player.stats, true);
       }
     },
 
