@@ -4,6 +4,8 @@
 // createSfx(ctx) takes an AudioContext (or a test fake). Nothing plays until ctx.state is 'running', which
 // browsers allow only after a user gesture: call resume() from the first key press or touch.
 export const MASTER_GAIN = 0.4;
+const ATTACK = 0.014; // seconds; slower than a click so shots and hits thump instead of snap
+const TONE_CUTOFF = 3500; // Hz, master low-pass that takes the edge off everything
 const GAIN_SCALE = 4; // per-voice gains below are relative; this sets the overall level (measured offline: a kill peaks near 0.1)
 export const MAX_VOICES = 24;
 export const MIN_GAP = { fire: 0.045, hit: 0.035, kill: 0.03, pickup: 0.02, hurt: 0.1 }; // seconds between plays of one sound
@@ -21,7 +23,12 @@ export function createSfx(ctx, storage = null) {
   comp.ratio.value = 6;
   comp.attack.value = 0.003;
   comp.release.value = 0.1;
-  master.connect(comp);
+  const soften = ctx.createBiquadFilter();
+  soften.type = 'lowpass';
+  soften.frequency.value = TONE_CUTOFF;
+  soften.Q.value = 0.5;
+  master.connect(soften);
+  soften.connect(comp);
   comp.connect(ctx.destination);
   let muted = false;
   try {
@@ -57,7 +64,7 @@ export function createSfx(ctx, storage = null) {
     o.frequency.setValueAtTime(f0, t);
     o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain * GAIN_SCALE, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(gain * GAIN_SCALE, t + ATTACK);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g);
     g.connect(master);
@@ -79,7 +86,7 @@ export function createSfx(ctx, storage = null) {
     f.frequency.setValueAtTime(f0, t);
     f.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain * GAIN_SCALE, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(gain * GAIN_SCALE, t + ATTACK);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     s.connect(f);
     f.connect(g);
@@ -118,24 +125,24 @@ export function createSfx(ctx, storage = null) {
 
     fire() {
       if (!allow('fire')) return;
-      noise({ f0: 2600 * jitter(0.08), f1: 700, q: 2, dur: 0.07, gain: 0.3 });
-      tone({ f0: 520 * jitter(0.08), f1: 260, dur: 0.05, type: 'triangle', gain: 0.08 });
+      noise({ f0: 1500 * jitter(0.08), f1: 500, q: 0.8, dur: 0.1, gain: 0.16 });
+      tone({ f0: 330 * jitter(0.08), f1: 200, dur: 0.09, type: 'sine', gain: 0.1 });
     },
 
     hit() {
       if (!allow('hit')) return;
-      tone({ f0: 900 * jitter(0.1), f1: 500, dur: 0.035, type: 'square', gain: 0.12 });
+      tone({ f0: 420 * jitter(0.1), f1: 260, dur: 0.07, type: 'sine', gain: 0.14 });
     },
 
     // `radius` is the dead enemy's radius; big ones sound heavier.
     kill(radius = 10) {
       if (!allow('kill')) return;
       if (radius >= HEAVY_RADIUS) {
-        tone({ f0: 160 * jitter(0.05), f1: 40, dur: 0.28, type: 'sawtooth', gain: 0.22 });
-        noise({ f0: 900, f1: 120, q: 0.8, dur: 0.22, gain: 0.28 });
+        tone({ f0: 150 * jitter(0.05), f1: 45, dur: 0.34, type: 'triangle', gain: 0.26 });
+        noise({ f0: 600, f1: 120, q: 0.6, dur: 0.26, gain: 0.14 });
       } else {
-        tone({ f0: 420 * jitter(0.1), f1: 110, dur: 0.12, type: 'triangle', gain: 0.2 });
-        noise({ f0: 1800, f1: 500, q: 1, dur: 0.06, gain: 0.14 });
+        tone({ f0: 360 * jitter(0.1), f1: 120, dur: 0.16, type: 'sine', gain: 0.22 });
+        noise({ f0: 900, f1: 350, q: 0.7, dur: 0.09, gain: 0.07 });
       }
     },
 
@@ -156,14 +163,14 @@ export function createSfx(ctx, storage = null) {
 
     hurt() {
       if (!allow('hurt')) return;
-      tone({ f0: 140, f1: 55, dur: 0.22, type: 'sawtooth', gain: 0.28 });
-      noise({ f0: 1200, f1: 200, q: 0.7, dur: 0.18, gain: 0.22 });
+      tone({ f0: 140, f1: 55, dur: 0.26, type: 'triangle', gain: 0.3 });
+      noise({ f0: 700, f1: 160, q: 0.6, dur: 0.2, gain: 0.12 });
     },
 
     boss() {
       if (muted || !live()) return;
-      tone({ f0: 55, f1: 220, dur: 0.9, type: 'sawtooth', gain: 0.22 });
-      noise({ f0: 200, f1: 1500, q: 0.6, dur: 0.9, gain: 0.12 });
+      tone({ f0: 55, f1: 220, dur: 0.9, type: 'triangle', gain: 0.24 });
+      noise({ f0: 200, f1: 1000, q: 0.5, dur: 0.9, gain: 0.07 });
     },
 
     gameOver() {
