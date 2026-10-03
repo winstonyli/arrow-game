@@ -117,3 +117,75 @@ test('get returns null when the stored replay is corrupt', () => {
   st.m.set('arrow-replay-arena-1', '{"v":1');
   assert.equal(s.get('arena', 1), null);
 });
+
+// Invariant: every listed entry has data (unless stale) and every data key is listed.
+function consistent(st, s) {
+  const listed = new Set(s.list().map((e) => `arrow-replay-${e.mode}-${e.seed}`));
+  for (const e of s.list()) if (!e.stale) assert.ok(s.get(e.mode, e.seed), `entry ${e.seed} has no data`);
+  for (const k of st.m.keys()) if (k !== 'arrow-replay-index') assert.ok(listed.has(k), `orphan data ${k}`);
+}
+
+test('a failed retry rolls back to a consistent store', () => {
+  const one = JSON.stringify(arena(1, 10)).length;
+  for (const quota of [one + 60, one + 150, one * 2 + 250, one * 2 + 350]) {
+    const st = memory(quota);
+    const s = createStore(st);
+    for (const seed of [1, 2, 3, 4]) {
+      s.submit(arena(seed, 10));
+      consistent(st, s);
+    }
+    // improving an existing entry may also fail mid-way
+    s.submit(arena(4, 50));
+    consistent(st, s);
+  }
+});
+
+test('a failed submit over an existing entry drops it consistently', () => {
+  const st = memory(400);
+  const s = createStore(st);
+  s.submit(arena(1, 10));
+  const r = s.submit(arena(1, 20, 0, { savedAt: 99 }));
+  consistent(st, s);
+  if (!r.saved) assert.equal(s.list().length, 0);
+});
+
+test('a cap of 0 or less never drops the just-saved entry', () => {
+  for (const cap of [0, -3]) {
+    const s = createStore(memory(), { cap });
+    assert.equal(s.submit(arena(1, 10)).saved, true);
+    assert.equal(s.submit(arena(2, 10)).saved, true);
+    assert.deepEqual(s.list().map((e) => e.seed), [2]);
+    assert.ok(s.get('arena', 2));
+  }
+});
+
+test('with equal savedAt the older (later in the list) entry is dropped first', () => {
+  const st = memory();
+  const s = createStore(st, { cap: 2 });
+  for (const seed of [1, 2, 3]) s.submit(arena(seed, 10, 0, { savedAt: 7 }));
+  assert.deepEqual(s.list().map((e) => e.seed), [3, 2]);
+});
+
+test('remove leaves the index alone when it cannot be read', () => {
+  const st = memory();
+  const s = createStore(st);
+  s.submit(arena(1, 10));
+  const before = st.m.get('arrow-replay-index');
+  const real = st.getItem;
+  let armed = true;
+  st.getItem = (k) => {
+    if (armed && k === 'arrow-replay-index') { armed = false; throw new Error('flaky'); }
+    return real(k);
+  };
+  s.remove('arena', 1);
+  assert.equal(st.m.get('arrow-replay-index'), before);
+  assert.ok(s.get('arena', 1));
+});
+
+test('get rejects a blob whose own sim differs from the index entry', () => {
+  const st = memory();
+  const s = createStore(st);
+  s.submit(arena(1, 10));
+  st.m.set('arrow-replay-arena-1', JSON.stringify(arena(1, 10, 0, { sim: SIM_VERSION - 1 })));
+  assert.equal(s.get('arena', 1), null);
+});

@@ -24,16 +24,19 @@ const summary = (/** @type {any} */ r, /** @type {string} */ label) => ({
  * Every access is guarded: storage can be missing, full or throw.
  */
 export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
-  const readIndex = () => {
+  cap = Math.max(1, cap);
+  /** The valid index entries, or null when the index cannot be read (distinct from empty). */
+  const tryIndex = () => {
     try {
       const v = JSON.parse(storage?.getItem(INDEX) ?? '[]');
-      return Array.isArray(v) ? v.filter(isEntry) : [];
+      return Array.isArray(v) ? v.filter(isEntry) : null;
     } catch {
-      return [];
+      return null;
     }
   };
+  const readIndex = () => tryIndex() ?? [];
   const oldestOf = (/** @type {any[]} */ list, /** @type {any} */ except) =>
-    list.filter((e) => e !== except).reduce((a, e) => (a && a.savedAt <= e.savedAt ? a : e), null);
+    list.filter((e) => e !== except).reduce((a, e) => (a && a.savedAt < e.savedAt ? a : e), null);
   const drop = (/** @type {any} */ e) => {
     try {
       storage.removeItem(keyOf(e.mode, e.seed));
@@ -48,7 +51,8 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
       try {
         const e = readIndex().find((x) => x.mode === mode && x.seed === seed);
         if (!e || e.sim !== SIM_VERSION) return null;
-        return validate(JSON.parse(storage.getItem(keyOf(mode, seed))));
+        const r = validate(JSON.parse(storage.getItem(keyOf(mode, seed))));
+        return r.sim === SIM_VERSION ? r : null;
       } catch {
         return null;
       }
@@ -62,8 +66,13 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
         if (old && old.sim === SIM_VERSION && !better(replay.mode, replay.result, old)) return none;
         const entry = summary(replay, label);
         const next = [entry, ...idx.filter((e) => e !== old)];
-        const evicted = [];
-        while (next.length > cap) evicted.push(next.splice(next.indexOf(oldestOf(next, entry)), 1)[0]);
+        /** Entries whose data we have already removed: they must leave the index too. */
+        const gone = [];
+        const free = (/** @type {any} */ e) => {
+          drop(e);
+          gone.push(e);
+        };
+        while (next.length > cap) free(next.splice(next.indexOf(oldestOf(next, entry)), 1)[0]);
         const put = () => {
           storage.setItem(keyOf(replay.mode, replay.seed), JSON.stringify(replay));
           storage.setItem(INDEX, JSON.stringify(next));
@@ -71,13 +80,22 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
         try {
           put();
         } catch (e) {
-          const victim = oldestOf(next, entry);
-          if (!victim) throw e;
-          next.splice(next.indexOf(victim), 1);
-          drop(victim); // free its data before retrying
-          put(); // a second failure propagates to the outer catch
+          try {
+            const victim = oldestOf(next, entry);
+            if (!victim) throw e;
+            next.splice(next.indexOf(victim), 1);
+            free(victim); // free its data before retrying
+            put();
+          } catch {
+            // Roll back to a consistent state: no data without an index entry, no entry without data.
+            drop(entry);
+            const keep = idx.filter((x) => x !== old && !gone.includes(x));
+            try {
+              storage.setItem(INDEX, JSON.stringify(keep));
+            } catch {}
+            return none;
+          }
         }
-        evicted.forEach(drop);
         return { saved: true, isBest: true };
       } catch {
         return none;
@@ -85,7 +103,9 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
     },
     remove(/** @type {string} */ mode, /** @type {number} */ seed) {
       try {
-        storage.setItem(INDEX, JSON.stringify(readIndex().filter((e) => !(e.mode === mode && e.seed === seed))));
+        const idx = tryIndex();
+        if (!idx) return;
+        storage.setItem(INDEX, JSON.stringify(idx.filter((e) => !(e.mode === mode && e.seed === seed))));
         storage.removeItem(keyOf(mode, seed));
       } catch {}
     },
