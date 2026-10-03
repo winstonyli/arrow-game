@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "start": "node scripts/serve.js"
+    "start": "node scripts/serve.js",
+    "bench": "node scripts/bench-sim.js"
   }
 }

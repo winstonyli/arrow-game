@@ -1,11 +1,13 @@
 import { KIND } from '../core/world.js';
 
-export const ENEMY = { CHASER: 0, SHOOTER: 1, BOSS: 2 };
+export const ENEMY = { CHASER: 0, SHOOTER: 1, BOSS: 2, DUMMY: 3 };
 
 export const ENEMY_TYPES = [
   { name: 'chaser', radius: 10, hp: 20, speed: 90, contact: 10, keepDist: 0, fireInterval: 0, fireRange: 0, projSpeed: 0, projDamage: 0, projCount: 0, ring: false, color: '#e5534b' },
   { name: 'shooter', radius: 11, hp: 30, speed: 70, contact: 5, keepDist: 240, fireInterval: 2, fireRange: 420, projSpeed: 220, projDamage: 8, projCount: 1, ring: false, color: '#d29922' },
   { name: 'boss', radius: 36, hp: 600, speed: 45, contact: 20, keepDist: 160, fireInterval: 1.6, fireRange: 600, projSpeed: 200, projDamage: 10, projCount: 12, ring: true, color: '#a371f7' },
+  // Static, unkillable target used only by the stress mode: keepDist is huge, so the AI never moves it.
+  { name: 'dummy', radius: 10, hp: 1e9, speed: 0, contact: 0, keepDist: 1e9, fireInterval: 0, fireRange: 0, projSpeed: 0, projDamage: 0, projCount: 0, ring: false, color: '#8b949e' },
 ];
 
 export const MAX_ENEMY_RADIUS = 36;

@@ -9,4 +9,18 @@ Browser archer roguelite (Archero / arrow.io style). Plain JS, typed-array simul
 
 ## Status
 Plan 1 (core + rooms mode) implemented; playable at `npm start`. Gameplay feel not yet tuned.
-Next: plan 2 (20k-entity stress test + profiling, WebGL decision), plan 3 (arena mode + camera).
+Plan 2 sim benchmark done (see below); browser render benchmark pending. Next: plan 3 (arena mode + camera).
+
+## Stress benchmarks (plan 2)
+- Sim: `npm run bench` (headless, per-system ms/tick; `--n=`, `--scenario=`, `--ticks=`). N is total entities, half enemies and half player projectiles.
+- Browser: open `/?stress=N` (add `&scenario=converge` for chasers). The HUD shows sim, draw and frame ms; `arrowGame.frameStats()` returns median and p95 frame interval. Browser numbers are not measured yet.
+
+Sim results, node v26.10.0, median ms per tick (budget 16.7), Defender real-time protection off, machine CPU ~46% busy from stray python processes, so treat as upper bounds:
+
+| scenario | 1k | 5k | 10k | 20k | notes |
+|---|---|---|---|---|---|
+| sparse (1 entity / 2500 px², arena scaled) | 0.24 | 1.44 | 2.36 | 4.94 | collision is 60% of the tick |
+| dense (900x600 arena) | 0.22 | 2.70 | 10.25 | 45.78 | collision is 97% of the tick |
+| converge (chasers pile on the player) | 0.41 | 6.45 | 25.32 | 94.55 | worst case for the grid |
+
+At constant density the sim fits 20k entities in 5 ms. Cost explodes with crowding (collision candidates per projectile), not with entity count alone.
