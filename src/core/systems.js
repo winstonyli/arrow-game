@@ -57,7 +57,9 @@ export function collisionSystem(world, grid, player) {
       const n = grid.gather(world.x[i], world.y[i], world.radius[i] + grid.maxRadius);
       for (let q = 0; q < n; q++) {
         const j = grid.out[q];
-        if (world.kind[j] !== KIND.ENEMY || j === world.lastHit[i]) continue;
+        if (world.kind[j] !== KIND.ENEMY) continue;
+        if (j === world.lastHit[i] && world.gen[j] === world.lastHitGen[i]) continue;
+        const genJ = world.gen[j]; // before a lethal hit bumps it
         const dx = world.x[j] - world.x[i];
         const dy = world.y[j] - world.y[i];
         const rr = world.radius[i] + world.radius[j];
@@ -70,6 +72,7 @@ export function collisionSystem(world, grid, player) {
         if (world.pierce[i] > 0) {
           world.pierce[i]--;
           world.lastHit[i] = j;
+          world.lastHitGen[i] = genJ;
         } else {
           world.despawn(i);
           break;

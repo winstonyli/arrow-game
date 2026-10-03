@@ -122,3 +122,13 @@ test('a projectile reaches a boss across a cell boundary (search radius follows 
   collide(sc);
   assert.equal(sc.world.hp[boss], 590);
 });
+
+test('a piercing projectile hits a new enemy that reuses the slot of the one it last hit', () => {
+  const sc = scene();
+  const e = spawnEnemy(sc.world, ENEMY.CHASER, 100, 100);
+  shot(sc.world, 105, 100, { damage: 25, pierce: 2 });
+  assert.equal(collide(sc), 1); // kills e; the projectile pierces on
+  const n = spawnEnemy(sc.world, ENEMY.CHASER, 100, 100);
+  assert.equal(n, e); // LIFO free list reuses the slot
+  assert.equal(collide(sc), 1); // the new enemy is a different occupant, so it is hit
+});

@@ -55,3 +55,13 @@ test('clearKind removes only that kind', () => {
   assert.equal(w.kindCount[KIND.PROJECTILE], 0);
   assert.equal(w.kindCount[KIND.ENEMY], 1);
 });
+
+test('despawn bumps the slot generation and GEM is a counted kind', () => {
+  const w = new World(2);
+  const a = w.spawn(KIND.GEM, 0, 0, 0, 0, 5, 0);
+  assert.equal(w.kindCount[KIND.GEM], 1);
+  assert.equal(w.gen[a], 0);
+  w.despawn(a);
+  assert.equal(w.gen[a], 1);
+  assert.equal(w.kindCount[KIND.GEM], 0);
+});

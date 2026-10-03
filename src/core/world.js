@@ -1,4 +1,4 @@
-export const KIND = { NONE: 0, ENEMY: 1, PROJECTILE: 2, ENEMY_PROJECTILE: 3 };
+export const KIND = { NONE: 0, ENEMY: 1, PROJECTILE: 2, ENEMY_PROJECTILE: 3, GEM: 4 };
 
 export class World {
   constructor(capacity) {
@@ -10,13 +10,15 @@ export class World {
     this.pierce = new Uint8Array(capacity);
     this.bounce = new Uint8Array(capacity);
     this.lastHit = new Int32Array(capacity);
+    this.lastHitGen = new Uint16Array(capacity); // gen[lastHit] when it was hit; a recycled slot has a newer gen
+    this.gen = new Uint16Array(capacity); // bumped on despawn
     this.kind = new Uint8Array(capacity); // 0 = free slot
     this.free = new Uint32Array(capacity);
     for (let k = 0; k < capacity; k++) this.free[k] = capacity - 1 - k;
     this.freeCount = capacity;
     this.high = 0; // one past the highest slot ever used; iterate 0..high
     this.dropped = 0;
-    this.kindCount = new Uint32Array(4);
+    this.kindCount = new Uint32Array(Object.keys(KIND).length);
   }
 
   get count() {
@@ -43,12 +45,14 @@ export class World {
     this.pierce[i] = 0;
     this.bounce[i] = 0;
     this.lastHit[i] = -1;
+    this.lastHitGen[i] = 0;
     if (i >= this.high) this.high = i + 1;
     this.kindCount[kind]++;
     return i;
   }
 
   despawn(i) {
+    this.gen[i]++;
     this.kindCount[this.kind[i]]--;
     this.kind[i] = KIND.NONE;
     this.free[this.freeCount++] = i;
