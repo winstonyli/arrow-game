@@ -15,7 +15,7 @@ for (const mode of ['arena', 'rooms']) {
     try {
       out = runReplay(fx.replay);
     } catch (e) {
-      if (e instanceof ReplayError) assert.fail(`${advice} (${e.code})`); // a desync is the usual symptom
+      if (e instanceof ReplayError && e.code === 'desync') assert.fail(`${advice} (${e.code})`); // a desync is the usual symptom
       throw e;
     }
     const { hash, result } = out;
