@@ -9,8 +9,9 @@ import { gemSystem } from './gems.js';
 
 export const BOUNDS = { w: 900, h: 600 };
 export const VIEW = { w: 900, h: 600 };
+export const CAPACITY = 50000;
 
-export function createGame({ capacity = 50000, bounds = BOUNDS, view, cellSize = 32, rng = Math.random, mode, input }) {
+export function createGame({ capacity = CAPACITY, bounds = BOUNDS, view, cellSize = 32, rng = Math.random, mode, input, fx }) {
   const game = {
     world: new World(capacity),
     grid: new Grid(bounds.w, bounds.h, cellSize, capacity),
@@ -20,6 +21,7 @@ export function createGame({ capacity = 50000, bounds = BOUNDS, view, cellSize =
     rng,
     input,
     mode,
+    fx,
     player: createPlayer(bounds.w / 2, bounds.h - 80),
     offer: null,
     over: false,
@@ -28,7 +30,13 @@ export function createGame({ capacity = 50000, bounds = BOUNDS, view, cellSize =
     level: 1,
     time: 0,
   };
-  game.onKill = mode.onKill ? (j) => mode.onKill(game, j) : undefined;
+  game.onKill =
+    fx || mode.onKill
+      ? (j) => {
+          fx?.kill(game.world.x[j], game.world.y[j], game.world.radius[j], game.world.type[j]);
+          mode.onKill?.(game, j);
+        }
+      : undefined;
   mode.start(game);
   followCamera(game.camera, game.player, game.bounds, game.view);
   return game;

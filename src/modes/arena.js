@@ -74,6 +74,7 @@ export function createArena() {
       }
       if (game.time >= this.nextBoss && spawnPoint(game, pt)) {
         spawnEnemy(world, ENEMY.BOSS, pt.x, pt.y);
+        game.fx?.shake(0.6);
         this.nextBoss += BOSS_EVERY;
       }
       const need = xpFor(game.level);
@@ -88,7 +89,10 @@ export function createArena() {
 
     onKill(game, j) {
       const value = ENEMY_TYPES[game.world.type[j]].xp;
-      if (value > 0) spawnGem(game.world, game.world.x[j], game.world.y[j], value);
+      if (value > 0) {
+        spawnGem(game.world, game.world.x[j], game.world.y[j], value);
+        game.fx?.burst(game.world.x[j], game.world.y[j]);
+      }
     },
 
     hud: (game) => `Lv ${game.level}  XP ${Math.floor(game.xp)}/${xpFor(game.level)}  ${clock(game.time)}`,
