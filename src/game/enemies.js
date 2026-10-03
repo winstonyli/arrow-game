@@ -1,0 +1,63 @@
+import { KIND } from '../core/world.js';
+
+export const ENEMY = { CHASER: 0, SHOOTER: 1, BOSS: 2 };
+
+export const ENEMY_TYPES = [
+  { name: 'chaser', radius: 10, hp: 20, speed: 90, contact: 10, keepDist: 0, fireInterval: 0, fireRange: 0, projSpeed: 0, projDamage: 0, projCount: 0, ring: false, color: '#e5534b' },
+  { name: 'shooter', radius: 11, hp: 30, speed: 70, contact: 5, keepDist: 240, fireInterval: 2, fireRange: 420, projSpeed: 220, projDamage: 8, projCount: 1, ring: false, color: '#d29922' },
+  { name: 'boss', radius: 36, hp: 600, speed: 45, contact: 20, keepDist: 160, fireInterval: 1.6, fireRange: 600, projSpeed: 200, projDamage: 10, projCount: 12, ring: true, color: '#a371f7' },
+];
+
+export const MAX_ENEMY_RADIUS = 36;
+
+export function spawnEnemy(world, type, x, y) {
+  const t = ENEMY_TYPES[type];
+  const i = world.spawn(KIND.ENEMY, x, y, 0, 0, t.radius, t.hp);
+  if (i < 0) return -1;
+  world.type[i] = type;
+  world.damage[i] = t.contact;
+  world.cd[i] = t.fireInterval;
+  return i;
+}
+
+function enemyFire(world, i, t, aim) {
+  for (let k = 0; k < t.projCount; k++) {
+    const a = t.ring ? aim + (k / t.projCount) * Math.PI * 2 : aim;
+    const p = world.spawn(
+      KIND.ENEMY_PROJECTILE,
+      world.x[i],
+      world.y[i],
+      Math.cos(a) * t.projSpeed,
+      Math.sin(a) * t.projSpeed,
+      5,
+      0,
+    );
+    if (p < 0) continue;
+    world.damage[p] = t.projDamage;
+    world.life[p] = 4;
+  }
+}
+
+export function enemyAISystem(world, player, dt) {
+  for (let i = 0; i < world.high; i++) {
+    if (world.kind[i] !== KIND.ENEMY) continue;
+    const t = ENEMY_TYPES[world.type[i]];
+    const dx = player.x - world.x[i];
+    const dy = player.y - world.y[i];
+    const d = Math.hypot(dx, dy) || 1;
+    if (d > t.keepDist) {
+      world.vx[i] = (dx / d) * t.speed;
+      world.vy[i] = (dy / d) * t.speed;
+    } else {
+      world.vx[i] = 0;
+      world.vy[i] = 0;
+    }
+    if (t.fireInterval > 0) {
+      world.cd[i] -= dt;
+      if (world.cd[i] <= 0 && d <= t.fireRange) {
+        world.cd[i] = t.fireInterval;
+        enemyFire(world, i, t, Math.atan2(dy, dx));
+      }
+    }
+  }
+}
