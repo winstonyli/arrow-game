@@ -12,7 +12,7 @@ export const BOUNDS = { w: 900, h: 600 };
 export const VIEW = { w: 900, h: 600 };
 export const CAPACITY = 50000;
 
-export function createGame({ capacity = CAPACITY, bounds = BOUNDS, view, cellSize = 32, rng = Math.random, mode, input, fx }) {
+export function createGame({ capacity = CAPACITY, bounds = BOUNDS, view, cellSize = 32, rng = Math.random, mode, input, fx, sfx }) {
   const game = {
     world: new World(capacity),
     grid: new Grid(bounds.w, bounds.h, cellSize, capacity),
@@ -23,6 +23,7 @@ export function createGame({ capacity = CAPACITY, bounds = BOUNDS, view, cellSiz
     input,
     mode,
     fx,
+    sfx,
     player: createPlayer(bounds.w / 2, bounds.h - 80),
     offer: null,
     over: false,
@@ -32,8 +33,9 @@ export function createGame({ capacity = CAPACITY, bounds = BOUNDS, view, cellSiz
     time: 0,
   };
   game.onKill =
-    fx || mode.onKill
+    fx || sfx || mode.onKill
       ? (j) => {
+          sfx?.kill(game.world.radius[j]);
           fx?.kill(game.world.x[j], game.world.y[j], game.world.radius[j], game.world.type[j]);
           mode.onKill?.(game, j);
         }

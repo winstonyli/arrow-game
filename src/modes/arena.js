@@ -106,6 +106,7 @@ export function createArena() {
       if (game.time >= this.nextBoss && spawnPoint(game, pt)) {
         spawnEnemy(world, ENEMY.BOSS, pt.x, pt.y);
         game.fx?.shake(0.6);
+        game.sfx?.boss();
         this.nextBoss += BOSS_EVERY;
       }
       const need = xpFor(game.level);

@@ -5,6 +5,7 @@ import { createStepper, startLoop } from './core/loop.js';
 import { createCanvasRenderer } from './render/canvas.js';
 import { createWebGLRenderer } from './render/webgl.js';
 import { createFx } from './render/fx.js';
+import { createSfx } from './audio/sfx.js';
 import { SKILLS_BY_ID } from './game/skills.js';
 import { createStress } from './modes/stress.js';
 import { ENEMY } from './game/enemies.js';
@@ -59,8 +60,25 @@ function frameStats() {
   return { n: s.length, medianMs: s[s.length >> 1], p95Ms: s[Math.floor(s.length * 0.95)], simMs, drawMs };
 }
 
+// Sound: one context for the page, started on the first key press or touch (browser autoplay rules). M mutes.
+// No sound in stress mode or where AudioContext is missing.
+let sfx;
+if (!stressN) {
+  try {
+    sfx = createSfx(new AudioContext(), localStorage);
+    const unlock = () => sfx.resume();
+    addEventListener('keydown', unlock);
+    addEventListener('pointerdown', unlock);
+    addEventListener('keydown', (e) => {
+      if (e.code === 'KeyM' && !e.repeat) sfx.toggleMute();
+    });
+  } catch (e) {
+    console.warn('Audio unavailable:', e.message);
+  }
+}
+
 function newGame() {
-  game = createGame({ mode: makeMode(), bounds: arena ? ARENA_BOUNDS : undefined, input, fx: stressN ? undefined : createFx(CAPACITY) });
+  game = createGame({ mode: makeMode(), bounds: arena ? ARENA_BOUNDS : undefined, input, fx: stressN ? undefined : createFx(CAPACITY), sfx });
   shownOffer = undefined;
 }
 document.getElementById('restart').onclick = newGame;
@@ -108,8 +126,9 @@ startLoop(
       game.fx.observe(game);
       game.fx.update(game.offer || game.over ? 0 : frameDt); // freeze effects while paused
     }
+    sfx?.observe(game);
     render(game, [
-      `${game.mode.hud?.(game) ?? ''}  HP ${Math.max(0, Math.ceil(game.player.hp))}  Kills ${game.kills}`,
+      `${game.mode.hud?.(game) ?? ''}  HP ${Math.max(0, Math.ceil(game.player.hp))}  Kills ${game.kills}${sfx?.muted ? "  [muted, M]" : ""}`,
       `entities ${game.world.count}  dropped ${game.world.dropped}  sim ${simMs.toFixed(2)} ms  draw ${drawMs.toFixed(2)} ms  frame ${frameMs.toFixed(1)} ms`,
     ]);
     drawMs = drawMs * 0.9 + (performance.now() - t0) * 0.1;

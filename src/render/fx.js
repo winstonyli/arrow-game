@@ -81,6 +81,7 @@ export function createFx(capacity, rng = Math.random) {
     sy: 0,
     hurt: 0, // damage vignette strength, 1 right after a hit
 
+    hits: 0, // running count of enemy hp drops seen by observe (the audio reads it)
     gvx,
     gvy,
     trail,
@@ -137,7 +138,10 @@ export function createFx(capacity, rng = Math.random) {
           flashUntil[i] = 0;
           continue;
         }
-        if (world.hp[i] < lastHp[i]) flashUntil[i] = fx.clock + FLASH_TIME;
+        if (world.hp[i] < lastHp[i]) {
+          flashUntil[i] = fx.clock + FLASH_TIME;
+          fx.hits++;
+        }
         lastHp[i] = world.hp[i];
       }
       if (lastPlayerHp !== null && player.hp < lastPlayerHp) {
