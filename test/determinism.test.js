@@ -5,41 +5,8 @@ import { createArena, ARENA_BOUNDS } from '../src/modes/arena.js';
 import { createFx } from '../src/render/fx.js';
 import { createStepper } from '../src/core/loop.js';
 import { seeded } from '../src/core/math.js';
-
-// FNV-1a over the sim state (world arrays, player, scalars). Guards the multiplayer prerequisite: same seed and
-// same input script must give the same state, whatever the frame times or presentation attached.
-function hash(g) {
-  let h = 2166136261 >>> 0;
-  const mix = (v) => {
-    h ^= v >>> 0;
-    h = Math.imul(h, 16777619) >>> 0;
-  };
-  const f = new Float32Array(1);
-  const u = new Uint32Array(f.buffer);
-  const num = (x) => {
-    f[0] = x;
-    mix(u[0]);
-  };
-  const w = g.world;
-  for (let i = 0; i < w.high; i++) {
-    mix(w.kind[i]);
-    if (!w.kind[i]) continue;
-    for (const k of ['x', 'y', 'vx', 'vy', 'hp', 'radius', 'life', 'cd']) num(w[k][i]);
-    mix(w.type[i]);
-    mix(w.gen[i]);
-    mix(w.pierce[i]);
-    mix(w.bounce[i]);
-  }
-  for (const k of ['x', 'y', 'hp', 'cd', 'invuln']) num(g.player[k]);
-  num(g.time);
-  num(g.xp);
-  mix(g.kills);
-  mix(g.level);
-  mix(w.freeCount);
-  mix(w.high);
-  mix(w.dropped);
-  return h;
-}
+import { createRooms } from '../src/modes/rooms.js';
+import { stateHash } from '../src/replay/hash.js';
 
 function run({ seed, seconds, frameDts = [1 / 60], fx }) {
   const input = { x: 0, y: 0 };
@@ -58,7 +25,7 @@ function run({ seed, seconds, frameDts = [1 / 60], fx }) {
       tick(g, stepper.dt);
       fx?.observe(g);
       fx?.update(stepper.dt);
-      if (ticks % 60 === 59) hashes.push(hash(g));
+      if (ticks % 60 === 59) hashes.push(stateHash(g));
     }
   }
   return hashes;
@@ -80,4 +47,13 @@ test('attaching fx does not change the sim', () => {
 
 test('a different seed diverges (the hash is sensitive)', () => {
   assert.notDeepEqual(run({ seed: 8, seconds: 5 }), base.slice(0, 5));
+});
+
+test('game.ticks counts advancing ticks only', () => {
+  const g = createGame({ capacity: 2000, mode: createRooms(), rng: seeded(3), input: { x: 0, y: 0 } });
+  for (let i = 0; i < 10; i++) tick(g, 1 / 60);
+  assert.equal(g.ticks, 10);
+  g.offer = ['x'];
+  tick(g, 1 / 60);
+  assert.equal(g.ticks, 10);
 });

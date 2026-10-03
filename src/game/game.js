@@ -31,6 +31,7 @@ export function createGame({ capacity = CAPACITY, bounds = BOUNDS, view, cellSiz
     xp: 0,
     level: 1,
     time: 0,
+    ticks: 0, // advancing ticks so far (replays refer to this)
     skills: {}, // skill id -> times chosen (the UI's owned-skills strip)
     bossAt: -Infinity, // game time of the latest boss spawn (the UI's boss banner)
   };
@@ -63,6 +64,7 @@ export function tick(game, dt) {
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);
   game.time += dt;
+  game.ticks++;
   followCamera(game.camera, player, bounds, game.view);
 }
 
