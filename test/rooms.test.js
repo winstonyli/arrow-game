@@ -114,3 +114,9 @@ test('createGame sets a view and centres the camera inside a larger world', () =
   const rooms = make();
   assert.deepEqual(rooms.camera, { x: 0, y: 0 });
 });
+
+test('rooms hud and summary name the room', () => {
+  const g = make();
+  assert.equal(g.mode.hud(g), 'Room 1');
+  assert.equal(g.mode.summary(g), 'reached room 1');
+});

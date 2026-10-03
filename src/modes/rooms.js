@@ -36,5 +36,13 @@ export function createRooms({ bossEvery = 10 } = {}) {
       game.player.hp = Math.min(game.player.maxHp, game.player.hp + 15);
       this.nextRoom(game);
     },
+
+    hud() {
+      return `Room ${this.room}`;
+    },
+
+    summary() {
+      return `reached room ${this.room}`;
+    },
   };
 }
