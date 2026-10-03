@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { packInstances, STRIDE } from '../src/render/webgl.js';
 import { World, KIND } from '../src/core/world.js';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.js';
+import { createFx } from '../src/render/fx.js';
 
 const player = (over = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, ...over });
 const G = (o = {}) => ({ time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 }, ...o });
@@ -19,10 +20,10 @@ test('packInstances writes live entities in slot order, player last, skipping fr
   assert.equal(n, 4); // shooter, projectile, enemy projectile, player
   const row = (k) => Array.from(out.subarray(k * STRIDE, (k + 1) * STRIDE));
   const T = ENEMY_TYPES.length;
-  assert.deepEqual(row(0), [1, 2, ENEMY_TYPES[ENEMY.SHOOTER].radius, ENEMY.SHOOTER]);
-  assert.deepEqual(row(1), [7, 8, 4, T + 1]);
-  assert.deepEqual(row(2), [9, 10, 5, T]);
-  assert.deepEqual(row(3), [5, 6, 12, T + 2]);
+  assert.deepEqual(row(0), [1, 2, ENEMY_TYPES[ENEMY.SHOOTER].radius, ENEMY.SHOOTER, 2]);
+  assert.deepEqual(row(1), [7, 8, 4, T + 1, 2]);
+  assert.deepEqual(row(2), [9, 10, 5, T, 2]);
+  assert.deepEqual(row(3), [5, 6, 12, T + 2, 2]);
   assert.ok(a >= 0);
 });
 
@@ -65,4 +66,42 @@ test('gems pack with their own palette index', () => {
   const out = new Float32Array(3 * STRIDE);
   packInstances(w, player(), G(), out);
   assert.equal(out[3], ENEMY_TYPES.length + 4);
+});
+
+test('a flashing enemy packs the flash palette entry', () => {
+  const w = new World(10);
+  const a = spawnEnemy(w, ENEMY.CHASER, 100, 100);
+  const fx = createFx(10, () => 0.5);
+  const sim = { world: w, player: { hp: 100 } };
+  const game = G({ fx });
+  const out = new Float32Array(20 * STRIDE);
+  const T = ENEMY_TYPES.length;
+  fx.observe(sim); // baseline
+  packInstances(w, player(), game, out);
+  assert.equal(out[3], ENEMY.CHASER);
+  w.hp[a] -= 1;
+  fx.observe(sim); // sees the drop
+  packInstances(w, player(), game, out);
+  assert.equal(out[3], T + 5); // P_FLASH: after enemy projectile, projectile, player, blink, gem
+});
+
+test('particles pack before the player with alpha / negative ring fade', () => {
+  const w = new World(10);
+  const fx = createFx(10, () => 0.5);
+  fx.kill(50, 60, 10, ENEMY.CHASER); // 1 ring + 5 dots
+  const out = new Float32Array(20 * STRIDE);
+  const n = packInstances(w, player(), G({ fx }), out);
+  assert.equal(n, 7); // 6 particles + player
+  const fade = (k) => out[k * STRIDE + 4];
+  assert.ok(fade(0) < 0 && fade(0) >= -1); // the ring is emitted first
+  for (let k = 1; k < 6; k++) assert.ok(fade(k) > 0 && fade(k) <= 1);
+  assert.equal(fade(6), 2); // player is last and solid
+});
+
+test('with fx the cull pad keeps entities just outside the view for shake', () => {
+  const w = new World(10);
+  spawnEnemy(w, ENEMY.CHASER, -20, 100); // radius 10: right edge at -10, 10 px outside
+  const out = new Float32Array(20 * STRIDE);
+  assert.equal(packInstances(w, player(), G(), out), 1); // player only
+  assert.equal(packInstances(w, player(), G({ fx: createFx(10) }), out), 2);
 });
