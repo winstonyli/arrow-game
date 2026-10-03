@@ -23,6 +23,7 @@ export function hudModel(game, kind) {
     m.xpPct = (game.xp / xpFor(game.level)) * 100;
     m.time = clock(game.time);
   }
+  if (game.ghost) m.ghost = ghostLine(game, kind);
   return m;
 }
 
@@ -52,3 +53,38 @@ export function bestLine(kind, best) {
   if (kind === 'rooms') return best.room ? `Best room ${best.room}` : 'No runs yet';
   return best.time ? `Best ${clock(best.time)} / ${best.kills ?? 0} kills` : 'No runs yet';
 }
+
+const signed = (n) => (n >= 0 ? `+${n}` : String(n));
+
+// "Ghost" is the stored best run racing alongside; `ahead` is true when the player is level with or past it.
+function ghostLine(game, kind) {
+  const g = game.ghost;
+  const out = g.alive ? '' : '(out) ';
+  if (kind === 'rooms') {
+    const d = game.mode.room - g.room;
+    return { text: `Ghost ${out}room ${g.room} (${signed(d)})`, ahead: d >= 0 };
+  }
+  const d = game.kills - g.kills;
+  return { text: `Ghost ${out}Lv ${g.level} · ${g.kills} kills (${signed(d)})`, ahead: d >= 0 };
+}
+
+// Rows for the Challenges list: entries come from store.list().
+export const challengeRows = (entries) =>
+  entries.map((e) => ({
+    mode: e.mode,
+    seed: e.seed,
+    title: `${e.mode === 'rooms' ? 'Rooms' : 'Arena'} · ${e.label || `Seed ${e.seed}`}`,
+    line: e.mode === 'rooms' ? `Room ${e.room} · ${e.kills} kills` : `${clock(e.time)} · ${e.kills} kills`,
+    stale: e.stale,
+  }));
+
+const IMPORT_ERRORS = {
+  'bad-code': 'That is not a replay code',
+  version: 'Replay is from a different game version',
+  corrupt: 'Replay code is damaged',
+  'too-large': 'Replay code is too large',
+  unsupported: 'This browser cannot read that code',
+  invalid: 'Replay data is invalid',
+  mismatch: 'Replay does not reproduce on this version',
+};
+export const importError = (code) => IMPORT_ERRORS[code] ?? 'Could not import that code';

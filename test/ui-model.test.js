@@ -6,7 +6,7 @@ import { createRooms } from '../src/modes/rooms.js';
 import { seeded } from '../src/core/math.js';
 import { KIND } from '../src/core/world.js';
 import { SKILLS } from '../src/game/skills.js';
-import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S } from '../src/ui/model.js';
+import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError } from '../src/ui/model.js';
 import { icon } from '../src/ui/icons.js';
 
 const arena = () => createGame({ capacity: 2000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
@@ -99,4 +99,37 @@ test('every skill and HUD glyph has an icon', () => {
   for (const { id } of SKILLS) assert.match(icon(id), /^<svg /, id);
   for (const id of ['heart', 'skull', 'pause']) assert.match(icon(id), /^<svg /, id);
   assert.throws(() => icon('nope'), /unknown icon/);
+});
+
+test('hudModel shows the ghost comparison (arena) and omits it without a ghost', () => {
+  const g = Object.assign(arena(), { kills: 10, level: 3, ghost: { x: 0, y: 0, alive: true, level: 4, kills: 7, room: 0 } });
+  assert.deepEqual(hudModel(g, 'arena').ghost, { text: 'Ghost Lv 4 · 7 kills (+3)', ahead: true });
+  g.kills = 5;
+  assert.deepEqual(hudModel(g, 'arena').ghost, { text: 'Ghost Lv 4 · 7 kills (-2)', ahead: false });
+  g.ghost.alive = false;
+  assert.equal(hudModel(g, 'arena').ghost.text, 'Ghost (out) Lv 4 · 7 kills (-2)');
+  delete g.ghost;
+  assert.equal(hudModel(g, 'arena').ghost, undefined);
+});
+
+test('hudModel ghost line in rooms compares rooms', () => {
+  const g = rooms();
+  g.mode.room = 5;
+  g.ghost = { x: 0, y: 0, alive: true, level: 1, kills: 0, room: 4 };
+  assert.deepEqual(hudModel(g, 'rooms').ghost, { text: 'Ghost room 4 (+1)', ahead: true });
+});
+
+test('challengeRows summarize stored replays', () => {
+  const rows = challengeRows([
+    { mode: 'arena', seed: 7, label: 'Daily 2026-10-03', time: 125, kills: 40, level: 5, room: 0, stale: false },
+    { mode: 'rooms', seed: 9, label: '', time: 50, kills: 12, level: 1, room: 6, stale: true },
+  ]);
+  assert.deepEqual(rows[0], { mode: 'arena', seed: 7, title: 'Arena · Daily 2026-10-03', line: '2:05 · 40 kills', stale: false });
+  assert.deepEqual(rows[1], { mode: 'rooms', seed: 9, title: 'Rooms · Seed 9', line: 'Room 6 · 12 kills', stale: true });
+});
+
+test('importError maps codes to messages with a fallback', () => {
+  assert.match(importError('version'), /different game version/);
+  assert.match(importError('bad-code'), /not a replay code/);
+  assert.match(importError(undefined), /Could not import/);
 });

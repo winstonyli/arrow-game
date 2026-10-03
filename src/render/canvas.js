@@ -4,6 +4,7 @@ import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.js';
 import { tailVec, TRAIL_N, TRAIL_ALPHA } from './trail.js';
+import { drawGhost } from './ghost-marker.js';
 
 const TAU = Math.PI * 2;
 const GEM_COLOR = '#f2cc60';
@@ -159,6 +160,7 @@ export function createCanvasRenderer(canvas, view) {
     ctx.fillRect(bx, by, bw, 4);
     ctx.fillStyle = '#3fb950';
     ctx.fillRect(bx, by, (bw * Math.max(0, player.hp)) / player.maxHp, 4);
+    drawGhost(ctx, game, 0, 0); // the context is still translated by the camera
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const v = fx ? fx.vignette(player) : 0;

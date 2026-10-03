@@ -4,6 +4,7 @@ import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
 import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.js';
 import { tailVec, TRAIL_MAX, TRAIL_N, TRAIL_ALPHA } from './trail.js';
+import { drawGhost } from './ghost-marker.js';
 
 export const STRIDE = 7; // floats per instance: x, y, radius, palette index, fade, tail x, tail y
 // fade: SOLID = entity (outline + shadow); (0, 1] = dot particle alpha; [-1, 0) = ring particle, alpha -fade.
@@ -243,6 +244,7 @@ export function createWebGLRenderer(canvas, hudCanvas, bgCanvas, view) {
     hud2d.fillRect(bx, by, bw, 4);
     hud2d.fillStyle = '#3fb950';
     hud2d.fillRect(bx, by, (bw * Math.max(0, player.hp)) / player.maxHp, 4);
+    drawGhost(hud2d, game, cam.x, cam.y);
     const v = fx ? fx.vignette(player) : 0;
     if (v > 0.01) {
       hud2d.globalAlpha = Math.min(1, v);
