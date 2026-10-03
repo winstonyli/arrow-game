@@ -3,6 +3,7 @@ import { createRooms } from './modes/rooms.js';
 import { createGame, tick, choose, BOUNDS } from './game/game.js';
 import { createStepper, startLoop } from './core/loop.js';
 import { createCanvasRenderer } from './render/canvas.js';
+import { createWebGLRenderer } from './render/webgl.js';
 import { SKILLS_BY_ID } from './game/skills.js';
 import { createStress } from './modes/stress.js';
 import { ENEMY } from './game/enemies.js';
@@ -11,7 +12,6 @@ const picker = document.getElementById('picker');
 const over = document.getElementById('over');
 const overText = document.getElementById('over-text');
 const input = createInput();
-const render = createCanvasRenderer(document.getElementById('game'), BOUNDS);
 
 let game;
 let shownOffer = null;
@@ -24,6 +24,25 @@ let lastFrame = 0;
 
 // ?stress=N[&scenario=converge]: N total entities, half enemies and half projectiles (see modes/stress.js).
 const params = new URLSearchParams(location.search);
+
+// ?renderer=canvas2d forces the fallback; otherwise WebGL2 when available.
+function makeRenderer() {
+  const canvas = document.getElementById('game');
+  if (params.get('renderer') !== 'canvas2d') {
+    try {
+      const r = createWebGLRenderer(canvas, document.getElementById('hud'), BOUNDS);
+      console.info('renderer: webgl2 on', r.adapter);
+      r.kind = 'webgl';
+      return r;
+    } catch (e) {
+      console.warn('WebGL renderer unavailable, using Canvas2D:', e.message);
+    }
+  }
+  const r = createCanvasRenderer(canvas, BOUNDS);
+  r.kind = 'canvas2d';
+  return r;
+}
+const render = makeRenderer();
 const stressN = Number(params.get('stress')) || 0;
 const makeMode = () =>
   stressN
@@ -59,7 +78,7 @@ function syncUI() {
 }
 
 newGame();
-window.arrowGame = { get game() { return game; }, frameStats };
+window.arrowGame = { get game() { return game; }, frameStats, renderer: render.kind };
 
 startLoop(
   createStepper(),

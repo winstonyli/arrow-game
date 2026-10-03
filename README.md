@@ -9,7 +9,7 @@ Browser archer roguelite (Archero / arrow.io style). Plain JS, typed-array simul
 
 ## Status
 Plan 1 (core + rooms mode) implemented; playable at `npm start`. Gameplay feel not yet tuned.
-Plan 2 benchmarks done (see below); WebGL decision pending. Next: plan 3 (arena mode + camera).
+Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Next: plan 3 (arena mode + camera).
 
 ## Stress benchmarks (plan 2)
 - Sim: `npm run bench` (headless, per-system ms/tick; `--n=`, `--scenario=`, `--ticks=`). N is total entities, half enemies and half player projectiles.
@@ -40,3 +40,19 @@ Browser results (Chrome, real window, GPU = AMD Radeon 780M iGPU via ANGLE/D3D11
 | converge | 20k | 185 (290) | 61.6 | 11.4 |
 
 Frame time is far above sim + draw CPU time (e.g. dense 5k: ~10 ms CPU, 39 ms frame), so the gap is Canvas2D rasterization on the GPU, which `draw ms` cannot see. Canvas2D does not hold 60 fps past ~1-2k entities on this iGPU; the 20k target needs WebGL instanced drawing (or a cheaper draw path) regardless of sim cost. Caveat: Chrome picked the iGPU, not the eGPU, and the sim also ran 1-3 catch-up steps per frame at the slow end, which inflates frame time.
+
+## WebGL renderer (plan 2b)
+`src/render/webgl.js`: WebGL2 instanced circles (one draw call, one pass over the world), HUD on a separate 2D canvas. Default when WebGL2 is available; falls back to Canvas2D. Reproduce with `node scripts/render-bench.mjs` (starts its own server and a throwaway Chrome; `--shot=dir` saves screenshots).
+
+Median frame ms (p95), same machine and load as above (iGPU 780M, ~46% CPU busy):
+
+| scenario | N | Canvas2D | WebGL |
+|---|---|---|---|
+| dense | 5k | 34.7 (51.5) | 16.7 (17.8) |
+| dense | 10k | 69.2 (104) | 16.8 (43.6) |
+| dense | 20k | 250 (406) | 241 (449) |
+| converge | 5k | 39.8 (52.8) | 16.7 (17.6) |
+| converge | 10k | 73.1 (105) | 16.9 (84.5) |
+| converge | 20k | 393 (466) | 169 (239) |
+
+WebGL draw CPU time is ~0.5 ms at every N, so rendering no longer limits frame time. At 20k the frame time is about 4-5 sim steps (the stepper's catch-up cap) at 37-46 ms each: the sim's collision cost under 900x600 crowding is the remaining limit. Spikes at 10k converge (p95 84 ms) come from the same sim cost as chasers pile up.
