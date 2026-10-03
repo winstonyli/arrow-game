@@ -3,8 +3,9 @@
 // entity growth, the high-water mark, dropped spawns and per-tick cost under churn are visible.
 // Real play differs (the player moves and only fires while stationary), so treat it as a load proxy.
 // --bot=kite makes the player mortal and steers it: flee nearby enemies, avoid walls, else drift to the nearest gem.
+// --bot=smart is the same plus: skill priority (damage/rate/multishot before speed), gems pulled in even with enemies near, and a sideways component so it circles instead of pinning itself on a wall.
 // It reports when the bot dies, which is the survival-time yardstick for balance changes.
-// Usage: node scripts/soak-arena.js [--minutes=10] [--bot=still|kite] [--seed=1]
+// Usage: node scripts/soak-arena.js [--minutes=10] [--bot=still|kite|smart] [--seed=1]
 import { createGame, tick, choose } from '../src/game/game.js';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.js';
 import { seeded } from '../src/core/math.js';
@@ -20,6 +21,9 @@ const g = createGame({ capacity: 50000, bounds: ARENA_BOUNDS, mode: createArena(
 if (bot === 'still') g.player.hp = g.player.maxHp = 1e9;
 
 // Flee enemies within FLEE px (1/d weighting), push off walls, and with nothing near, chase the nearest gem.
+const PRIORITY = ['multishot', 'rapid', 'power', 'pierce', 'ricochet', 'swift'];
+const pick = (offer) => (bot === 'smart' ? [...offer].sort((a, b) => PRIORITY.indexOf(a) - PRIORITY.indexOf(b))[0] : offer[0]);
+
 function steer(g) {
   const { world, player, bounds } = g;
   const FLEE = 260;
@@ -37,7 +41,15 @@ function steer(g) {
   const M = 250;
   fx += Math.max(0, M - player.x) / M - Math.max(0, M - (bounds.w - player.x)) / M;
   fy += Math.max(0, M - player.y) / M - Math.max(0, M - (bounds.h - player.y)) / M;
-  const m = Math.hypot(fx, fy);
+  const smart = bot === 'smart';
+  let m = Math.hypot(fx, fy);
+  if (smart && m > 0.02) {
+    const near = gd < 400 ? 0.7 : 0; // keep collecting while fleeing
+    const sx = -fy / m * 0.5, sy = fx / m * 0.5; // sidestep: circle rather than back into a wall
+    fx = fx / m + sx + gx * near;
+    fy = fy / m + sy + gy * near;
+    m = Math.hypot(fx, fy);
+  }
   if (m > 0.02) { g.input.x = fx / m; g.input.y = fy / m; } else if (gd < Infinity) { g.input.x = gx; g.input.y = gy; } else { g.input.x = 0; g.input.y = 0; }
 }
 
@@ -45,8 +57,8 @@ console.log('min  enemies   gems   high  dropped  level  kills   tick ms (median
 for (let m = 1; m <= minutes; m++) {
   const ms = new Float64Array(TICKS_PER_MIN);
   for (let k = 0; k < TICKS_PER_MIN; k++) {
-    if (g.offer) choose(g, g.offer[0]);
-    if (bot === 'kite') steer(g);
+    if (g.offer) choose(g, pick(g.offer));
+    if (bot !== 'still') steer(g);
     const t0 = performance.now();
     tick(g, DT);
     ms[k] = performance.now() - t0;
