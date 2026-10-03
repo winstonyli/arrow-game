@@ -1,6 +1,5 @@
 import { createInput } from './input/input.js';
-import { createRooms } from './modes/rooms.js';
-import { createGame, tick, choose, VIEW, CAPACITY } from './game/game.js';
+import { createGame, tick, VIEW, CAPACITY } from './game/game.js';
 import { createStepper, startLoop } from './core/loop.js';
 import { createCanvasRenderer } from './render/canvas.js';
 import { createWebGLRenderer } from './render/webgl.js';
@@ -11,7 +10,9 @@ import { hudModel, overModel, resultOf, bestLine } from './ui/model.js';
 import { loadBest, submit } from './game/records.js';
 import { createStress } from './modes/stress.js';
 import { ENEMY } from './game/enemies.js';
-import { createArena, ARENA_BOUNDS } from './modes/arena.js';
+import { createSession } from './replay/session.js';
+import { createStore } from './replay/store.js';
+import { randomSeed, customSeed } from './replay/seeds.js';
 
 const input = createInput();
 
@@ -50,6 +51,10 @@ const debug = params.has('debug');
 const direct = !!stressN || params.has('mode'); // benchmarks and verify scripts: no title, no auto-pause
 let kind = params.get('mode') === 'arena' ? 'arena' : 'rooms';
 let screen = 'title'; // title | play | pause | over | none (stress: no UI, the sim always runs)
+let session = null; // non-stress runs: quantizes input, ticks, records (replay.js); null in stress mode
+let seed = 0;
+let challenge = null; // { seed, label } for a seeded run, null for a random one
+let lastReplay = null; // the run that just ended (kept for Watch replay / Copy code)
 const storage = (() => {
   try {
     return localStorage;
@@ -57,12 +62,9 @@ const storage = (() => {
     return null;
   }
 })();
-const makeMode = () =>
-  stressN
-    ? createStress({ enemies: stressN / 2, projectiles: stressN / 2, enemyType: params.get('scenario') === 'converge' ? ENEMY.CHASER : ENEMY.DUMMY })
-    : kind === 'arena'
-      ? createArena()
-      : createRooms();
+const store = createStore(storage);
+const makeStress = () =>
+  createStress({ enemies: stressN / 2, projectiles: stressN / 2, enemyType: params.get('scenario') === 'converge' ? ENEMY.CHASER : ENEMY.DUMMY });
 
 function frameStats() {
   const s = Float32Array.from(frames.subarray(0, Math.min(frameCount, frames.length))).sort();
@@ -86,8 +88,15 @@ if (!stressN) {
   }
 }
 
-function newGame() {
-  game = createGame({ mode: makeMode(), bounds: kind === 'arena' && !stressN ? ARENA_BOUNDS : undefined, input, fx: stressN ? undefined : createFx(CAPACITY), sfx });
+function newGame({ seed: s, label } = {}) {
+  seed = s ?? randomSeed();
+  if (stressN) {
+    session = null;
+    game = createGame({ mode: makeStress(), input, fx: undefined, sfx });
+  } else {
+    session = createSession({ mode: kind, seed, fx: createFx(CAPACITY), sfx });
+    game = session.game;
+  }
   shownOffer = undefined;
 }
 
@@ -95,9 +104,10 @@ function setScreen(next) {
   screen = next;
   ui.show(next);
 }
-function play(k) {
+function play(k, opts) {
   kind = k;
-  newGame();
+  challenge = opts ?? null;
+  newGame(challenge ?? {});
   setScreen('play');
 }
 function pause() {
@@ -110,12 +120,15 @@ function refreshBests() {
   ui.setBests({ arena: bestLine('arena', loadBest(storage, 'arena')), rooms: bestLine('rooms', loadBest(storage, 'rooms')) });
 }
 function quit() {
+  challenge = null;
   newGame();
   setScreen('title');
   refreshBests();
 }
 function finish() {
   const rec = direct ? null : submit(storage, kind, resultOf(game, kind));
+  lastReplay = session ? session.finish() : null;
+  if (lastReplay && !direct) store.submit(lastReplay, challenge?.label ?? '');
   ui.showOver(overModel(game, kind, rec));
   setScreen('over');
 }
@@ -124,9 +137,9 @@ const ui = createUi(document.getElementById('ui'), {
   onPlay: play,
   onResume: resume,
   onQuit: quit,
-  onAgain: () => play(kind),
+  onAgain: () => play(kind, challenge ?? undefined),
   onPause: pause,
-  onPick: (id) => choose(game, id),
+  onPick: (id) => session?.pick(id),
   onToggleSound: () => (sfx ? sfx.toggleMute() : false),
 });
 
@@ -149,13 +162,17 @@ function syncUI() {
   if (screen === 'play' || screen === 'pause') ui.update(hudModel(game, kind), sfx?.muted);
 }
 
-newGame();
+const urlSeed = params.has('seed') ? customSeed(params.get('seed')) : null; // ?mode=arena&seed=123 for reproducible direct runs
+newGame(urlSeed === null ? {} : { seed: urlSeed });
 refreshBests();
 setScreen(stressN ? 'none' : direct ? 'play' : 'title');
 window.arrowGame = {
   get game() { return game; },
   get screen() { return screen; },
   get mode() { return kind; },
+  get session() { return session; },
+  get lastReplay() { return lastReplay; },
+  get seed() { return seed; },
   frameStats,
   renderer: render.kind,
 };
@@ -164,7 +181,7 @@ startLoop(
   createStepper(),
   (dt) => {
     const t0 = performance.now();
-    if (screen === 'play' || screen === 'none') tick(game, dt);
+    if (screen === 'play' || screen === 'none') session ? session.step(input.x, input.y) : tick(game, dt);
     simMs = simMs * 0.9 + (performance.now() - t0) * 0.1;
   },
   () => {
