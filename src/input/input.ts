@@ -1,4 +1,9 @@
-export function keysToVector(keys) {
+export interface Vec2 {
+  x: number;
+  y: number;
+}
+
+export function keysToVector(keys: ReadonlySet<string>): Vec2 {
   let x = 0;
   let y = 0;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) x -= 1;
@@ -11,10 +16,18 @@ export function keysToVector(keys) {
 
 const STICK_RADIUS = 60;
 
-export function createInput(target = window) {
+interface Stick {
+  id: number;
+  ox: number;
+  oy: number;
+  x: number;
+  y: number;
+}
+
+export function createInput(target: Window = window): Vec2 {
   const input = { x: 0, y: 0 };
-  const keys = new Set();
-  let stick = null; // { id, ox, oy, x, y }
+  const keys = new Set<string>();
+  let stick: Stick | null = null;
 
   const sync = () => {
     if (stick) {
@@ -48,8 +61,9 @@ export function createInput(target = window) {
     }
     sync();
   }, { passive: true });
-  const end = (e) => {
-    if (stick && Array.from(e.changedTouches).some((t) => t.identifier === stick.id)) {
+  const end = (e: TouchEvent) => {
+    const active = stick; // const alias: narrowing of the `let` is lost inside the callback
+    if (active && Array.from(e.changedTouches).some((t) => t.identifier === active.id)) {
       stick = null;
       sync();
     }
