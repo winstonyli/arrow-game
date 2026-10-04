@@ -3,7 +3,7 @@
 // per frame; the renderers read the state.
 import { KIND } from '../core/world.ts';
 import { bladePos, MAX_BLADES } from '../game/orbit.ts';
-import { TRAIL_N, TRAIL_MID, TRAIL_END, bentTail } from './trail.js';
+import { TRAIL_N, TRAIL_MID, TRAIL_END, bentTail } from './trail.ts';
 
 export const FLASH_TIME = 0.08; // seconds an enemy stays white after a hit
 export const POOL = 512;

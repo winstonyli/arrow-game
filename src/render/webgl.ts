@@ -1,10 +1,10 @@
 import { KIND } from '../core/world.ts';
 import { ENEMY_TYPES } from '../game/enemies.ts';
-import { drawWorldGrid } from './grid-lines.js';
-import { POOL, RING } from './fx.js';
+import { drawWorldGrid } from './grid-lines.ts';
+import { POOL, RING } from './fx.ts';
 import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.ts';
-import { TRAIL_MAX } from './trail.js';
-import { drawGhost } from './ghost-marker.js';
+import { TRAIL_MAX } from './trail.ts';
+import { drawGhost } from './ghost-marker.ts';
 
 export const STRIDE = 9; // floats per instance: x, y, radius, palette index, fade, tail bend x, y, tail tip x, y
 // fade: SOLID = entity (outline + shadow); (0, 1] = dot particle alpha; [-1, 0) = ring particle, alpha -fade.
@@ -38,10 +38,10 @@ function put(out, o, x, y, r, pal, fade, mx, my, ex, ey) {
   out[o + 8] = ey;
 }
 
-// Layers, bottom to top (canvas.js uses the same order): gems, enemies, enemy projectiles, player
+// Layers, bottom to top (canvas.ts uses the same order): gems, enemies, enemy projectiles, player
 // projectiles, fx particles, blades, player. The background and grid
 // are on a canvas below; the HP bar, vignette and HUD text on one above. Within a layer instances draw in
-// slot order. Entities carry their tail's bend and tip (see trail.js); zero without fx.
+// slot order. Entities carry their tail's bend and tip (see trail.ts); zero without fx.
 // Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
 export function packInstances(world, player, game, out) {
   const { camera, view, fx } = game;

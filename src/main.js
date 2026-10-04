@@ -1,9 +1,9 @@
 import { createInput } from './input/input.js';
 import { createGame, tick, VIEW, CAPACITY } from './game/game.ts';
 import { createStepper, startLoop } from './core/loop.ts';
-import { createCanvasRenderer } from './render/canvas.js';
-import { createWebGLRenderer } from './render/webgl.js';
-import { createFx } from './render/fx.js';
+import { createCanvasRenderer } from './render/canvas.ts';
+import { createWebGLRenderer } from './render/webgl.ts';
+import { createFx } from './render/fx.ts';
 import { createSfx } from './audio/sfx.ts';
 import { createUi } from './ui/ui.js';
 import { hudModel, overModel, resultOf, bestLine, challengeRows, importError, pastedCode, importLabel, raceLabel } from './ui/model.js';

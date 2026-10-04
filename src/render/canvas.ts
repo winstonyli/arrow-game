@@ -1,9 +1,9 @@
 import { KIND } from '../core/world.ts';
 import { ENEMY_TYPES } from '../game/enemies.ts';
-import { drawWorldGrid } from './grid-lines.js';
-import { POOL, RING } from './fx.js';
+import { drawWorldGrid } from './grid-lines.ts';
+import { POOL, RING } from './fx.ts';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.ts';
-import { drawGhost } from './ghost-marker.js';
+import { drawGhost } from './ghost-marker.ts';
 
 const TAU = Math.PI * 2;
 const GEM_COLOR = '#f2cc60';
@@ -19,7 +19,7 @@ export function createCanvasRenderer(canvas, view) {
 
   const tv = { mx: 0, my: 0, ex: 0, ey: 0 };
 
-  // Tapered tails (see trail.js): a smooth quadratic curve from the mover's centre through the tail's bend to its
+  // Tapered tails (see trail.ts): a smooth quadratic curve from the mover's centre through the tail's bend to its
   // tip, widest at the mover and tapering to a point, appended to the current path from the tail in `tv`.
   function tailPath(x, y, radius) {
     const le = Math.hypot(tv.ex, tv.ey);
@@ -123,7 +123,7 @@ export function createCanvasRenderer(canvas, view) {
     drawWorldGrid(ctx, cam, view, bounds);
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
-    // Same layer order as webgl.js: gems, enemies (then their flash), enemy projectiles, arrows, particles, blades, player.
+    // Same layer order as webgl.ts: gems, enemies (then their flash), enemy projectiles, arrows, particles, blades, player.
     if (fx) tails(world, KIND.GEM, -1, GEM_COLOR, fx);
     circles(world, KIND.GEM, -1, GEM_COLOR);
     for (let t = 0; t < ENEMY_TYPES.length; t++) {

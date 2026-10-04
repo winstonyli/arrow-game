@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { drawGhost } from '../src/render/ghost-marker.js';
+import { drawGhost } from '../src/render/ghost-marker.ts';
 
 const fakeCtx = () => {
   const calls = [];

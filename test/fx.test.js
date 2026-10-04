@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
-import { createFx, FLASH_TIME, POOL, RING, DOT, PAL_GEM } from '../src/render/fx.js';
+import { createFx, FLASH_TIME, POOL, RING, DOT, PAL_GEM } from '../src/render/fx.ts';
 import { createGame, tick, choose } from '../src/game/game.ts';
 import { createRooms } from '../src/modes/rooms.ts';
 import { createArena, BOSS_EVERY } from '../src/modes/arena.ts';

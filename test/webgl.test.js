@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { packInstances, STRIDE } from '../src/render/webgl.js';
+import { packInstances, STRIDE } from '../src/render/webgl.ts';
 import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.ts';
-import { createFx } from '../src/render/fx.js';
+import { createFx } from '../src/render/fx.ts';
 
 const player = (over = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0 }, ...over });
 const G = (o = {}) => ({ time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 }, ...o });

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, tick, choose } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
-import { createFx } from '../src/render/fx.js';
+import { createFx } from '../src/render/fx.ts';
 import { createStepper } from '../src/core/loop.ts';
 import { seeded } from '../src/core/math.ts';
 import { createRooms } from '../src/modes/rooms.ts';
