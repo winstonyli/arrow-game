@@ -2,11 +2,15 @@ import { KIND } from '../core/world.js';
 
 export const GEM_RADIUS = 5;
 export const GEM_LIFE = 60; // seconds before an uncollected gem despawns
-const MAGNET_SPEED = 360; // px/s at full pull once a gem is captured
-const MAGNET_OVER_MOVE = 1.5; // ...and never slower than this multiple of the player's speed
-const START_PULL = 0.5; // fraction of full speed at the moment of capture: gems ease in
-const RAMP = 0.18; // seconds to reach full speed
-const OMEGA = 30; // rad/s the gem circles the player at full pull (about 5 turns/s, roughly one turn per pickup); eased in with the pull
+// A captured gem is a damped orbit around the player, simulated in the player's frame of reference (so a
+// moving player drags its gems along and a gem cannot be outrun): a spring-like pull of strength PULL^2 per px
+// plus drag DRAG on the velocity relative to the player, and a sideways push that fades out over the first
+// SWING_TIME so it swings around instead of dropping straight in. About 0.4 s and half a turn from the edge of the pickup radius.
+const PULL = 7; // rad/s: natural frequency of the pull (acceleration = PULL^2 * distance)
+const DRAG = 6; // 1/s: how fast the relative velocity dies out
+const SWING = 8; // 1/s: sideways acceleration, as a multiple of PULL * distance, that fades out over SWING_TIME
+const SWING_TIME = 0.2; // s: the sideways push builds momentum without a jolt, then stops
+const MAX_REL = 600; // px/s cap on the speed relative to the player, a safety net
 
 export function spawnGem(world, x, y, value) {
   const i = world.spawn(KIND.GEM, x, y, 0, 0, GEM_RADIUS, 0);
@@ -18,14 +22,10 @@ export function spawnGem(world, x, y, value) {
 
 // Expires, attracts and collects gems. Returns the XP collected this tick. Scans world.high; gems are
 // far fewer than enemies, so it needs no grid. A gem inside the pickup radius is captured (world.cd holds
-// the seconds since capture, 0 = free) and stays captured: it eases in, circles the player and spirals
-// onto them. The gem is moved here directly (it keeps zero velocity). Each tick it steps toward the player
-// and its offset is then rotated about the player by OMEGA*dt; the rotation uses the Cayley form
-// (1-u^2)/(1+u^2), 2u/(1+u^2), u = angle/2, which preserves length exactly and needs no trig, so it is as
-// deterministic as the rest of the sim. Every gem turns the same way, so a pile of them reads as a vortex.
+// the seconds since capture, 0 = free) and stays captured. This only sets the gem's velocity; moveSystem
+// moves it. Every gem is kicked the same way round, so a pile of them reads as a vortex. No RNG, no trig.
 export function gemSystem(world, player, dt) {
   const reach = player.stats.pickupRadius;
-  const full = Math.max(MAGNET_SPEED, MAGNET_OVER_MOVE * player.stats.moveSpeed);
   let xp = 0;
   for (let i = 0; i < world.high; i++) {
     if (world.kind[i] !== KIND.GEM) continue;
@@ -34,23 +34,28 @@ export function gemSystem(world, player, dt) {
       world.despawn(i);
       continue;
     }
-    const dx = player.x - world.x[i];
-    const dy = player.y - world.y[i];
-    const d = Math.hypot(dx, dy);
+    const rx = world.x[i] - player.x;
+    const ry = world.y[i] - player.y;
+    const d = Math.hypot(rx, ry);
     if (d <= player.radius + world.radius[i]) {
       xp += world.damage[i];
       world.despawn(i);
     } else if (world.cd[i] > 0 || d <= reach) {
+      let ux = world.vx[i] - player.vx; // velocity relative to the player
+      let uy = world.vy[i] - player.vy;
+      const swing = SWING * PULL * d * Math.max(0, 1 - world.cd[i] / SWING_TIME); // sideways acceleration
+      ux += ((-ry / d) * swing) * dt;
+      uy += ((rx / d) * swing) * dt;
       world.cd[i] += dt;
-      const ease = Math.min(1, START_PULL + ((1 - START_PULL) * world.cd[i]) / RAMP);
-      const rest = (d - Math.min(full * ease * dt, d)) / d; // distance left, as a fraction of d
-      const u = (OMEGA * ease * dt) / 2;
-      const c = (1 - u * u) / (1 + u * u);
-      const s = (2 * u) / (1 + u * u);
-      const ox = -dx * rest;
-      const oy = -dy * rest;
-      world.x[i] = player.x + ox * c - oy * s;
-      world.y[i] = player.y + ox * s + oy * c;
+      ux += (-PULL * PULL * rx - DRAG * ux) * dt;
+      uy += (-PULL * PULL * ry - DRAG * uy) * dt;
+      const u = Math.hypot(ux, uy);
+      if (u > MAX_REL) {
+        ux *= MAX_REL / u;
+        uy *= MAX_REL / u;
+      }
+      world.vx[i] = ux + player.vx;
+      world.vy[i] = uy + player.vy;
     }
   }
   return xp;

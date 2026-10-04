@@ -21,17 +21,22 @@ export function baseStats() {
 }
 
 export function createPlayer(x, y) {
-  return { x, y, radius: 12, hp: 100, maxHp: 100, invuln: 0, cd: 0, moving: false, stats: baseStats() };
+  return { x, y, radius: 12, hp: 100, maxHp: 100, invuln: 0, cd: 0, moving: false, vx: 0, vy: 0, stats: baseStats() };
 }
 
 export function movePlayer(p, input, dt, bounds) {
   const mag = Math.hypot(input.x, input.y);
   p.moving = mag > 0.01;
   p.invuln = Math.max(0, p.invuln - dt);
+  p.vx = p.vy = 0; // the velocity actually travelled this tick (gems orbit in the player's frame)
   if (!p.moving) return;
   const k = (p.stats.moveSpeed * dt) / Math.max(mag, 1);
-  p.x = clamp(p.x + input.x * k, p.radius, bounds.w - p.radius);
-  p.y = clamp(p.y + input.y * k, p.radius, bounds.h - p.radius);
+  const x = clamp(p.x + input.x * k, p.radius, bounds.w - p.radius);
+  const y = clamp(p.y + input.y * k, p.radius, bounds.h - p.radius);
+  p.vx = (x - p.x) / dt;
+  p.vy = (y - p.y) / dt;
+  p.x = x;
+  p.y = y;
 }
 
 export function fireVolley(world, p, angle) {

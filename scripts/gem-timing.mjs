@@ -1,19 +1,25 @@
-// Seconds for a gem at the edge of the pickup radius to be collected, for a still and a moving player.
+// Seconds for a gem from 85% of the pickup radius (a moving player leaves the very edge before capture) to be collected, for a still and a moving player.
 import { World } from '../src/core/world.js';
+import { moveSystem } from '../src/core/systems.js';
 import { createPlayer } from '../src/game/player.js';
 import { spawnGem, gemSystem } from '../src/game/gems.js';
 
 const dt = 1 / 60;
-function collect(speed) {
+function collect(speed, angle = 0) {
   const world = new World(8);
   const player = createPlayer(450, 500);
+  player.vx = speed;
   const reach = player.stats.pickupRadius;
-  const g = spawnGem(world, 450 + reach - 1, 500, 1);
+  spawnGem(world, 450 + Math.cos(angle) * (reach * 0.85), 500 + Math.sin(angle) * (reach * 0.85), 1);
   for (let t = 1; t < 600; t++) {
     player.x += speed * dt;
+    moveSystem(world, dt);
     if (gemSystem(world, player, dt) > 0) return t * dt;
   }
   return NaN;
 }
-for (const sp of [0, 150, player_speed()]) console.log(`player ${sp} px/s: collected in ${collect(sp).toFixed(3)} s`);
-function player_speed() { return createPlayer(0, 0).stats.moveSpeed; }
+const around = (speed) => {
+  const ts = Array.from({ length: 24 }, (_, k) => collect(speed, (k / 24) * Math.PI * 2));
+  return `mean ${(ts.reduce((a, b) => a + b, 0) / ts.length).toFixed(3)} s, worst ${Math.max(...ts).toFixed(3)} s`;
+};
+for (const sp of [0, 150, 220, 500]) console.log(`player ${sp} px/s, gems all around: ${around(sp)}`);
