@@ -7,6 +7,8 @@ import { enemyAISystem } from './enemies.ts';
 import { applySkill } from './skills.ts';
 import { gemSystem } from './gems.ts';
 import { orbitSystem } from './orbit.ts';
+import { createWeaponState, weaponSystem } from './weapons.ts';
+import type { WeaponState } from './weapons.ts';
 import type { Vec, Size } from '../core/math.ts';
 import type { Player } from './player.ts';
 import type { GhostState } from '../replay/ghost.ts';
@@ -60,6 +62,7 @@ export interface Game<M extends Mode = Mode, F extends GameFx = GameFx> {
   time: number;
   ticks: number;
   skills: Record<string, number>;
+  wstate: WeaponState;
   bossAt: number;
   onKill?: (enemyIndex: number) => void; // assigned right after construction (undefined when nothing listens)
   enemyFireOnScreen?: boolean; // set by the arena's start
@@ -113,6 +116,7 @@ export function createGame<M extends Mode, F extends GameFx = GameFx>({
     time: 0,
     ticks: 0, // advancing ticks so far (replays refer to this)
     skills: {}, // skill id -> times chosen (the UI's owned-skills strip)
+    wstate: createWeaponState(),
     bossAt: -Infinity, // game time of the latest boss spawn (the UI's boss banner)
   };
   game.onKill =
@@ -139,7 +143,8 @@ export function tick(game: Game, dt: number): void {
   grid.rebuild(world, KIND.ENEMY);
   autoFire(player, world, grid, dt);
   game.kills += collisionSystem(world, grid, player, game.onKill);
-  game.kills += orbitSystem(world, grid, player, game.time + dt, dt, game.onKill) // the renderers draw at the post-tick time;
+  game.kills += orbitSystem(world, grid, player, game.time + dt, dt, game.onKill); // the renderers draw at the post-tick time
+  game.kills += weaponSystem(game, dt);
   game.xp += gemSystem(world, player, dt);
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);

@@ -1,4 +1,7 @@
 import { BLADE } from './weapons/blade.ts';
+import { SHOCKWAVE, createShockState } from './weapons/shockwave.ts';
+import type { ShockState } from './weapons/shockwave.ts';
+import type { Game } from './game.ts';
 import type { PlayerStats } from './player.ts';
 
 // Weapon slots a run can hold, the bow (always held, never leveled: the stat passives level it) included.
@@ -13,6 +16,21 @@ export interface WeaponDef {
   desc: string;
   maxLevel: number;
   onLevel?: (s: PlayerStats, level: number) => void;
+  update?: (game: Game, level: number, dt: number) => number; // runs each tick while owned; returns kills
 }
 
-export const WEAPONS: WeaponDef[] = [BLADE];
+export const WEAPONS: WeaponDef[] = [BLADE, SHOCKWAVE];
+
+// Per-run weapon state, on game.wstate: advanced by weaponSystem, hashed by stateHash, read by the renderers.
+export interface WeaponState { shock: ShockState }
+export const createWeaponState = (): WeaponState => ({ shock: createShockState() });
+
+// Runs every owned weapon that has an update. Orbit blades have none (orbitSystem runs them). Returns kills.
+export function weaponSystem(game: Game, dt: number): number {
+  let kills = 0;
+  for (const w of WEAPONS) {
+    const level = game.player.stats.weapons[w.id];
+    if (level && w.update) kills += w.update(game, level, dt);
+  }
+  return kills;
+}

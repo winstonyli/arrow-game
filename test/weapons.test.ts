@@ -8,6 +8,13 @@ import { SKILLS, applySkill, pickChoices, offerTag } from '../src/game/skills.ts
 import { MAX_WEAPONS, WEAPONS } from '../src/game/weapons.ts';
 import { BLADE_LEVELS } from '../src/game/weapons/blade.ts';
 import { MAX_BLADES, BLADE_DPS } from '../src/game/orbit.ts';
+import { createGame, tick } from '../src/game/game.ts';
+import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
+import { seeded } from '../src/core/math.ts';
+import { ENEMY_TYPES } from '../src/game/enemies.ts';
+import { updateShockwave, SHOCK_LEVELS } from '../src/game/weapons/shockwave.ts';
+import { stateHash } from '../src/replay/hash.ts';
+import type { Game } from '../src/game/game.ts';
 
 test('baseStats carries the weapon fields', () => {
   const s = baseStats();
@@ -60,8 +67,7 @@ test('the slot cap stops new weapons but not level-ups of owned ones', () => {
   assert.equal(Object.keys(s.weapons).length + 1, MAX_WEAPONS);
   const blade = SKILLS.find((k) => k.id === 'blade')!;
   assert.equal(blade.available!(s), true); // owned, below max
-  const other = WEAPONS.find((w) => w.id !== 'blade');
-  if (other) assert.equal(SKILLS.find((k) => k.id === other.id)!.available!(s), false); // new weapon, no slot
+  assert.equal(SKILLS.find((k) => k.id === 'shockwave')!.available!(s), false); // new weapon, no slot
 });
 
 test('offerTag says NEW for an unowned weapon, the level step for an owned one, and nothing for a passive', () => {
@@ -97,4 +103,83 @@ test('Power Shot and Rapid Fire are global multipliers that the bow reads', () =
   player.cd = 0;
   autoFire(player, world, grid, 0);
   assert.ok(Math.abs(player.cd - 0.5 / 1.3) < 1e-9);
+});
+
+const arenaGame = () => createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
+const settle = (g: Game) => g.grid.rebuild(g.world, KIND.ENEMY); // tick() rebuilds the grid; tests that call a weapon directly do it themselves
+const BRUISER_HP = ENEMY_TYPES[ENEMY.BRUISER].hp;
+
+test('shockwave hits each enemy once as the ring crosses it and spares those out of reach', () => {
+  const g = arenaGame();
+  applySkill(g.player.stats, 'shockwave');
+  const near = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 100, g.player.y);
+  const far = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 400, g.player.y);
+  for (let k = 0; k < 120; k++) { // two seconds: one pulse (interval 5 s), the ring dies at 150 px after about 23 ticks
+    settle(g);
+    updateShockwave(g, 1, 1 / 60);
+  }
+  assert.equal(g.world.hp[near], BRUISER_HP - SHOCK_LEVELS[0].damage);
+  assert.equal(g.world.hp[far], BRUISER_HP);
+  assert.equal(g.wstate.shock.on, false);
+});
+
+test('shockwave waits for a target in reach before pulsing, then starts its interval', () => {
+  const g = arenaGame();
+  applySkill(g.player.stats, 'shockwave');
+  settle(g);
+  assert.equal(updateShockwave(g, 1, 1 / 60), 0);
+  assert.equal(g.wstate.shock.on, false);
+  assert.equal(g.wstate.shock.cd, 0); // no target: no cooldown spent
+  spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 50, g.player.y);
+  settle(g);
+  updateShockwave(g, 1, 1 / 60);
+  assert.equal(g.wstate.shock.on, true);
+  assert.ok(Math.abs(g.wstate.shock.cd - SHOCK_LEVELS[0].interval) < 1e-9);
+});
+
+test('shockwave scales with level, and Rapid Fire shortens its interval and Power Shot raises its damage', () => {
+  const g = arenaGame();
+  g.player.stats.cooldownMult = 0.5;
+  g.player.stats.damageMult = 1.2; // 75 * 1.2 = 90 < the bruiser's 120 hp, so it survives to be measured
+  const e = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 100, g.player.y);
+  for (let k = 0; k < 60; k++) { // one second: the ring (320 px at 400 px/s) is done by 0.8 s, before the halved 1.5 s interval brings a second pulse
+    settle(g);
+    updateShockwave(g, 5, 1 / 60);
+  }
+  assert.ok(Math.abs(g.world.hp[e] - (BRUISER_HP - SHOCK_LEVELS[4].damage * 1.2)) < 1e-3);
+  assert.equal(g.wstate.shock.max, SHOCK_LEVELS[4].radius);
+  assert.ok(g.wstate.shock.cd <= SHOCK_LEVELS[4].interval * 0.5);
+});
+
+test('a shockwave kill is counted, calls onKill once and removes the enemy', () => {
+  const g = arenaGame();
+  const killed: number[] = [];
+  g.onKill = (j) => killed.push(j);
+  const e = spawnEnemy(g.world, ENEMY.CHASER, g.player.x + 60, g.player.y);
+  g.world.hp[e] = 1;
+  settle(g);
+  let kills = 0;
+  for (let k = 0; k < 60; k++) {
+    settle(g);
+    kills += updateShockwave(g, 1, 1 / 60);
+  }
+  assert.equal(kills, 1);
+  assert.deepEqual(killed, [e]);
+  assert.equal(g.world.kind[e], KIND.NONE);
+});
+
+test('tick runs owned weapons', () => {
+  const g = arenaGame();
+  applySkill(g.player.stats, 'shockwave');
+  spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 50, g.player.y);
+  tick(g, 1 / 60);
+  assert.equal(g.wstate.shock.on, true);
+});
+
+test('the state hash sees weapon state', () => {
+  const g = arenaGame();
+  applySkill(g.player.stats, 'shockwave');
+  const before = stateHash(g);
+  g.wstate.shock.r = 12;
+  assert.notEqual(stateHash(g), before);
 });

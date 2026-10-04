@@ -26,6 +26,10 @@ export function stateHash(g: Game): number {
     mix(w.bounce[i]);
   }
   for (const k of ['x', 'y', 'hp', 'cd', 'invuln'] as const) num(g.player[k]);
+  for (const id of ['blade', 'shockwave', 'chain', 'boomerang']) mix(g.player.stats.weapons[id] ?? 0);
+  const sh = g.wstate.shock;
+  mix(sh.on ? 1 : 0);
+  for (const v of [sh.cd, sh.x, sh.y, sh.r, sh.max]) num(v);
   num(g.time);
   num(g.xp);
   mix(g.kills);

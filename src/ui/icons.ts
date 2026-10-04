@@ -12,6 +12,7 @@ const PATHS: Record<string, string> = {
   magnet: '<path d="M6 4v8a6 6 0 0012 0V4M6 8h3M15 8h3"/>',
   homing: '<circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
   blade: '<circle cx="12" cy="12" r="3"/><path d="M12 3a9 9 0 019 9"/>',
+  shockwave: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/>',
   heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 10c0 5.5-7 10-7 10z"/>',
   skull: '<path d="M5 12a7 7 0 1114 0v4H5z"/><path d="M9 20v-4M15 20v-4"/><circle cx="9.5" cy="12" r="1"/><circle cx="14.5" cy="12" r="1"/>',
   pause: '<path d="M8 5v14M16 5v14"/>',

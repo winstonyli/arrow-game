@@ -19,7 +19,7 @@ export function bladePos(player: Player, time: number, k: number, out: Vec): voi
 
 const pos = { x: 0, y: 0 };
 
-// Blades have no entity: each tick every overlapped enemy takes BLADE_DPS * dt. grid must be rebuilt
+// Blades have no entity: each tick every overlapped enemy takes stats.bladeDps * stats.damageMult * dt. grid must be rebuilt
 // for KIND.ENEMY this tick. onKill(enemyIndex) runs before a killed enemy is despawned. Returns kills.
 export function orbitSystem(
   world: World,
