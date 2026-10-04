@@ -13,6 +13,10 @@ import { ENEMY } from './game/enemies.js';
 import { createSession } from './replay/session.js';
 import { createStore } from './replay/store.js';
 import { randomSeed, customSeed } from './replay/seeds.js';
+import { createPlayback } from './replay/playback.js';
+import { toCode, ReplayError } from './replay/codec.js';
+import { engineTag } from './replay/recorder.js';
+import { SIM_VERSION } from './replay/version.js';
 
 const input = createInput();
 
@@ -50,11 +54,12 @@ const stressN = Number(params.get('stress')) || 0;
 const debug = params.has('debug');
 const direct = !!stressN || params.has('mode'); // benchmarks and verify scripts: no title, no auto-pause
 let kind = params.get('mode') === 'arena' ? 'arena' : 'rooms';
-let screen = 'title'; // title | play | pause | over | none (stress: no UI, the sim always runs)
+let screen = 'title'; // title | play | pause | over | watch | none (stress: no UI, the sim always runs)
 let session = null; // non-stress runs: quantizes input, ticks, records (replay.js); null in stress mode
 let seed = 0;
 let challenge = null; // { seed, label } for a seeded run, null for a random one
-let lastReplay = null; // the run that just ended (kept for Watch replay / Copy code)
+let lastReplay = null; // the run that just ended (kept for Watch replay / Copy code until the next run starts)
+let watch = null; // { pb, speed, done, note } while a replay is being watched
 const storage = (() => {
   try {
     return localStorage;
@@ -107,6 +112,7 @@ function setScreen(next) {
 function play(k, opts) {
   kind = k;
   challenge = opts ?? null;
+  lastReplay = null;
   newGame(challenge ?? {});
   setScreen('play');
 }
@@ -121,6 +127,7 @@ function refreshBests() {
 }
 function quit() {
   challenge = null;
+  watch = null;
   newGame();
   setScreen('title');
   refreshBests();
@@ -129,8 +136,39 @@ function finish() {
   const rec = direct ? null : submit(storage, kind, resultOf(game, kind));
   lastReplay = session ? session.finish() : null;
   if (lastReplay && !direct) store.submit(lastReplay, challenge?.label ?? '');
-  ui.showOver(overModel(game, kind, rec));
+  ui.showOver({ ...overModel(game, kind, rec), canReplay: !!lastReplay });
   setScreen('over');
+}
+function setWatchUi(note = '') {
+  ui.setWatch({ speed: watch.speed, done: watch.done, note });
+}
+function startWatch(replay) {
+  if (!replay || replay.sim !== SIM_VERSION) return;
+  kind = replay.mode;
+  challenge = null;
+  session = null;
+  const pb = createPlayback(replay, { fx: createFx(CAPACITY), sfx });
+  game = pb.game;
+  shownOffer = undefined;
+  watch = { pb, speed: 1, done: false, note: replay.engine !== engineTag() ? 'Recorded on another browser engine: may drift' : '' };
+  setWatchUi(watch.note);
+  setScreen('watch');
+}
+function stepWatch() {
+  if (watch.done) return;
+  try {
+    for (let i = 0; i < watch.speed; i++) {
+      if (!watch.pb.step()) {
+        watch.done = true;
+        break;
+      }
+    }
+  } catch (e) {
+    if (!(e instanceof ReplayError)) throw e;
+    watch.done = true;
+    watch.note = 'Replay went out of sync';
+  }
+  if (watch.done) setWatchUi(watch.note);
 }
 
 const ui = createUi(document.getElementById('ui'), {
@@ -141,12 +179,19 @@ const ui = createUi(document.getElementById('ui'), {
   onPause: pause,
   onPick: (id) => session?.pick(id),
   onToggleSound: () => (sfx ? sfx.toggleMute() : false),
+  onWatchLast: () => startWatch(lastReplay),
+  onCopyLast: () => (lastReplay ? toCode(lastReplay) : null),
+  onWatchSpeed: () => {
+    watch.speed = watch.speed === 1 ? 4 : 1;
+    return watch.speed;
+  },
 });
 
 addEventListener('keydown', (e) => {
   if (e.repeat || (e.code !== 'Escape' && e.code !== 'KeyP')) return;
   if (screen === 'play') pause();
   else if (screen === 'pause') resume();
+  else if (screen === 'watch' && e.code === 'Escape') quit();
 });
 if (!direct) {
   addEventListener('blur', pause);
@@ -155,11 +200,12 @@ if (!direct) {
 
 function syncUI() {
   if (screen === 'play' && game.over) finish();
-  if (game.offer !== shownOffer) {
-    shownOffer = game.offer;
-    ui.setOffer(game.offer, kind === 'rooms' ? 'Room cleared' : `Level ${game.level}`);
+  const offer = screen === 'watch' ? null : game.offer; // the viewer never shows the picker
+  if (offer !== shownOffer) {
+    shownOffer = offer;
+    ui.setOffer(offer, kind === 'rooms' ? 'Room cleared' : `Level ${game.level}`);
   }
-  if (screen === 'play' || screen === 'pause') ui.update(hudModel(game, kind), sfx?.muted);
+  if (screen === 'play' || screen === 'pause' || screen === 'watch') ui.update(hudModel(game, kind), sfx?.muted);
 }
 
 const urlSeed = params.has('seed') ? customSeed(params.get('seed')) : null; // ?mode=arena&seed=123 for reproducible direct runs
@@ -172,6 +218,7 @@ window.arrowGame = {
   get mode() { return kind; },
   get session() { return session; },
   get lastReplay() { return lastReplay; },
+  get watch() { return watch; },
   get seed() { return seed; },
   frameStats,
   renderer: render.kind,
@@ -181,7 +228,8 @@ startLoop(
   createStepper(),
   (dt) => {
     const t0 = performance.now();
-    if (screen === 'play' || screen === 'none') session ? session.step(input.x, input.y) : tick(game, dt);
+    if (screen === 'watch') stepWatch();
+    else if (screen === 'play' || screen === 'none') session ? session.step(input.x, input.y) : tick(game, dt);
     simMs = simMs * 0.9 + (performance.now() - t0) * 0.1;
   },
   () => {
@@ -195,7 +243,7 @@ startLoop(
     syncUI();
     if (game.fx) {
       game.fx.observe(game);
-      game.fx.update((screen === 'play' || screen === 'none') && !game.offer && !game.over ? frameDt : 0); // freeze effects while paused
+      game.fx.update((screen === 'play' || screen === 'none' || screen === 'watch') && !game.offer && !game.over ? frameDt : 0); // freeze effects while paused
     }
     sfx?.observe(game);
     render(

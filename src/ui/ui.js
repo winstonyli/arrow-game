@@ -27,6 +27,27 @@ const setWidth = (el, pct) => {
     el.style.width = w;
   }
 };
+// Clipboard with a prompt fallback (insecure origins and some browsers have no async clipboard).
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    window.prompt('Copy this replay code:', text);
+    return false;
+  }
+}
+// A button that fetches a share code on click and copies it; flashes "Copied".
+const codeButton = (label, cls, getCode) => {
+  const b = button(label, cls, async () => {
+    const code = await getCode();
+    if (!code) return;
+    const ok = await copyText(code);
+    b.textContent = ok ? 'Copied' : label;
+    setTimeout(() => (b.textContent = label), 1500);
+  });
+  return b;
+};
 
 export function createUi(root, on) {
   // HUD ------------------------------------------------------------------
@@ -42,6 +63,7 @@ export function createUi(root, on) {
       <button class="pause-btn" type="button" aria-label="Pause">${icon('pause')}</button>
     </div>
     <div class="foes rooms-only">Enemies left <b class="foes-n"></b></div>
+    <div class="ghost-line" hidden></div>
     <div class="skills"></div>
     <div class="sound-hint">[M] sound <span class="snd"></span></div>
     <div class="banner"><b class="glow-text">Warning</b><span>Something big is coming</span></div>`;
@@ -49,6 +71,7 @@ export function createUi(root, on) {
   const el = {
     hp: q('.bar.hp i'), hpN: q('.hp-n'), lv: q('.lv'), xp: q('.bar.xp i'), room: q('.room'), bossRoom: q('.boss-room'),
     time: q('.time'), kills: q('.kills'), foes: q('.foes-n'), skills: q('.skills'), snd: q('.snd'), banner: q('.banner'),
+    ghost: q('.ghost-line'),
   };
   q('.pause-btn').onclick = () => on.onPause();
 
@@ -90,7 +113,22 @@ export function createUi(root, on) {
   picker.append(pickHead, cards, h('div', 'tip', 'Press 1, 2 or 3, or click'));
   let offer = null;
 
-  root.append(hud, title, pause, over, picker);
+  // The watch bar is a sibling of the HUD, because the HUD is inert outside play.
+  const watchbar = h('div', 'watchbar panel');
+  const watchStatus = h('span', 'mu');
+  const watchNote = h('span', '');
+  const speedBtn = button('', 'g', () => setWatch({ ...watchState, speed: on.onWatchSpeed() }));
+  let watchState = { speed: 1, done: false, note: '' };
+  watchbar.append(watchStatus, speedBtn, button('Exit', 'b', () => on.onQuit()), watchNote);
+  function setWatch(s) {
+    watchState = s;
+    setText(watchStatus, s.done ? 'Replay finished' : 'Replay');
+    setText(speedBtn, `Speed ${s.speed}x`);
+    setText(watchNote, s.note);
+  }
+  setWatch(watchState);
+
+  root.append(hud, title, pause, over, picker, watchbar);
 
   // State ----------------------------------------------------------------
   let screen = 'none';
@@ -99,6 +137,8 @@ export function createUi(root, on) {
   function show(name) {
     screen = name;
     hud.hidden = name === 'none' || name === 'title' || name === 'over';
+    hud.dataset.watch = String(name === 'watch');
+    watchbar.hidden = name !== 'watch';
     title.hidden = name !== 'title';
     pause.hidden = name !== 'pause';
     over.hidden = name !== 'over';
@@ -169,6 +209,11 @@ export function createUi(root, on) {
       el.banner._on = m.boss;
       el.banner.classList.toggle('on', m.boss);
     }
+    el.ghost.hidden = !m.ghost;
+    if (m.ghost) {
+      setText(el.ghost, m.ghost.text);
+      el.ghost.dataset.ahead = String(m.ghost.ahead);
+    }
     setText(el.snd, muted ? 'off' : 'on');
     setText(soundBtn, `Sound: ${muted ? 'off' : 'on'}`);
   }
@@ -184,6 +229,7 @@ export function createUi(root, on) {
       }),
       ...m.newBest.map((s) => h('div', 'new-best glow-text', s)),
       button('Play again', 'primary', () => on.onAgain()),
+      ...(m.canReplay ? [button('Watch replay', 'g', () => on.onWatchLast()), codeButton('Copy code', '', () => on.onCopyLast())] : []),
       button('Title', 'b', () => on.onQuit()),
     );
   }
@@ -193,5 +239,5 @@ export function createUi(root, on) {
     bests.rooms.textContent = `Rooms: ${b.rooms}`;
   }
 
-  return { show, update, setOffer, showOver, setBests };
+  return { show, update, setOffer, showOver, setBests, setWatch };
 }
