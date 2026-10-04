@@ -10,7 +10,7 @@ export interface Skill {
   desc: string;
   arena?: boolean; // offered only in the arena
   available?: (s: PlayerStats) => boolean; // false when already owned or maxed
-  tag?: (s: PlayerStats) => string; // short label for the offer card: NEW or the level step (weapons only)
+  tag?: (s: PlayerStats) => string; // short label for the offer card: NEW or the level step (weapons and modifiers)
   apply: (s: PlayerStats) => void;
 }
 
@@ -67,7 +67,7 @@ export function applySkill(stats: PlayerStats, id: string): void {
   skill.apply(stats);
 }
 
-// The card label for an offered id: 'NEW' or 'Lv 2 → 3' for a weapon, '' for a passive.
+// The card label for an offered id: 'NEW' or 'Lv 2 → 3' for a weapon or modifier, '' for a passive.
 export function offerTag(stats: PlayerStats, id: string): string {
   return SKILLS_BY_ID[id]?.tag?.(stats) ?? '';
 }

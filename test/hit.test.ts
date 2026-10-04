@@ -216,11 +216,13 @@ test('no explosion without the modifier', () => {
   assert.equal(g.blasts.n, 0);
 });
 
-test('a crowd killed by shockwave with explosions: every kill once, the kill count matches onKill', () => {
+// 40 low-hp chasers in a spiral around the player, shockwave level 5, then 3 s of ticks. Returns the final kill
+// count; every kill must reach onKill exactly once.
+function crowdRun(explode: number): number {
   const g = arenaGame();
   applySkill(g.player.stats, 'shockwave');
   g.player.stats.weapons.shockwave = 5;
-  g.player.stats.explode = 5;
+  g.player.stats.explode = explode;
   g.player.hp = g.player.maxHp = 1e9;
   const killed = new Set<string>();
   let calls = 0;
@@ -239,6 +241,11 @@ test('a crowd killed by shockwave with explosions: every kill once, the kill cou
   assert.ok(calls > 0);
   assert.equal(g.kills, calls);
   assert.equal(g.blasts.n, 0);
+  return calls;
+}
+
+test('a crowd killed by shockwave with explosions: every kill once, and explosions add kills', () => {
+  assert.ok(crowdRun(5) > crowdRun(0), 'an explosion fired and killed something the shockwave alone did not');
 });
 
 test('the explosive modifier is a levelled arena skill', () => {

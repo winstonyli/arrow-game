@@ -16,7 +16,9 @@ export const createBlasts = (): Blasts => ({ n: 0, x: new Float32Array(BLAST_CAP
 
 // The one place an enemy takes damage. (dx, dy) is the hit's direction (zero when it has none). A slot that is no
 // longer an enemy (killed earlier this tick, the grid is older) is rejected. A lethal hit calls onKill before the
-// despawn and returns 1; every other hit returns 0.
+// despawn and returns 1; every other hit returns 0. Modifiers apply here: HIT_CRIT hits may crit (rolled on game.rng),
+// a surviving HIT_KNOCK hit is pushed back along (dx, dy), a kill heals the player (vamp) and queues a blast for
+// explosionSystem unless the hit is HIT_NOBLAST.
 export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: number, dy: number): number {
   const { world } = game;
   if (world.kind[j] !== KIND.ENEMY) return 0;
