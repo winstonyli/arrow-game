@@ -8,6 +8,7 @@ import { BLAST_BASE, BLAST_CAP, BLAST_DMG, BLAST_PER, CRIT_CHANCE, CRIT_MULT, KN
 export const HIT_CRIT = 1;
 export const HIT_KNOCK = 2;
 export const HIT_NOBLAST = 4;
+const BLAST_PAL = -1; // render/fx PAL_GEM (gold); the sim does not import render code
 
 // Positions of kills that explode this tick, drained by explosionSystem. Fixed size; empty between ticks, so it is
 // not hashed.
@@ -15,13 +16,13 @@ export interface Blasts { n: number; x: Float32Array; y: Float32Array }
 export const createBlasts = (): Blasts => ({ n: 0, x: new Float32Array(BLAST_CAP), y: new Float32Array(BLAST_CAP) });
 
 // The one place an enemy takes damage. (dx, dy) is the hit's direction (zero when it has none). A slot that is no
-// longer an enemy (killed earlier this tick, the grid is older) is rejected. A lethal hit calls onKill before the
+// longer a live enemy (killed earlier this tick, the grid is older) is rejected. A lethal hit calls onKill before the
 // despawn and returns 1; every other hit returns 0. Modifiers apply here: HIT_CRIT hits may crit (rolled on game.rng),
 // a surviving HIT_KNOCK hit is pushed back along (dx, dy), a kill heals the player (vamp) and queues a blast for
 // explosionSystem unless the hit is HIT_NOBLAST.
 export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: number, dy: number): number {
   const { world } = game;
-  if (world.kind[j] !== KIND.ENEMY) return 0;
+  if (world.kind[j] !== KIND.ENEMY || world.hp[j] <= 0) return 0;
   const s = game.player.stats;
   if (flags & HIT_CRIT && s.crit > 0 && game.rng() < s.crit * CRIT_CHANCE) dmg *= CRIT_MULT;
   world.hp[j] -= dmg;
@@ -56,10 +57,10 @@ export function createHits(game: Game): Hits {
   };
 }
 
-// Runs each queued blast: every enemy whose centre is within the blast radius of the point takes the level's damage.
-// Kept out of hitEnemy because a weapon loop may be walking grid.out, which gather here would overwrite. The grid is
-// the tick's (built before anything died); hitEnemy rejects slots that are gone. Blast hits carry HIT_NOBLAST, so
-// an explosion never queues another. Returns kills.
+// Runs each queued blast: every enemy that overlaps the blast radius around the point (its edge reaches it) takes the
+// level's damage, and a gold ring starting at that radius marks it. Kept out of hitEnemy because a weapon loop may be
+// walking grid.out, which gather here would overwrite. The grid is the tick's (built before anything died); hitEnemy
+// rejects slots that are gone. Blast hits carry HIT_NOBLAST, so an explosion never queues another. Returns kills.
 export function explosionSystem(game: Game): number {
   const b = game.blasts;
   if (b.n === 0) return 0;
@@ -71,7 +72,7 @@ export function explosionSystem(game: Game): number {
   for (let k = 0; k < b.n; k++) {
     const x = b.x[k];
     const y = b.y[k];
-    game.fx?.burst(x, y);
+    game.fx?.kill(x, y, radius, BLAST_PAL);
     const n = grid.gather(x, y, radius + grid.maxRadius);
     for (let q = 0; q < n; q++) {
       const j = grid.out[q];

@@ -5,6 +5,7 @@ import { collisionSystem } from '../src/core/systems.ts';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
 import { createGame, tick } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
+import { updateShockwave } from '../src/game/weapons/shockwave.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
 import { hitEnemy, explosionSystem, HIT_CRIT, HIT_KNOCK } from '../src/game/hit.ts';
 import { BLAST_CAP } from '../src/game/modifiers.ts';
@@ -30,6 +31,12 @@ test('hitEnemy counts a kill once, calls onKill before the despawn, and rejects 
   assert.equal(hitEnemy(g, j, 1e6, 0, 0, 0), 0);
   assert.equal(seen.length, 1);
   assert.equal(g.world.freeCount, free);
+  const live = at(g, 200); // a LIVE enemy slot with hp already <= 0 (kind still ENEMY): also rejected
+  g.world.hp[live] = 0;
+  assert.equal(g.world.kind[live], KIND.ENEMY);
+  assert.equal(hitEnemy(g, live, 1e6, 0, 0, 0), 0);
+  assert.equal(seen.length, 1);
+  assert.equal(g.world.kind[live], KIND.ENEMY);
 });
 
 test('collisionSystem sends an arrow hit through the hit callback with the arrow velocity', () => {
@@ -180,6 +187,9 @@ test('an explosive kill damages neighbours inside the radius once the tick drain
   const victim = at(g, 100);
   const near = at(g, 140); // 40 px away: inside
   const far = at(g, 400);
+  const r = g.world.radius[near];
+  const edge = at(g, 100 + 60 + r / 2); // centre beyond the radius but its edge overlaps it: hit
+  const clear = at(g, 100 + 60 + r + 5); // beyond radius + its own radius: spared
   const hp = g.world.hp[near];
   hitEnemy(g, victim, 1e6, 0, 0, 0);
   assert.equal(g.blasts.n, 1);
@@ -187,6 +197,8 @@ test('an explosive kill damages neighbours inside the radius once the tick drain
   assert.equal(explosionSystem(g), 0);
   assert.equal(g.world.hp[near], hp - 20);
   assert.equal(g.world.hp[far], hp);
+  assert.equal(g.world.hp[edge], hp - 20);
+  assert.equal(g.world.hp[clear], hp);
   assert.equal(g.blasts.n, 0);
 });
 
@@ -214,6 +226,37 @@ test('no explosion without the modifier', () => {
   const g = arenaGame();
   hitEnemy(g, at(g, 100), 1e6, 0, 0, 0);
   assert.equal(g.blasts.n, 0);
+});
+
+test('each blast shows one ring at least as wide as its damage radius', () => {
+  const g = arenaGame();
+  const rings: number[][] = [];
+  g.fx = { kill: (x, y, r, pal) => rings.push([x, y, r, pal]), burst: () => {}, shake: () => {}, sample: () => {} };
+  g.player.stats.explode = 3; // radius 70
+  hitEnemy(g, at(g, 100), 1e6, 0, 0, 0);
+  hitEnemy(g, at(g, 300), 1e6, 0, 0, 0);
+  settle(g);
+  explosionSystem(g);
+  assert.equal(rings.length, 2);
+  for (const [, , r] of rings) assert.ok(r >= 70);
+});
+
+test('the Shockwave ring never knocks back, even with Knockback maxed', () => {
+  const g = arenaGame();
+  applySkill(g.player.stats, 'shockwave');
+  g.player.stats.knockback = 5;
+  const j = at(g, 100);
+  g.world.hp[j] = 1000; // survives the pulse
+  const x = g.world.x[j];
+  const y = g.world.y[j];
+  const hp = g.world.hp[j];
+  for (let k = 0; k < 40; k++) {
+    settle(g);
+    updateShockwave(g, 1, 1 / 60);
+  }
+  assert.ok(g.world.hp[j] < hp, 'the ring did hit it');
+  assert.equal(g.world.x[j], x);
+  assert.equal(g.world.y[j], y);
 });
 
 // 40 low-hp chasers in a spiral around the player, shockwave level 5, then 3 s of ticks. Returns the final kill
