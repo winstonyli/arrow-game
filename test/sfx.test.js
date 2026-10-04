@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSfx, MAX_VOICES, MIN_GAP, STREAK_RESET, PENTATONIC } from '../src/audio/sfx.js';
+import { createSfx, MAX_VOICES, MIN_GAP, STREAK_RESET, PENTATONIC } from '../src/audio/sfx.ts';
 import { createFx } from '../src/render/fx.js';
 import { World } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';

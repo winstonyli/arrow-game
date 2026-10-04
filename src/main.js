@@ -4,7 +4,7 @@ import { createStepper, startLoop } from './core/loop.ts';
 import { createCanvasRenderer } from './render/canvas.js';
 import { createWebGLRenderer } from './render/webgl.js';
 import { createFx } from './render/fx.js';
-import { createSfx } from './audio/sfx.js';
+import { createSfx } from './audio/sfx.ts';
 import { createUi } from './ui/ui.js';
 import { hudModel, overModel, resultOf, bestLine, challengeRows, importError, pastedCode, importLabel, raceLabel } from './ui/model.js';
 import { loadBest, submit } from './game/records.ts';
