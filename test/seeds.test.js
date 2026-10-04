@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dailySeed, dailyLabel, customSeed, hashString, randomSeed } from '../src/replay/seeds.js';
+import { dailySeed, dailyLabel, customSeed, hashString, randomSeed } from '../src/replay/seeds.ts';
 
 test('dailySeed is stable per mode and local date', () => {
   const d = new Date(2026, 9, 3, 15, 30);

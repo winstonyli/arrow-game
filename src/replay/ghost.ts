@@ -1,4 +1,4 @@
-import { createPlayback } from './playback.js';
+import { createPlayback } from './playback.ts';
 
 const POS_EVERY = 6; // ticks between stored positions (10 Hz); the renderer interpolates
 const STAT_EVERY = 60; // ticks between stored level / kills / room (1 Hz)
@@ -7,7 +7,7 @@ const STAT_EVERY = 60; // ticks between stored level / kills / room (1 Hz)
  * Simulates a stored replay once into a track of positions and stats, in slices so it never stalls a frame.
  * The track fills far faster than live play advances, so the ghost is always ready by the time it is needed.
  */
-export function createGhostBuilder(/** @type {import('./codec.js').Replay} */ replay) {
+export function createGhostBuilder(/** @type {import('./codec.ts').Replay} */ replay) {
   const pb = createPlayback(replay);
   const g = pb.game;
   const np = Math.floor(replay.ticks / POS_EVERY) + 1;

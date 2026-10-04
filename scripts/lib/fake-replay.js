@@ -1,4 +1,4 @@
-import { SIM_VERSION } from '../../src/replay/version.js';
+import { SIM_VERSION } from '../../src/replay/version.ts';
 
 // A small valid replay for tests. `over` overrides top-level fields; `over.result` merges into the result.
 export function fakeReplay(over = {}) {

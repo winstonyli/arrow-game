@@ -1,5 +1,5 @@
-import { SIM_VERSION } from './version.js';
-import { REPLAY_VERSION } from './codec.js';
+import { SIM_VERSION } from './version.ts';
+import { REPLAY_VERSION } from './codec.ts';
 
 /** @returns {'v8'|'gecko'|'jsc'|'unknown'} the JS engine family (trig results may differ across engines) */
 export function engineTag() {

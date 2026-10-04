@@ -10,14 +10,14 @@ import { hudModel, overModel, resultOf, bestLine, challengeRows, importError, pa
 import { loadBest, submit } from './game/records.ts';
 import { createStress } from './modes/stress.ts';
 import { ENEMY } from './game/enemies.ts';
-import { createSession } from './replay/session.js';
-import { createStore, better } from './replay/store.js';
-import { randomSeed, customSeed, dailySeed, dailyLabel } from './replay/seeds.js';
-import { createPlayback, verify } from './replay/playback.js';
-import { toCode, fromCode, ReplayError } from './replay/codec.js';
-import { createGhostBuilder, ghostAt } from './replay/ghost.js';
-import { engineTag } from './replay/recorder.js';
-import { SIM_VERSION, TICK_HZ } from './replay/version.js';
+import { createSession } from './replay/session.ts';
+import { createStore, better } from './replay/store.ts';
+import { randomSeed, customSeed, dailySeed, dailyLabel } from './replay/seeds.ts';
+import { createPlayback, verify } from './replay/playback.ts';
+import { toCode, fromCode, ReplayError } from './replay/codec.ts';
+import { createGhostBuilder, ghostAt } from './replay/ghost.ts';
+import { engineTag } from './replay/recorder.ts';
+import { SIM_VERSION, TICK_HZ } from './replay/version.ts';
 
 const input = createInput();
 

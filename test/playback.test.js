@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { driveLive } from '../scripts/lib/drive.js';
-import { runReplay, createPlayback, verify } from '../src/replay/playback.js';
-import { validate, ReplayError } from '../src/replay/codec.js';
-import { stateHash } from '../src/replay/hash.js';
-import { createRecorder } from '../src/replay/recorder.js';
-import { createSession } from '../src/replay/session.js';
-import { SIM_VERSION } from '../src/replay/version.js';
+import { runReplay, createPlayback, verify } from '../src/replay/playback.ts';
+import { validate, ReplayError } from '../src/replay/codec.ts';
+import { stateHash } from '../src/replay/hash.ts';
+import { createRecorder } from '../src/replay/recorder.ts';
+import { createSession } from '../src/replay/session.ts';
+import { SIM_VERSION } from '../src/replay/version.ts';
 
 for (const mode of ['arena', 'rooms']) {
   test(`a recorded ${mode} run replays to the identical state`, () => {

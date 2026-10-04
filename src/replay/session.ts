@@ -1,8 +1,8 @@
 import { newRun } from '../game/run.ts';
 import { tick, choose } from '../game/game.ts';
-import { createRecorder } from './recorder.js';
-import { quantize, dequantize } from './quantize.js';
-import { TICK_DT } from './version.js';
+import { createRecorder } from './recorder.ts';
+import { quantize, dequantize } from './quantize.ts';
+import { TICK_DT } from './version.ts';
 
 /** The one live path: quantize input, tick, record. main.js and the test driver both go through it. */
 export function createSession({ mode, seed, fx, sfx }) {

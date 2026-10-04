@@ -7,7 +7,7 @@ import { seeded } from '../src/core/math.ts';
 import { KIND } from '../src/core/world.ts';
 import { SKILLS } from '../src/game/skills.ts';
 import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError, pastedCode, importLabel, raceLabel } from '../src/ui/model.js';
-import { toCode, fromCode, ReplayError } from '../src/replay/codec.js';
+import { toCode, fromCode, ReplayError } from '../src/replay/codec.ts';
 import { fakeReplay } from '../scripts/lib/fake-replay.js';
 import { icon } from '../src/ui/icons.js';
 

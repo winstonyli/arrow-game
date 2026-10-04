@@ -6,7 +6,7 @@ import { createFx } from '../src/render/fx.js';
 import { createStepper } from '../src/core/loop.ts';
 import { seeded } from '../src/core/math.ts';
 import { createRooms } from '../src/modes/rooms.ts';
-import { stateHash } from '../src/replay/hash.js';
+import { stateHash } from '../src/replay/hash.ts';
 
 // Same seed and input script must give the same state, whatever the frame times or presentation attached.
 function run({ seed, seconds, frameDts = [1 / 60], fx }) {

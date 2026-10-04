@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createStore, better } from '../src/replay/store.js';
+import { createStore, better } from '../src/replay/store.ts';
 import { fakeReplay } from '../scripts/lib/fake-replay.js';
-import { SIM_VERSION } from '../src/replay/version.js';
+import { SIM_VERSION } from '../src/replay/version.ts';
 
 // A Web Storage stand-in; `quota` limits the total characters stored.
 function memory(quota = Infinity) {

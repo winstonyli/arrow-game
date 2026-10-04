@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRun } from '../src/game/run.ts';
 import { tick } from '../src/game/game.ts';
-import { stateHash } from '../src/replay/hash.js';
+import { stateHash } from '../src/replay/hash.ts';
 import { ARENA_BOUNDS } from '../src/modes/arena.ts';
 
 const spin = (g, n) => {

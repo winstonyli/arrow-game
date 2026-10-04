@@ -1,4 +1,4 @@
-import { createSession } from '../../src/replay/session.js';
+import { createSession } from '../../src/replay/session.ts';
 
 // A scripted player: eight compass directions, 45 ticks each. Reads no sim state, so runs are reproducible.
 const DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];

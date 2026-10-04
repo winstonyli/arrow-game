@@ -1,5 +1,5 @@
-import { SIM_VERSION } from './version.js';
-import { validate } from './codec.js';
+import { SIM_VERSION } from './version.ts';
+import { validate } from './codec.ts';
 
 export const CAP = 40;
 const INDEX = 'arrow-replay-index';

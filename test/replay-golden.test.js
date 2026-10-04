@@ -1,16 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { runReplay } from '../src/replay/playback.js';
-import { validate, ReplayError } from '../src/replay/codec.js';
-import { SIM_VERSION } from '../src/replay/version.js';
+import { runReplay } from '../src/replay/playback.ts';
+import { validate, ReplayError } from '../src/replay/codec.ts';
+import { SIM_VERSION } from '../src/replay/version.ts';
 
 for (const mode of ['arena', 'rooms']) {
   test(`golden ${mode} replay still reproduces`, () => {
     const fx = JSON.parse(readFileSync(new URL(`./fixtures/golden-${mode}.json`, import.meta.url), 'utf8'));
     validate(fx.replay);
     assert.equal(fx.replay.sim, SIM_VERSION, 'SIM_VERSION changed: regenerate with node scripts/make-golden.mjs');
-    const advice = 'sim behaviour changed: bump SIM_VERSION in src/replay/version.js, then run node scripts/make-golden.mjs';
+    const advice = 'sim behaviour changed: bump SIM_VERSION in src/replay/version.ts, then run node scripts/make-golden.mjs';
     let out;
     try {
       out = runReplay(fx.replay);

@@ -2,8 +2,8 @@
 // Refuses to overwrite a fixture whose hash would change without a SIM_VERSION bump (pass --force to override).
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { driveLive } from './lib/drive.js';
-import { stateHash } from '../src/replay/hash.js';
-import { SIM_VERSION } from '../src/replay/version.js';
+import { stateHash } from '../src/replay/hash.ts';
+import { SIM_VERSION } from '../src/replay/version.ts';
 
 const OUT = new URL('../test/fixtures/', import.meta.url);
 mkdirSync(OUT, { recursive: true });
@@ -18,7 +18,7 @@ for (const [mode, seed, maxTicks] of CASES) {
   if (existsSync(file) && !process.argv.includes('--force')) {
     const old = JSON.parse(readFileSync(file, 'utf8'));
     if (old.replay.sim === SIM_VERSION && old.hash !== fixture.hash) {
-      console.error(`${mode}: sim behaviour changed but SIM_VERSION is still ${SIM_VERSION}. Bump it in src/replay/version.js, then rerun.`);
+      console.error(`${mode}: sim behaviour changed but SIM_VERSION is still ${SIM_VERSION}. Bump it in src/replay/version.ts, then rerun.`);
       failed = true;
       continue;
     }

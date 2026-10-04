@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { quantize, dequantize } from '../src/replay/quantize.js';
+import { quantize, dequantize } from '../src/replay/quantize.ts';
 
 test('quantize maps [-1, 1] to signed bytes and clamps', () => {
   assert.equal(quantize(0), 0);
