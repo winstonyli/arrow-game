@@ -1,31 +1,51 @@
 # arrow-game
 
-Browser archer roguelite (Archero / arrow.io style). Plain JS, typed-array simulation.
+Browser archer roguelite (Archero / arrow.io style). Strict TypeScript bundled by Vite, with Bun as the tool (install, scripts, tests); typed-array simulation, no runtime dependencies.
 
-- Run: `bun run dev` then open http://localhost:8000
-- Test: `bun test`
+- Install: `bun install` (dev dependencies only: `typescript`, `vite`, `@types/bun`)
+- Run: `bun run dev` then open http://localhost:8000 (Vite dev server, port 8000, fails rather than drifting if the port is taken)
+- Build: `bun run build` writes the bundle to `dist/`; `bun run preview` serves it on http://localhost:8000
+- Test: `bun test`; `node --test test/*.test.ts` runs the same 230 tests on Node/V8 (type stripping) as a cross-engine check of the golden hashes
+- Typecheck: `bun run typecheck` (`tsc --noEmit`; `strict`, explicit `.ts` import specifiers, erasable syntax only)
+- Benchmarks: `bun run bench` (sim), `bun run soak` (arena soak), `bun run bench:render` (Chrome); `node scripts/<name>.ts` runs the same scripts on V8 (checked for `bench-sim`, `soak-arena`, `gem-timing`)
 - Design: `docs/superpowers/specs/2026-10-02-arrow-game-design.md`
 - Plan: `docs/superpowers/plans/2026-10-02-arrow-game-core-and-rooms.md`
+
+## Build
+`bun run build` (Vite 8.3.2) bundles 43 modules into `dist/` in ~0.2 s. Sizes on 2026-10-04 (`du -sh dist`: 109K on disk, 95,381 bytes of files):
+
+| file | bytes | gzip |
+|---|---|---|
+| `index.html` | 520 | 310 |
+| `assets/index-*.js` (the whole game, minified) | 59,672 | 23,639 |
+| `assets/index-*.css` | 8,565 | 2,224 |
+| `assets/share-tech-mono-latin-400-normal-*.woff2` | 13,500 | - |
+| `assets/orbitron-latin-500-normal-*.woff2` | 6,596 | - |
+| `assets/orbitron-latin-700-normal-*.woff2` | 6,528 | - |
+
+Dev-server start (`bun run dev`, measured from launching the command to the first response, machine CPU ~93% busy from other sessions, BelowNormal, Vite's dependency cache already present): first 200 on `/` after 2.1 s, `/src/main.ts` served at 2.3 s. `bun run preview` answers `/` after 1.2 s. `bun run` starts Vite through its `node` shebang, so the Vite server itself runs on Node; Bun runs the tests and the scripts.
+
+Out-of-repo CDP harnesses that imported `/src/...js` paths need the `.ts` names now (the dev server serves `/src/main.ts`; the build has a single hashed bundle).
 
 ## Status
 Plan 1 (core + rooms mode) implemented; playable at `bun run dev`. Gameplay feel not yet tuned.
 Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Plan 3 (arena mode + camera) implemented; play it at `/?mode=arena` (rooms stays the default at `/`).
 
 ## Branches
-`dev` is where work lands: feature branches (`feat/*`, `fix/*`) merge into `dev`. `main` only moves by fast-forward from `dev` when cutting a release, so it is always a tested release point. Until the first release, `main` deliberately sits at the repo's first commit as a baseline. Merging is the owner's decision; run `node --test` on the merged result first. There is no remote.
+`dev` is where work lands: feature branches (`feat/*`, `fix/*`) merge into `dev`. `main` only moves by fast-forward from `dev` when cutting a release, so it is always a tested release point. Until the first release, `main` deliberately sits at the repo's first commit as a baseline. Merging is the owner's decision; run `bun test` and `node --test test/*.test.ts` on the merged result first. There is no remote.
 
 ## Versioning and commits
 Three separate versions, each with one job:
-- **Release version** (`version` in `package.json`, git tags `vX.Y.Z`): `0.MINOR.PATCH` while unstable, `1.0.0` at the first public release. Minor = new content or features (a mode, an enemy, a skill), patch = fixes and tuning. Named prereleases use SemVer tags, `v0.1.0-alpha.1`, `-beta.1`, `-rc.1`; the `package.json` version reads `0.1.0-dev` between tags.
-- **`SIM_VERSION`** (`src/replay/version.js`, integer): bump on ANY change to sim behaviour, balance tuning included, because old replays and share codes stop verifying. Regenerate the goldens with `node scripts/make-golden.ts --force` and say so in the commit body. It is independent of the release version: a patch release that tunes gem speed still bumps it.
-- **`REPLAY_VERSION`** (`src/replay/codec.js`): bump only when the replay file format changes.
+- **Release version** (`version` in `package.json`, git tags `vX.Y.Z`): `0.MINOR.PATCH` while unstable, `1.0.0` at the first public release. Minor = new content or features (a mode, an enemy, a skill), patch = fixes and tuning. Named prereleases use SemVer tags, `v0.1.0-alpha.1`, `-beta.1`, `-rc.1`; the `package.json` version reads the next version with `-dev` between tags (now `0.2.0-dev`).
+- **`SIM_VERSION`** (`src/replay/version.ts`, integer): bump on ANY change to sim behaviour, balance tuning included, because old replays and share codes stop verifying. Regenerate the goldens with `bun scripts/make-golden.ts --force` and say so in the commit body. It is independent of the release version: a patch release that tunes gem speed still bumps it.
+- **`REPLAY_VERSION`** (`src/replay/codec.ts`): bump only when the replay file format changes.
 
 Commits are Conventional Commits, `type: summary`, scope optional. Types in use: `feat`, `fix`, `docs`, `test`, `perf`, `chore`, plus `tune` for balance and feel changes. Mark a breaking change with `!` (`feat!:`) or a `BREAKING CHANGE:` footer. Commit bodies explain why, and name any `SIM_VERSION` bump.
 
 Prereleases are tagged on `dev` at points the owner picks. `v0.1.0` is the first tag (made after the checklist below passed); the next release number is chosen per release. Release checklist:
-1. `node --test` passes on the tagged commit.
+1. `bun test` and `node --test test/*.test.ts` pass on the tagged commit, and `bun run typecheck` is clean.
 2. If `SIM_VERSION` changed, the goldens are regenerated and committed.
-3. `scripts/render-bench` and `bun run soak` have run, with CPU load and Defender state recorded next to the numbers.
+3. `bun run bench:render` and `bun run soak` have run, with CPU load and Defender state recorded next to the numbers.
 4. `package.json` version and the tag match; a `CHANGELOG.md` entry lists the changes and any `SIM_VERSION` bump (the file is created with the first tag).
 5. For a full release only: `main` fast-forwards to the tag.
 
@@ -43,14 +63,14 @@ Every run is recorded as its seed plus quantized per-tick inputs and skill picks
 - **Challenges** (title screen): Daily Arena / Daily Rooms (seed derived from the local date), or any text or number as a seed. A run on a seed you have a best for races it as a translucent ghost with a live comparison line.
 - **Watch replay**: from the game over screen or the Challenges list; 1x or 4x, Esc to exit.
 - **Share codes**: Copy code on the game over screen or in the list; paste into Import. Codes are `AG1.` plus base64url of deflated JSON; imports are re-simulated and rejected if they do not reproduce.
-- **Versioning**: `SIM_VERSION` in `src/replay/version.js`. Changing sim behaviour makes `test/replay-golden.test.ts` fail: bump the version, then `node scripts/make-golden.ts`. Old-version replays stay listed as stale and cannot be watched or raced.
+- **Versioning**: `SIM_VERSION` in `src/replay/version.ts`. Changing sim behaviour makes `test/replay-golden.test.ts` fail: bump the version, then `bun scripts/make-golden.ts`. Old-version replays stay listed as stale and cannot be watched or raced.
 - **Caveat**: determinism is proven within one JS engine only. A replay recorded in another browser engine may drift (trig functions); the viewer warns.
 - `?mode=arena&seed=123` starts a direct run on a fixed seed (direct runs keep the finished run in memory for Watch replay / Copy code but never write it to the store).
 
 ## Arena balance (kiting)
 In arena the player auto-fires while moving at half rate (`stats.moveFireRate = 0.5`; rooms keeps stand-still-to-fire, `moveFireRate = 0`), shooters and bosses only fire while on screen (`game.enemyFireOnScreen`), the early spawn ramp is gentler (`BASE_RATE 0.6`, `RATE_PER_SEC 0.015`), and the gem magnet is at least 1.5x the player's speed. A stationary player used to die at about 0:30.
 
-`node scripts/soak-arena.ts --bot=kite --seed=N` runs a crude mortal kiting bot (flees nearby enemies, avoids walls, chases gems, always takes the first offered skill) and reports when it dies. Seeds 1-5 died at 69, 99, 131, 157 and 171 s, all at level 1-2. `--bot=smart` adds a skill priority (multishot, rapid, power before speed), keeps collecting gems while fleeing and sidesteps so it circles instead of pinning itself on a wall: seeds 1-5 died at 131, 252, 199, 220 and 217 s, level 2-4. Both are yardsticks for later tuning, not targets; a human should do better.
+`bun scripts/soak-arena.ts --bot=kite --seed=N` runs a crude mortal kiting bot (flees nearby enemies, avoids walls, chases gems, always takes the first offered skill) and reports when it dies. Seeds 1-5 died at 69, 99, 131, 157 and 171 s, all at level 1-2. `--bot=smart` adds a skill priority (multishot, rapid, power before speed), keeps collecting gems while fleeing and sidesteps so it circles instead of pinning itself on a wall: seeds 1-5 died at 131, 252, 199, 220 and 217 s, level 2-4. Both are yardsticks for later tuning, not targets; a human should do better.
 
 ## Effects
 Hit flash, kill pop, gem burst, screen shake and a damage vignette come from `src/render/fx.ts` (presentation-only, `game.fx` optional, absent in stress mode, which still draws the WebGL outline and shadow). The WebGL renderer adds an outline and soft shadow in the circle shader. The Canvas2D fallback draws flash, pop, shake and vignette but no outline or shadow.
@@ -58,17 +78,19 @@ Hit flash, kill pop, gem burst, screen shake and a damage vignette come from `sr
 Layer order, bottom to top, is the same in both renderers: background and grid, gems, enemies, enemy projectiles, arrows, fx particles, orbit blades, player, then HP bar, damage vignette and HUD text. The WebGL renderer puts the background and grid on a `#bg` canvas below a transparent `#game` canvas, and the HP bar, vignette and HUD on `#hud` above it. Within a layer, WebGL draws in slot order and Canvas2D by enemy type.
 
 ## Content
-Arena enemy mix (`MIX` in `src/modes/arena.js`, first match wins, the rest are chasers): shooters from 60 s (30%), swarmers from 30 s (15%, spawn as a pack of 4), bruisers from 90 s (8%), splitters from 150 s (8%, leave 2 swarmers). Skills (10 total, `src/game/skills.js`): Regeneration (+1 HP/s), Magnet (+50% pickup range), Homing (arrows steer toward the nearest enemy within 300 px at up to 4 rad/s; `world.type` = 1 flags the arrow) and Orbit Blade (up to 8 blades at 60 px, 30 damage/s each to every enemy they overlap; blades are not entities, `src/game/orbit.js` computes positions for both the sim and the renderers). All numbers are first guesses. Smart-bot soak (seeds 1-3) died at 211, 132 and 184 s, so difficulty is in the same range as before; the bot picks skills by priority, not cleverly.
+Arena enemy mix (`MIX` in `src/modes/arena.ts`, first match wins, the rest are chasers): shooters from 60 s (30%), swarmers from 30 s (15%, spawn as a pack of 4), bruisers from 90 s (8%), splitters from 150 s (8%, leave 2 swarmers). Skills (10 total, `src/game/skills.ts`): Regeneration (+1 HP/s), Magnet (+50% pickup range), Homing (arrows steer toward the nearest enemy within 300 px at up to 4 rad/s; `world.type` = 1 flags the arrow) and Orbit Blade (up to 8 blades at 60 px, 30 damage/s each to every enemy they overlap; blades are not entities, `src/game/orbit.ts` computes positions for both the sim and the renderers). All numbers are first guesses. Smart-bot soak (seeds 1-3) died at 211, 132 and 184 s, so difficulty is in the same range as before; the bot picks skills by priority, not cleverly.
 
 Trails (`src/render/trail.ts`, tunables there): enemies, arrows, enemy shots and gems get a tapered tail bent through where they actually were. `fx` keeps a 10-sample position history per slot (one per sim tick, taken at the end of `tick` by `fx.sample`, so tail length is the same at any frame rate and does not grow while paused) and `bentTail` turns the samples at ages `TRAIL_MID` and `TRAIL_END` into a bend and a tip, capped at `TRAIL_MAX` 80 px and at `TRAIL_PER_R` (8) radii, so small movers get short tails. The tail is a quadratic curve from the centre through the bend to the tip: WebGL walks it in `TAIL_STEPS` (6) capsules in the circle shader from a per-instance tail (`STRIDE` 9), Canvas2D draws it with `quadraticCurveTo`. A slot's history is tied to its generation, so a recycled slot never shows a ghost, and a mover under 5 samples old gets a straight tail. The player and orbit blades are not slots, so `fx` keeps the same 10-sample history for them (`trackTail`) and they get the same bent tail. Presentation-only like the rest of fx; stress mode passes no fx, so it packs zero tails. The tail starts at the body's rim (the radius is added to its length), so slow enemies still show a short one; it fades from 0.4 alpha (WebGL; Canvas2D is a flat 0.3), so it stays subtle.
 
-Gems are captured when they enter the pickup radius and stay captured. A captured gem is a damped orbit around the player, simulated in the player's frame of reference (`src/game/gems.js`; the player's travelled velocity is `player.vx/vy`): a spring-like pull, drag on the velocity relative to the player, and a sideways push that fades out over the first 0.5 s so it swings around and spirals in (about 0.8 s). Because it works in the player's frame, a moving player drags its gems along and cannot outrun them. The gem's real velocity feeds its trail. It is sim-side, part of `SIM_VERSION` 2, and uses no RNG or trig. `node scripts/gem-timing.ts` prints the time to collect a gem from the edge of the pickup radius, for balance checks.
+Gems are captured when they enter the pickup radius and stay captured. A captured gem is a damped orbit around the player, simulated in the player's frame of reference (`src/game/gems.ts`; the player's travelled velocity is `player.vx/vy`): a spring-like pull, drag on the velocity relative to the player, and a sideways push that fades out over the first 0.5 s so it swings around and spirals in (about 0.8 s). Because it works in the player's frame, a moving player drags its gems along and cannot outrun them. The gem's real velocity feeds its trail. It is sim-side, part of `SIM_VERSION` 2, and uses no RNG or trig. `bun scripts/gem-timing.ts` prints the time to collect a gem from the edge of the pickup radius, for balance checks.
 
 ## Sound
 `src/audio/sfx.ts` synthesizes every effect with WebAudio (no asset files): shot, hit, kill (heavier for bruisers and bosses), gem pickup (pitch climbs a pentatonic scale while pickups keep coming, restarts after 0.5 s), level-up arpeggio, damage, boss spawn, game over. Presentation-only like fx: `game.sfx` is optional, the sim only calls `sfx.kill` (via `onKill`) and `sfx.boss`; `sfx.observe(game)` derives the rest from state changes once per frame. Per-sound throttles (`MIN_GAP`), a 24-voice cap and a compressor keep a crowd from turning to noise. Audio starts on the first key press or touch (browser autoplay rules); **M** mutes (remembered in localStorage, shown in the HUD). There is no sound in stress mode. Levels were checked offline (every sound peaks between 0.06 and 0.45, no NaN), but nobody has judged how it sounds yet; all gains and pitches are first guesses in that file.
 
 ## Arena soak
-`bun run soak` (`node scripts/soak-arena.ts --minutes=10`) runs the arena headless with a stationary invulnerable player, taking the first offered skill at each level-up, and prints one line per game minute (node v26.10.0, seed 1, Defender real-time protection off, machine CPU ~30% busy at the time):
+`bun run soak` (`bun scripts/soak-arena.ts --minutes=10`) runs the arena headless with a stationary invulnerable player, taking the first offered skill at each level-up, and prints one line per game minute. Pass criteria: 0 dropped spawns, tick median well under the 16.7 ms budget.
+
+**Node/V8** (node v26.10.0, run as plain JS before the TypeScript migration; seed 1, Defender real-time protection off, machine CPU ~30% busy at the time):
 
 | min | enemies | gems | high | dropped | level | kills | tick ms (median / p95) |
 |---|---|---|---|---|---|---|---|
@@ -83,13 +105,30 @@ Gems are captured when they enter the pickup radius and stay captured. A capture
 | 9 | 90 | 622 | 762 | 0 | 17 | 3369 | 0.05 / 0.10 |
 | 10 | 112 | 673 | 838 | 0 | 17 | 4091 | 0.04 / 0.08 |
 
-Caveat (table above, taken before the kiting change): the player is stationary, so this is a load proxy, not a difficulty measure. The table predates the balance pass below; spawn rates and kiting have changed since. Entity counts stay far below the 50k capacity and nothing is dropped.
+**Bun/JavaScriptCore** (Bun 1.4.2, `bun run soak`, seed 1, 2026-10-03, after the TypeScript migration and the balance pass; Defender real-time protection off, machine CPU ~90-100% busy from other sessions, process BelowNormal, so tick times are contended upper bounds):
+
+| min | enemies | gems | high | dropped | level | kills | tick ms (median / p95) |
+|---|---|---|---|---|---|---|---|
+| 1 | 8 | 43 | 54 | 0 | 2 | 54 | 0.03 / 0.07 |
+| 2 | 53 | 10 | 77 | 0 | 5 | 129 | 0.03 / 0.05 |
+| 3 | 166 | 0 | 237 | 0 | 7 | 187 | 0.04 / 0.06 |
+| 4 | 130 | 0 | 305 | 0 | 14 | 479 | 0.05 / 0.10 |
+| 5 | 24 | 284 | 324 | 0 | 16 | 892 | 0.09 / 0.20 |
+| 6 | 28 | 347 | 404 | 0 | 16 | 1251 | 0.10 / 0.19 |
+| 7 | 28 | 374 | 435 | 0 | 17 | 1683 | 0.10 / 0.22 |
+| 8 | 45 | 413 | 495 | 0 | 18 | 2155 | 0.11 / 0.24 |
+| 9 | 47 | 491 | 568 | 0 | 19 | 2695 | 0.13 / 0.31 |
+| 10 | 47 | 602 | 677 | 0 | 19 | 3316 | 0.15 / 0.24 |
+
+The two tables are not a Node-vs-Bun comparison: the entity counts differ because the sim changed in between (balance pass, gem orbit; `SIM_VERSION` 2), and the machine load differs. Both pass (0 dropped).
+
+Caveat (Node table above, taken before the kiting change): the player is stationary, so this is a load proxy, not a difficulty measure. The table predates the balance pass below; spawn rates and kiting have changed since. Entity counts stay far below the 50k capacity and nothing is dropped.
 
 ## Stress benchmarks (plan 2)
 - Sim: `bun run bench` (headless, per-system ms/tick; `--n=`, `--scenario=`, `--ticks=`). N is total entities, half enemies and half player projectiles.
 - Browser: open `/?stress=N` (add `&scenario=converge` for chasers). Add `&debug` to show sim, draw and frame ms at the bottom; `arrowGame.frameStats()` returns median and p95 frame interval.
 
-Sim results, node v26.10.0, median ms per tick (budget 16.7), Defender real-time protection off, machine CPU ~46% busy from stray python processes, so treat as upper bounds:
+Sim results, **Node/V8** (node v26.10.0, plain JS before the TypeScript migration, and before the collision search radius change below), median ms per tick (budget 16.7), Defender real-time protection off, machine CPU ~46% busy from stray python processes, so treat as upper bounds:
 
 | scenario | 1k | 5k | 10k | 20k | notes |
 |---|---|---|---|---|---|
@@ -97,11 +136,21 @@ Sim results, node v26.10.0, median ms per tick (budget 16.7), Defender real-time
 | dense (900x600 arena) | 0.22 | 2.70 | 10.25 | 45.78 | collision is 97% of the tick |
 | converge (chasers pile on the player) | 0.41 | 6.45 | 25.32 | 94.55 | worst case for the grid |
 
+Sim results, **Bun/JavaScriptCore** (Bun 1.4.2, `bun run bench`, 2026-10-03, after the TypeScript migration and the collision search radius change), median ms per tick, Defender real-time protection off, machine CPU ~100% busy from other sessions (process BelowNormal), so contended upper bounds; the bench flagged converge 5k (real `tick()` median 4.58 ms, 62% off the per-stage sum):
+
+| scenario | 1k | 5k | 10k | 20k |
+|---|---|---|---|---|
+| sparse | 0.17 | 0.86 | 2.02 | 4.12 |
+| dense | 0.23 | 2.20 | 6.68 | 21.11 |
+| converge | 0.27 | 2.82 | 10.64 | 40.09 |
+
+Not a Node-vs-Bun comparison: the code (collision radius) and the load differ between the two tables. For V8 numbers on today's code, run `node scripts/bench-sim.ts` (the header names the runtime).
+
 At constant density the sim fits 20k entities in 5 ms. Cost explodes with crowding (collision candidates per projectile), not with entity count alone.
 
 Grid cell size (`createGame({ cellSize })`, bench `--cell=`) was swept at 16/32/64/128 on the same machine under load. 32 is the default: converge at 20k went from 75-117 ms to 42-48 ms, sparse was equal or better, dense was unchanged (~50 ms) because its cost is the overlap count itself. 16 and 128 were worse. Repeat runs varied by ±40% under load, so only the converge gain is a clear signal.
 
-Browser results (Chrome, real window, GPU = AMD Radeon 780M iGPU via ANGLE/D3D11, ~46% CPU load from stray processes). Median rAF interval over ~10 s; sim and draw are the HUD's CPU-side EMAs per step / per frame:
+Browser results (Chrome, real window, plain JS modules served unbundled before the migration, GPU = AMD Radeon 780M iGPU via ANGLE/D3D11, ~46% CPU load from stray processes). Median rAF interval over ~10 s; sim and draw are the HUD's CPU-side EMAs per step / per frame:
 
 | scenario | N | frame ms (p95) | sim ms/step | draw ms (CPU) |
 |---|---|---|---|---|
@@ -116,9 +165,9 @@ Browser results (Chrome, real window, GPU = AMD Radeon 780M iGPU via ANGLE/D3D11
 Frame time is far above sim + draw CPU time (e.g. dense 5k: ~10 ms CPU, 39 ms frame), so the gap is Canvas2D rasterization on the GPU, which `draw ms` cannot see. Canvas2D does not hold 60 fps past ~1-2k entities on this iGPU; the 20k target needs WebGL instanced drawing (or a cheaper draw path) regardless of sim cost. Caveat: Chrome picked the iGPU, not the eGPU, and the sim also ran 1-3 catch-up steps per frame at the slow end, which inflates frame time.
 
 ## WebGL renderer (plan 2b)
-`src/render/webgl.ts`: WebGL2 instanced circles (one draw call, one pass over the world), HUD on a separate 2D canvas. Default when WebGL2 is available; falls back to Canvas2D. Reproduce with `bun run bench:render` (`scripts/render-bench.ts`: runs `vite build` if `dist/` is missing or older than `src/`, serves it with `vite preview` on a free port, and starts a throwaway Chrome, stopping both when done; `--shot=dir` saves screenshots). `--mode=background` (default) opens the window off-screen with Chrome's occlusion and backgrounding throttling disabled, so the run neither takes window focus nor slows when other windows cover it; `--mode=headed` is the old visible window, `--mode=headless` has no window. On the same loaded machine the three agree at 5k; at 20k the run-to-run spread from other processes' load (CPU 60-100%) was larger than any difference between modes. Chrome picks the iGPU (780M) by default here, as in the tables below; the discrete card is not selected.
+`src/render/webgl.ts`: WebGL2 instanced circles (one draw call, one pass over the world), HUD on a separate 2D canvas. Default when WebGL2 is available; falls back to Canvas2D. Reproduce with `bun run bench:render` (`scripts/render-bench.ts`: runs `vite build` if `dist/` is missing or older than its inputs (`src/`, `assets/`, `index.html`, `vite.config.ts`, `package.json`, `bun.lock`), serves it with `vite preview` on a free port, and starts a throwaway Chrome, stopping both and deleting the Chrome profile when done; `--shot=dir` saves screenshots). `--mode=background` (default) opens the window off-screen with Chrome's occlusion and backgrounding throttling disabled, so the run neither takes window focus nor slows when other windows cover it; `--mode=headed` is the old visible window, `--mode=headless` has no window. On the same loaded machine the three agree at 5k; at 20k the run-to-run spread from other processes' load (CPU 60-100%) was larger than any difference between modes. Chrome picks the iGPU (780M) by default here, as in the tables below; the discrete card is not selected.
 
-Median frame ms (p95), same machine and load as above (iGPU 780M, ~46% CPU busy):
+Median frame ms (p95), plain JS modules served unbundled (before the migration), same machine and load as above (iGPU 780M, ~46% CPU busy):
 
 | scenario | N | Canvas2D | WebGL |
 |---|---|---|---|
@@ -129,10 +178,25 @@ Median frame ms (p95), same machine and load as above (iGPU 780M, ~46% CPU busy)
 | converge | 10k | 73.1 (105) | 16.9 (84.5) |
 | converge | 20k | 393 (466) | 169 (239) |
 
+New baseline: **Vite build, minified, Chrome 154, AMD Radeon 780M iGPU (ANGLE D3D11), 2026-10-03, CPU load ~93-98% from other sessions, Defender off** (`bun run bench:render`, default matrix, `--mode=background`, one run, BelowNormal; another session's render loop shared both GPUs, so contended). Median frame ms (p95):
+
+| scenario | N | Canvas2D | WebGL |
+|---|---|---|---|
+| dense | 1k | 17.6 (20.4) | 16.7 (17.7) |
+| dense | 5k | 59.2 (68.0) | 16.7 (19.3) |
+| dense | 10k | 107.5 (121.1) | 16.6 (21.2) |
+| dense | 20k | 196.3 (227.0) | 186.0 (202.7) |
+| converge | 1k | 16.7 (18.3) | 16.7 (17.4) |
+| converge | 5k | 57.8 (66.7) | 16.7 (18.6) |
+| converge | 10k | 108.8 (126.2) | 16.6 (19.1) |
+| converge | 20k | 234.1 (267.1) | 209.2 (226.4) |
+
+This measures the minified bundle under much heavier load, so it is not comparable with the unbundled table above; it is the reference for later runs of the bundle.
+
 WebGL draw CPU time is ~0.5 ms at every N, so rendering no longer limits frame time. At 20k the frame time is about 4-5 sim steps (the stepper's catch-up cap) at 37-46 ms each: the sim's collision cost under 900x600 crowding is the remaining limit. Spikes at 10k converge (p95 84 ms) come from the same sim cost as chasers pile up.
 
 ## Collision search radius (plan 2c)
-The candidate search used a fixed boss-sized radius (36) for every projectile; it now uses `grid.maxRadius`, the largest radius among the enemies of the current tick (boss rooms still pay for the boss). Sim median ms per tick at 20k, two alternating before/after runs on the same loaded machine (`bun run bench`):
+The candidate search used a fixed boss-sized radius (36) for every projectile; it now uses `grid.maxRadius`, the largest radius among the enemies of the current tick (boss rooms still pay for the boss). Sim median ms per tick at 20k, two alternating before/after runs on the same loaded machine (Node/V8, `node scripts/bench-sim.ts`, before the migration):
 
 | scenario | before | after |
 |---|---|---|
