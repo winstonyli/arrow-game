@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { KIND } from '../src/core/world.ts';
 import { collisionSystem } from '../src/core/systems.ts';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
-import { createGame } from '../src/game/game.ts';
+import { createGame, tick } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
-import { hitEnemy, HIT_CRIT, HIT_KNOCK } from '../src/game/hit.ts';
+import { hitEnemy, explosionSystem, HIT_CRIT, HIT_KNOCK } from '../src/game/hit.ts';
+import { BLAST_CAP } from '../src/game/modifiers.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
@@ -171,4 +172,78 @@ test('the vampiric modifier is a levelled arena skill', () => {
   applySkill(s, 'vamp');
   assert.equal(s.vamp, 1);
   assert.ok(!pickChoices(seeded(3), 50, null, false).includes('vamp'));
+});
+
+test('an explosive kill damages neighbours inside the radius once the tick drains the queue', () => {
+  const g = arenaGame();
+  g.player.stats.explode = 2; // radius 60, damage 20
+  const victim = at(g, 100);
+  const near = at(g, 140); // 40 px away: inside
+  const far = at(g, 400);
+  const hp = g.world.hp[near];
+  hitEnemy(g, victim, 1e6, 0, 0, 0);
+  assert.equal(g.blasts.n, 1);
+  settle(g);
+  assert.equal(explosionSystem(g), 0);
+  assert.equal(g.world.hp[near], hp - 20);
+  assert.equal(g.world.hp[far], hp);
+  assert.equal(g.blasts.n, 0);
+});
+
+test('a kill caused by an explosion queues no explosion of its own, and counts as a kill', () => {
+  const g = arenaGame();
+  g.player.stats.explode = 5;
+  const victim = at(g, 100);
+  const doomed = at(g, 130);
+  g.world.hp[doomed] = 1;
+  hitEnemy(g, victim, 1e6, 0, 0, 0);
+  settle(g);
+  assert.equal(explosionSystem(g), 1);
+  assert.equal(g.world.kind[doomed], 0);
+  assert.equal(g.blasts.n, 0);
+});
+
+test('the blast queue is bounded and drops the overflow', () => {
+  const g = arenaGame();
+  g.player.stats.explode = 1;
+  for (let k = 0; k < BLAST_CAP + 6; k++) hitEnemy(g, at(g, 80 + k), 1e6, 0, 0, 0);
+  assert.equal(g.blasts.n, BLAST_CAP);
+});
+
+test('no explosion without the modifier', () => {
+  const g = arenaGame();
+  hitEnemy(g, at(g, 100), 1e6, 0, 0, 0);
+  assert.equal(g.blasts.n, 0);
+});
+
+test('a crowd killed by shockwave with explosions: every kill once, the kill count matches onKill', () => {
+  const g = arenaGame();
+  applySkill(g.player.stats, 'shockwave');
+  g.player.stats.weapons.shockwave = 5;
+  g.player.stats.explode = 5;
+  g.player.hp = g.player.maxHp = 1e9;
+  const killed = new Set<string>();
+  let calls = 0;
+  g.onKill = (j) => {
+    calls++;
+    const key = `${j}:${g.world.gen[j]}`;
+    assert.ok(!killed.has(key), `slot killed twice: ${key}`);
+    killed.add(key);
+  };
+  for (let k = 0; k < 40; k++) {
+    const a = (k / 40) * Math.PI * 2;
+    const j = spawnEnemy(g.world, ENEMY.CHASER, g.player.x + Math.cos(a) * (60 + k * 5), g.player.y + Math.sin(a) * (60 + k * 5));
+    g.world.hp[j] = 5;
+  }
+  for (let k = 0; k < 180; k++) tick(g, 1 / 60);
+  assert.ok(calls > 0);
+  assert.equal(g.kills, calls);
+  assert.equal(g.blasts.n, 0);
+});
+
+test('the explosive modifier is a levelled arena skill', () => {
+  const s = baseStats();
+  applySkill(s, 'explode');
+  assert.equal(s.explode, 1);
+  assert.ok(!pickChoices(seeded(3), 50, null, false).includes('explode'));
 });

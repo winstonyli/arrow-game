@@ -8,8 +8,8 @@ import { applySkill } from './skills.ts';
 import { gemSystem } from './gems.ts';
 import { orbitSystem } from './orbit.ts';
 import { createWeaponState, weaponSystem } from './weapons.ts';
-import { createHits } from './hit.ts';
-import type { Hits } from './hit.ts';
+import { createBlasts, createHits, explosionSystem } from './hit.ts';
+import type { Blasts, Hits } from './hit.ts';
 import type { WeaponState } from './weapons.ts';
 import type { Vec, Size } from '../core/math.ts';
 import type { Player } from './player.ts';
@@ -47,6 +47,7 @@ export interface GameSfx {
 export interface Game<M extends Mode = Mode, F extends GameFx = GameFx> {
   world: World;
   grid: Grid;
+  blasts: Blasts;
   bounds: Size;
   view: Size;
   camera: Vec;
@@ -102,6 +103,7 @@ export function createGame<M extends Mode, F extends GameFx = GameFx>({
   const game: Game<M, F> = {
     world: new World(capacity),
     grid: new Grid(bounds.w, bounds.h, cellSize, capacity),
+    blasts: createBlasts(),
     bounds,
     view: view ?? { w: Math.min(bounds.w, VIEW.w), h: Math.min(bounds.h, VIEW.h) },
     camera: { x: 0, y: 0 },
@@ -150,6 +152,7 @@ export function tick(game: Game, dt: number): void {
   game.kills += collisionSystem(world, grid, player, game.onKill, game.hits.arrow);
   game.kills += orbitSystem(world, grid, player, game.time + dt, dt, game.onKill, game.hits.blade); // the renderers draw at the post-tick time
   game.kills += weaponSystem(game, dt);
+  game.kills += explosionSystem(game);
   game.xp += gemSystem(world, player, dt);
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);
