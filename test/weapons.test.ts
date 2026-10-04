@@ -13,6 +13,7 @@ import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
 import { ENEMY_TYPES } from '../src/game/enemies.ts';
 import { updateShockwave, SHOCK_LEVELS } from '../src/game/weapons/shockwave.ts';
+import { updateChain, CHAIN_LEVELS, CHAIN_LIFE, CHAIN_FALLOFF } from '../src/game/weapons/chain.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import type { Game } from '../src/game/game.ts';
 
@@ -182,4 +183,68 @@ test('the state hash sees weapon state', () => {
   const before = stateHash(g);
   g.wstate.shock.r = 12;
   assert.notEqual(stateHash(g), before);
+});
+
+const at = (g: Game, dx: number, dy = 0) => spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + dx, g.player.y + dy);
+const damage = (g: Game, j: number) => BRUISER_HP - g.world.hp[j];
+
+test('chain lightning strikes the nearest enemy, then jumps outward with falling damage', () => {
+  const g = arenaGame();
+  const a = at(g, 100);
+  const b = at(g, 180); // 80 from a
+  const c = at(g, 260); // 80 from b
+  const d = at(g, 500); // out of jump range of c
+  settle(g);
+  updateChain(g, 1, 1 / 60);
+  const base = CHAIN_LEVELS[0].damage;
+  assert.ok(Math.abs(damage(g, a) - base) < 1e-3);
+  assert.ok(Math.abs(damage(g, b) - base * CHAIN_FALLOFF) < 1e-3);
+  assert.ok(Math.abs(damage(g, c) - base * CHAIN_FALLOFF ** 2) < 1e-3);
+  assert.equal(damage(g, d), 0);
+  assert.equal(g.wstate.chain.n, 4); // the player plus three targets
+  assert.equal(g.wstate.chain.life, CHAIN_LIFE);
+});
+
+test('chain lightning hits at most jumps + 1 distinct enemies', () => {
+  const g = arenaGame();
+  const ids: number[] = [];
+  for (let k = 0; k < 12; k++) ids.push(at(g, 60 + k * 20, (k % 3) * 10));
+  settle(g);
+  updateChain(g, 1, 1 / 60);
+  assert.equal(ids.filter((j) => damage(g, j) > 0).length, CHAIN_LEVELS[0].jumps + 1);
+});
+
+test('chain lightning waits for a target without spending its interval, then honours it', () => {
+  const g = arenaGame();
+  settle(g);
+  assert.equal(updateChain(g, 1, 1 / 60), 0);
+  assert.equal(g.wstate.chain.cd, 0);
+  assert.equal(g.wstate.chain.life, 0);
+  const e = at(g, 100);
+  settle(g);
+  updateChain(g, 1, 1 / 60);
+  const once = damage(g, e);
+  assert.ok(once > 0);
+  updateChain(g, 1, 1 / 60); // within the interval
+  assert.equal(damage(g, e), once);
+  assert.ok(Math.abs(g.wstate.chain.cd - (CHAIN_LEVELS[0].interval - 1 / 60)) < 1e-9);
+});
+
+test('a chain-lightning kill is counted once and the chain carries on past it', () => {
+  const g = arenaGame();
+  const first = spawnEnemy(g.world, ENEMY.CHASER, g.player.x + 100, g.player.y);
+  g.world.hp[first] = 1;
+  const second = at(g, 170);
+  settle(g);
+  assert.equal(updateChain(g, 1, 1 / 60), 1);
+  assert.equal(g.world.kind[first], KIND.NONE);
+  assert.ok(damage(g, second) > 0);
+});
+
+test('chain lightning scales with level', () => {
+  const g = arenaGame();
+  const e = at(g, 100);
+  settle(g);
+  updateChain(g, 5, 1 / 60);
+  assert.ok(Math.abs(damage(g, e) - CHAIN_LEVELS[4].damage) < 1e-3);
 });

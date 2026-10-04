@@ -30,6 +30,7 @@ export function stateHash(g: Game): number {
   const sh = g.wstate.shock;
   mix(sh.on ? 1 : 0);
   for (const v of [sh.cd, sh.x, sh.y, sh.r, sh.max]) num(v);
+  num(g.wstate.chain.cd); // the zap's path and life are presentation only and follow from the sim
   num(g.time);
   num(g.xp);
   mix(g.kills);
