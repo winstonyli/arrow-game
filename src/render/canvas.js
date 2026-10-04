@@ -3,7 +3,7 @@ import { ENEMY_TYPES } from '../game/enemies.js';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.js';
-import { tailVec, TRAIL_N, TRAIL_ALPHA } from './trail.js';
+import { TRAIL_N, TRAIL_ALPHA } from './trail.js';
 import { drawGhost } from './ghost-marker.js';
 
 const TAU = Math.PI * 2;
@@ -18,28 +18,35 @@ export function createCanvasRenderer(canvas, view) {
   vignette.addColorStop(1, 'rgba(248,81,73,0.85)');
   const cam = { x: 0, y: 0 }; // the camera plus the current shake offset
 
-  const tv = { x: 0, y: 0 };
+  const tv = { mx: 0, my: 0, ex: 0, ey: 0 };
   const sp = { x: 0, y: 0 };
 
-  // Tapered tails (see trail.js): a triangle from each mover's flanks to its tail tip, one fill per group.
+  // Tapered tails (see trail.js): a quad from each mover's flanks through the tail's bend to its tip, one fill per group.
   function tails(world, kind, type, color, fx) {
     ctx.fillStyle = color;
     ctx.globalAlpha = 0.3;
     ctx.beginPath();
     for (let i = 0; i < world.high; i++) {
       if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type)) continue;
-      if (kind === KIND.GEM) tailVec(fx.gvx[i], fx.gvy[i], tv, world.radius[i]);
-      else tailVec(world.vx[i], world.vy[i], tv, world.radius[i]);
-      const l = Math.hypot(tv.x, tv.y);
-      if (l < 0.5) continue;
+      fx.tail(world, i, tv);
+      const le = Math.hypot(tv.ex, tv.ey);
+      if (le < 0.5) continue;
+      const lm = Math.hypot(tv.mx, tv.my);
+      const sx = lm > 0.5 ? tv.mx : tv.ex; // direction of the first segment
+      const sy = lm > 0.5 ? tv.my : tv.ey;
+      const sl = lm > 0.5 ? lm : le;
       const r = world.radius[i] * 0.85;
-      const nx = (-tv.y / l) * r;
-      const ny = (tv.x / l) * r;
       const x = world.x[i];
       const y = world.y[i];
-      ctx.moveTo(x + nx, y + ny);
-      ctx.lineTo(x + tv.x, y + tv.y);
-      ctx.lineTo(x - nx, y - ny);
+      const n0x = (-sy / sl) * r;
+      const n0y = (sx / sl) * r;
+      const n1x = (-tv.ey / le) * r * 0.5; // the bend is half as wide, on the normal of the overall direction
+      const n1y = (tv.ex / le) * r * 0.5;
+      ctx.moveTo(x + n0x, y + n0y);
+      ctx.lineTo(x + tv.mx + n1x, y + tv.my + n1y);
+      ctx.lineTo(x + tv.ex, y + tv.ey);
+      ctx.lineTo(x + tv.mx - n1x, y + tv.my - n1y);
+      ctx.lineTo(x - n0x, y - n0y);
       ctx.closePath();
     }
     ctx.fill();

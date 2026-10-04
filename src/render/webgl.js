@@ -3,10 +3,10 @@ import { ENEMY_TYPES } from '../game/enemies.js';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
 import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.js';
-import { tailVec, TRAIL_MAX, TRAIL_N, TRAIL_ALPHA } from './trail.js';
+import { TRAIL_MAX, TRAIL_N, TRAIL_ALPHA } from './trail.js';
 import { drawGhost } from './ghost-marker.js';
 
-export const STRIDE = 7; // floats per instance: x, y, radius, palette index, fade, tail x, tail y
+export const STRIDE = 9; // floats per instance: x, y, radius, palette index, fade, tail bend x, y, tail tip x, y
 // fade: SOLID = entity (outline + shadow); (0, 1] = dot particle alpha; [-1, 0) = ring particle, alpha -fade.
 const SOLID = 2;
 const SHAKE_PAD = 12; // cull pad when fx can shake the view (max offset is 10 px); a tail can also reach this far into the view
@@ -24,22 +24,24 @@ const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));
 
 const LAYERS = [KIND.GEM, KIND.ENEMY, KIND.ENEMY_PROJECTILE, KIND.PROJECTILE];
 const bp = { x: 0, y: 0 };
-const tv = { x: 0, y: 0 };
+const tv = { mx: 0, my: 0, ex: 0, ey: 0 };
 
-function put(out, o, x, y, r, pal, fade, tx, ty) {
+function put(out, o, x, y, r, pal, fade, mx, my, ex, ey) {
   out[o] = x;
   out[o + 1] = y;
   out[o + 2] = r;
   out[o + 3] = pal;
   out[o + 4] = fade;
-  out[o + 5] = tx;
-  out[o + 6] = ty;
+  out[o + 5] = mx;
+  out[o + 6] = my;
+  out[o + 7] = ex;
+  out[o + 8] = ey;
 }
 
 // Layers, bottom to top (canvas.js uses the same order): gems, enemies, enemy projectiles, player
 // projectiles, fx particles, trail dots of the player and blades, blades, player. The background and grid
 // are on a canvas below; the HP bar, vignette and HUD text on one above. Within a layer instances draw in
-// slot order. Entities carry their tail vector (see trail.js); it is zero without fx.
+// slot order. Entities carry their tail's bend and tip (see trail.js); zero without fx.
 // Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
 export function packInstances(world, player, game, out) {
   const { camera, view, fx } = game;
@@ -67,9 +69,9 @@ export function packInstances(world, player, game, out) {
             : k === KIND.GEM
               ? P_GEM
               : P_ENEMY_PROJECTILE;
-      tv.x = tv.y = 0;
-      if (fx) k === KIND.GEM ? tailVec(fx.gvx[i], fx.gvy[i], tv, r) : tailVec(world.vx[i], world.vy[i], tv, r);
-      put(out, n++ * STRIDE, x, y, r, pal, SOLID, tv.x, tv.y);
+      tv.mx = tv.my = tv.ex = tv.ey = 0;
+      if (fx) fx.tail(world, i, tv);
+      put(out, n++ * STRIDE, x, y, r, pal, SOLID, tv.mx, tv.my, tv.ex, tv.ey);
     }
   }
   if (fx) {
@@ -77,7 +79,7 @@ export function packInstances(world, player, game, out) {
     for (let k = 0; k < POOL; k++) {
       if (p.life[k] <= 0) continue;
       const a = Math.min(1, p.life[k] / p.max[k]);
-      put(out, n++ * STRIDE, p.x[k], p.y[k], p.r[k], p.pal[k] < 0 ? P_GEM : p.pal[k], p.shape[k] === RING ? -a : a, 0, 0);
+      put(out, n++ * STRIDE, p.x[k], p.y[k], p.r[k], p.pal[k] < 0 ? P_GEM : p.pal[k], p.shape[k] === RING ? -a : a, 0, 0, 0, 0);
     }
     // Position history of the player (track 0) and blades, oldest first so newer dots land on top.
     for (let t = 0; t <= player.stats.orbit; t++) {
@@ -86,15 +88,15 @@ export function packInstances(world, player, game, out) {
       for (let age = TRAIL_N - 1; age >= 1; age--) {
         if (!fx.sample(t, age, bp)) continue;
         const f = 1 - age / TRAIL_N;
-        put(out, n++ * STRIDE, bp.x, bp.y, r0 * (0.4 + 0.6 * f), pal, TRAIL_ALPHA * f, 0, 0);
+        put(out, n++ * STRIDE, bp.x, bp.y, r0 * (0.4 + 0.6 * f), pal, TRAIL_ALPHA * f, 0, 0, 0, 0);
       }
     }
   }
   for (let k = 0; k < player.stats.orbit; k++) {
     bladePos(player, game.time, k, bp);
-    put(out, n++ * STRIDE, bp.x, bp.y, BLADE_RADIUS, P_BLADE, SOLID, 0, 0);
+    put(out, n++ * STRIDE, bp.x, bp.y, BLADE_RADIUS, P_BLADE, SOLID, 0, 0, 0, 0);
   }
-  put(out, n++ * STRIDE, player.x, player.y, player.radius, player.invuln > 0 && Math.floor(game.time * 20) % 2 ? P_PLAYER_BLINK : P_PLAYER, SOLID, 0, 0);
+  put(out, n++ * STRIDE, player.x, player.y, player.radius, player.invuln > 0 && Math.floor(game.time * 20) % 2 ? P_PLAYER_BLINK : P_PLAYER, SOLID, 0, 0, 0, 0);
   return n;
 }
 
@@ -103,20 +105,22 @@ const hex = (c) => [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16) / 255);
 const VERT = `#version 300 es
 in vec4 aInst; // x, y, radius, palette index (world coordinates)
 in float aFade;
-in vec2 aTail; // offset from the centre back along the mover's path (zero for most instances)
+in vec4 aTail; // offsets from the centre to the tail's bend (xy) and tip (zw) along the mover's path (zero for most instances)
 uniform vec2 uSize; // view size in px
 uniform vec2 uCam; // view's top-left in world coordinates
 flat out float vIdx;
 flat out float vR;
 flat out float vFade;
-flat out vec2 vTail;
+flat out vec4 vTail;
 out vec2 vOff;
 void main() {
   vec2 corner = vec2(gl_VertexID & 1, gl_VertexID >> 1) * 2.0 - 1.0;
   vOff = corner * (aInst.z + 4.0); // margin for anti-aliasing and the shadow offset
   // Grow the quad on the tail side so it covers the body and the whole tail.
-  vOff.x += corner.x * aTail.x > 0.0 ? aTail.x : 0.0;
-  vOff.y += corner.y * aTail.y > 0.0 ? aTail.y : 0.0;
+  vec2 hi = max(max(aTail.xy, aTail.zw), 0.0);
+  vec2 lo = min(min(aTail.xy, aTail.zw), 0.0);
+  vOff.x += corner.x > 0.0 ? hi.x : lo.x;
+  vOff.y += corner.y > 0.0 ? hi.y : lo.y;
   vec2 p = aInst.xy - uCam + vOff;
   gl_Position = vec4(p.x / uSize.x * 2.0 - 1.0, 1.0 - p.y / uSize.y * 2.0, 0.0, 1.0);
   vIdx = aInst.w;
@@ -131,7 +135,7 @@ uniform vec4 uPalette[${COLORS.length}];
 flat in float vIdx;
 flat in float vR;
 flat in float vFade;
-flat in vec2 vTail;
+flat in vec4 vTail;
 in vec2 vOff;
 out vec4 outColor;
 void main() {
@@ -143,13 +147,22 @@ void main() {
     vec3 rgb = mix(c.rgb, c.rgb * 0.55, edge);
     float ca = c.a * a;
     float sa = clamp(vR + 0.5 - length(vOff - vec2(2.0, 3.0)), 0.0, 1.0) * 0.35;
-    // Tail: a tapered capsule from the centre along vTail, fading toward its tip, over the shadow, under the body.
-    float tl2 = dot(vTail, vTail);
+    // Tail: two tapered capsules, centre -> bend -> tip, fading toward the tip, over the shadow, under the body.
+    vec2 bend = vTail.xy;
+    vec2 tip = vTail.zw;
     float ta = 0.0;
-    if (tl2 > 0.25) {
-      float s = clamp(dot(vOff, vTail) / tl2, 0.0, 1.0);
+    float l1 = dot(bend, bend);
+    if (l1 > 0.25) {
+      float s = clamp(dot(vOff, bend) / l1, 0.0, 1.0) * 0.5;
       float tr = vR * 0.85 * (1.0 - s);
-      ta = clamp(tr + 0.5 - length(vOff - vTail * s), 0.0, 1.0) * 0.4 * (1.0 - s);
+      ta = clamp(tr + 0.5 - length(vOff - bend * s * 2.0), 0.0, 1.0) * 0.4 * (1.0 - s);
+    }
+    vec2 seg = tip - bend;
+    float l2 = dot(seg, seg);
+    if (l2 > 0.25) {
+      float s = 0.5 + clamp(dot(vOff - bend, seg) / l2, 0.0, 1.0) * 0.5;
+      float tr = vR * 0.85 * (1.0 - s);
+      ta = max(ta, clamp(tr + 0.5 - length(vOff - bend - seg * (s - 0.5) * 2.0), 0.0, 1.0) * 0.4 * (1.0 - s));
     }
     vec4 under = vec4(c.rgb * c.a * ta, c.a * ta) + (1.0 - ta) * vec4(0.0, 0.0, 0.0, sa);
     outColor = vec4(rgb * ca, ca) + (1.0 - ca) * under; // premultiplied; the shadow is black
@@ -203,7 +216,7 @@ export function createWebGLRenderer(canvas, hudCanvas, bgCanvas, view) {
   gl.vertexAttribDivisor(locFade, 1);
   const locTail = gl.getAttribLocation(prog, 'aTail');
   gl.enableVertexAttribArray(locTail);
-  gl.vertexAttribPointer(locTail, 2, gl.FLOAT, false, STRIDE * 4, 20);
+  gl.vertexAttribPointer(locTail, 4, gl.FLOAT, false, STRIDE * 4, 20);
   gl.vertexAttribDivisor(locTail, 1);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

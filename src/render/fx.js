@@ -3,7 +3,7 @@
 // per frame; the renderers read the state.
 import { KIND } from '../core/world.js';
 import { bladePos, MAX_BLADES } from '../game/orbit.js';
-import { TRAIL_N, TRAIL_DT } from './trail.js';
+import { TRAIL_N, TRAIL_DT, TRAIL_MID, TRAIL_END, bentTail } from './trail.js';
 
 export const FLASH_TIME = 0.08; // seconds an enemy stays white after a hit
 export const POOL = 512;
@@ -28,12 +28,13 @@ export function createFx(capacity, rng = Math.random) {
     shape: new Uint8Array(POOL),
     pal: new Int16Array(POOL),
   };
-  // Gems have no velocity in the sim (the magnet moves them directly), so it is derived per sim tick.
-  const gvx = new Float32Array(capacity);
-  const gvy = new Float32Array(capacity);
-  const gpx = new Float32Array(capacity);
-  const gpy = new Float32Array(capacity);
-  let simTime = 0;
+  // Position history of every enemy, arrow and gem slot: TRAIL_N sampled positions, ring-indexed by `head`
+  // (shared, since all slots are sampled together). histGen/born say which occupant a slot's history belongs to.
+  const histX = new Float32Array(TRAIL_N * capacity);
+  const histY = new Float32Array(TRAIL_N * capacity);
+  const histGen = new Int32Array(capacity).fill(-1);
+  const born = new Int32Array(capacity); // sample number of the slot's first sample
+  let seq = 0; // number of samples taken so far
   // Position history of the player (track 0) and each orbit blade (track 1 + k): a ring of TRAIL_N samples.
   const TRACKS = 1 + MAX_BLADES;
   const trail = { x: new Float32Array(TRACKS * TRAIL_N), y: new Float32Array(TRACKS * TRAIL_N), count: new Uint8Array(TRACKS), head: new Uint8Array(TRACKS) };
@@ -46,6 +47,20 @@ export function createFx(capacity, rng = Math.random) {
     trail.x[t * TRAIL_N + h] = x;
     trail.y[t * TRAIL_N + h] = y;
     if (trail.count[t] < TRAIL_N) trail.count[t]++;
+  }
+
+  function sampleMovers(world) {
+    seq++;
+    const h = seq % TRAIL_N;
+    for (let i = 0; i < world.high; i++) {
+      if (world.kind[i] === KIND.NONE) continue;
+      if (histGen[i] !== world.gen[i]) {
+        histGen[i] = world.gen[i];
+        born[i] = seq;
+      }
+      histX[h * capacity + i] = world.x[i];
+      histY[h * capacity + i] = world.y[i];
+    }
   }
 
   let next = 0;
@@ -82,8 +97,6 @@ export function createFx(capacity, rng = Math.random) {
     hurt: 0, // damage vignette strength, 1 right after a hit
 
     hits: 0, // running count of enemy hp drops seen by observe (the audio reads it)
-    gvx,
-    gvy,
     trail,
 
     flashing: (i) => flashUntil[i] > fx.clock,
@@ -95,6 +108,25 @@ export function createFx(capacity, rng = Math.random) {
       out.x = trail.x[k];
       out.y = trail.y[k];
       return true;
+    },
+
+    // Writes slot i's tail (see bentTail) to `out`; zero until it has two samples, and for a slot whose
+    // current occupant has none yet, so a recycled slot never inherits a ghost.
+    tail(world, i, out) {
+      const avail = histGen[i] === world.gen[i] ? seq - born[i] : 0;
+      if (avail < 1) {
+        out.mx = out.my = out.ex = out.ey = 0;
+        return;
+      }
+      const e = (seq - Math.min(TRAIL_END, avail) + TRAIL_N * 2) % TRAIL_N * capacity + i;
+      const ex = histX[e] - world.x[i];
+      const ey = histY[e] - world.y[i];
+      if (avail > TRAIL_MID) {
+        const m = (seq - TRAIL_MID + TRAIL_N * 2) % TRAIL_N * capacity + i;
+        bentTail(histX[m] - world.x[i], histY[m] - world.y[i], ex, ey, out, world.radius[i]);
+      } else {
+        bentTail(ex / 2, ey / 2, ex, ey, out, world.radius[i]); // too young for a bend: a straight tail
+      }
     },
 
     kill(x, y, r, pal) {
@@ -113,24 +145,8 @@ export function createFx(capacity, rng = Math.random) {
     // Derives flashes and the hurt vignette from sim state. hp only ever falls on a hit, so a drop is a hit.
     observe(game) {
       const { world, player } = game;
-      const dtSim = game.time - simTime;
-      if (dtSim > 0) simTime = game.time;
       for (let i = 0; i < world.high; i++) {
         const kind = world.kind[i];
-        if (kind === KIND.GEM) {
-          if (world.gen[i] !== lastGen[i]) {
-            lastGen[i] = world.gen[i];
-            gpx[i] = world.x[i];
-            gpy[i] = world.y[i];
-            gvx[i] = gvy[i] = 0;
-          } else if (dtSim > 0) {
-            gvx[i] = (world.x[i] - gpx[i]) / dtSim;
-            gvy[i] = (world.y[i] - gpy[i]) / dtSim;
-            gpx[i] = world.x[i];
-            gpy[i] = world.y[i];
-          }
-          continue;
-        }
         if (kind !== KIND.ENEMY) continue;
         if (world.gen[i] !== lastGen[i]) {
           lastGen[i] = world.gen[i]; // a new occupant of this slot
@@ -151,6 +167,7 @@ export function createFx(capacity, rng = Math.random) {
       lastPlayerHp = player.hp;
       if (fx.clock - lastSample >= TRAIL_DT - 1e-6) { // epsilon: summed frame dts land a hair under TRAIL_DT
         lastSample = fx.clock;
+        sampleMovers(world);
         record(0, player.x, player.y);
         const orbit = player.stats.orbit;
         for (let k = 0; k < MAX_BLADES; k++) {
