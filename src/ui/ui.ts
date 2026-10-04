@@ -1,4 +1,4 @@
-import { icon } from './icons.js';
+import { icon } from './icons.ts';
 import { SKILLS_BY_ID } from '../game/skills.ts';
 
 const h = (tag, cls, html = '') => {

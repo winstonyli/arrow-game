@@ -6,10 +6,10 @@ import { createRooms } from '../src/modes/rooms.ts';
 import { seeded } from '../src/core/math.ts';
 import { KIND } from '../src/core/world.ts';
 import { SKILLS } from '../src/game/skills.ts';
-import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError, pastedCode, importLabel, raceLabel } from '../src/ui/model.js';
+import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError, pastedCode, importLabel, raceLabel } from '../src/ui/model.ts';
 import { toCode, fromCode, ReplayError } from '../src/replay/codec.ts';
 import { fakeReplay } from '../scripts/lib/fake-replay.js';
-import { icon } from '../src/ui/icons.js';
+import { icon } from '../src/ui/icons.ts';
 
 const arena = () => createGame({ capacity: 2000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
 const rooms = (o) => createGame({ capacity: 1000, mode: createRooms(o), rng: seeded(1), input: { x: 0, y: 0 } });

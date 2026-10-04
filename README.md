@@ -32,7 +32,7 @@ Prereleases are tagged on `dev` at points the owner picks. `v0.1.0` is the first
 ## UI
 `/` opens a title screen (Arena or Rooms); `/?mode=arena` and `/?mode=rooms` skip it, as does `?stress=N` (those never auto-pause, so benchmarks run unfocused). Esc or P pauses (also on tab blur when started from the title); M mutes; 1-3 or a click picks a skill. Personal bests are kept in `localStorage` (`arrow-best-arena`, `arrow-best-rooms`). `?debug` shows the entity and frame-time line at the bottom.
 
-The screens and HUD are DOM overlays (`src/ui/`): `model.js` holds the pure view-models, `ui.js` the DOM controller, `ui.css` the Synthwave theme (tokens as custom properties). Fonts are self-hosted in `assets/fonts/` (Orbitron, Share Tech Mono; SIL OFL). The sim only exposes `game.skills` (owned-skill counts) and `game.bossAt` (last boss spawn time) for the UI. Spec: `docs/superpowers/specs/2026-10-03-ui-design.md`.
+The screens and HUD are DOM overlays (`src/ui/`): `model.ts` holds the pure view-models, `ui.ts` the DOM controller, `ui.css` the Synthwave theme (tokens as custom properties). Fonts are self-hosted in `assets/fonts/` (Orbitron, Share Tech Mono; SIL OFL). The sim only exposes `game.skills` (owned-skill counts) and `game.bossAt` (last boss spawn time) for the UI. Spec: `docs/superpowers/specs/2026-10-03-ui-design.md`.
 
 Parked: a volume slider and settings screen, a real icon set (the glyphs are simple inline SVG), key rebinding, gamepad, a tutorial, an attract-mode title background, Rooms difficulty select. Touch: a tap on the HUD pause button also starts the move stick (harmless, not fixed).
 
