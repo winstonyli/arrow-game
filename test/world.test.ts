@@ -65,3 +65,15 @@ test('despawn bumps the slot generation and GEM is a counted kind', () => {
   assert.equal(w.gen[a], 1);
   assert.equal(w.kindCount[KIND.GEM], 0);
 });
+
+test('a recycled slot starts with both status timers at 0', () => {
+  const w = new World(2);
+  const a = w.spawn(KIND.ENEMY, 1, 1, 0, 0, 5, 10);
+  w.slowT[a] = 2;
+  w.burnT[a] = 3;
+  w.despawn(a);
+  const b = w.spawn(KIND.ENEMY, 1, 1, 0, 0, 5, 10);
+  assert.equal(b, a);
+  assert.equal(w.slowT[b], 0);
+  assert.equal(w.burnT[b], 0);
+});

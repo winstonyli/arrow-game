@@ -4,11 +4,12 @@ import { followCamera } from '../core/camera.ts';
 import { moveSystem, projectileSystem, collisionSystem } from '../core/systems.ts';
 import { createPlayer, movePlayer, autoFire } from './player.ts';
 import { enemyAISystem } from './enemies.ts';
+import { FROST_SLOW } from './modifiers.ts';
 import { applySkill } from './skills.ts';
 import { gemSystem } from './gems.ts';
 import { orbitSystem } from './orbit.ts';
 import { createWeaponState, weaponSystem } from './weapons.ts';
-import { createBlasts, createHits, explosionSystem } from './hit.ts';
+import { createBlasts, createHits, explosionSystem, statusSystem } from './hit.ts';
 import type { Blasts, Hits } from './hit.ts';
 import type { WeaponState } from './weapons.ts';
 import type { Vec, Size } from '../core/math.ts';
@@ -146,7 +147,7 @@ export function tick(game: Game, dt: number): void {
   const { world, grid, player, bounds } = game;
   movePlayer(player, game.input, dt, bounds);
   player.hp = Math.min(player.maxHp, player.hp + player.stats.regen * dt);
-  enemyAISystem(world, player, dt, game.enemyFireOnScreen ? game.camera : null, game.view);
+  enemyAISystem(world, player, dt, game.enemyFireOnScreen ? game.camera : null, game.view, 1 - FROST_SLOW * player.stats.frost);
   moveSystem(world, dt);
   projectileSystem(world, dt, bounds, grid);
   grid.rebuild(world, KIND.ENEMY);
@@ -154,6 +155,7 @@ export function tick(game: Game, dt: number): void {
   game.kills += collisionSystem(world, grid, player, game.onKill, game.hits.arrow);
   game.kills += orbitSystem(world, grid, player, game.time + dt, dt, game.onKill, game.hits.blade); // the renderers draw at the post-tick time
   game.kills += weaponSystem(game, dt);
+  game.kills += statusSystem(game, dt); // before explosionSystem, so burn-kill blasts drain this tick
   game.kills += explosionSystem(game);
   game.xp += gemSystem(world, player, dt);
   if (player.hp <= 0) game.over = true;

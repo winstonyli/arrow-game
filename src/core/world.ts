@@ -13,6 +13,8 @@ export class World {
   damage!: Float32Array;
   life!: Float32Array;
   cd!: Float32Array;
+  slowT!: Float32Array;
+  burnT!: Float32Array;
   type: Uint8Array;
   pierce: Uint8Array;
   bounce: Uint8Array;
@@ -28,7 +30,7 @@ export class World {
 
   constructor(capacity: number) {
     this.capacity = capacity;
-    for (const f of ['x', 'y', 'vx', 'vy', 'radius', 'hp', 'damage', 'life', 'cd'] as const) {
+    for (const f of ['x', 'y', 'vx', 'vy', 'radius', 'hp', 'damage', 'life', 'cd', 'slowT', 'burnT'] as const) {
       this[f] = new Float32Array(capacity);
     }
     this.type = new Uint8Array(capacity);
@@ -79,6 +81,8 @@ export class World {
     this.bounce[i] = 0;
     this.lastHit[i] = -1;
     this.lastHitGen[i] = 0;
+    this.slowT[i] = 0;
+    this.burnT[i] = 0;
     if (i >= this.high) this.high = i + 1;
     this.kindCount[kind]++;
     return i;

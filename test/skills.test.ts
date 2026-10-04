@@ -51,3 +51,29 @@ test('rooms never offers arena skills; arena does, minus owned or maxed ones', (
     assert.ok(!picks.includes('homing') && !picks.includes('blade'));
   }
 });
+
+test('Frost is a levelled arena-only offer capped at 5', () => {
+  const frost = SKILLS.find((k) => k.id === 'frost')!;
+  assert.ok(frost.arena);
+  const s = baseStats();
+  assert.equal(frost.tag!(s), 'NEW');
+  for (let n = 0; n < 5; n++) frost.apply(s);
+  assert.equal(s.frost, 5);
+  assert.equal(frost.available!(s), false);
+  frost.apply(s);
+  assert.equal(s.frost, 5);
+});
+
+test('Ignite is a levelled arena-only offer capped at 5', () => {
+  const ignite = SKILLS.find((k) => k.id === 'ignite')!;
+  assert.ok(ignite.arena);
+  const s = baseStats();
+  assert.equal(ignite.tag!(s), 'NEW');
+  ignite.apply(s);
+  assert.equal(ignite.tag!(s), 'Lv 1 → 2');
+  for (let n = 0; n < 4; n++) ignite.apply(s);
+  assert.equal(s.ignite, 5);
+  assert.equal(ignite.available!(s), false);
+  ignite.apply(s);
+  assert.equal(s.ignite, 5);
+});

@@ -61,18 +61,20 @@ function enemyFire(world: World, i: number, t: EnemyType, aim: number): void {
 }
 
 // `camera` (optional, with `view`): when given, enemies only fire while inside the view.
+// `slow` (default 1): speed multiplier applied to enemies whose `slowT` is running.
 export function enemyAISystem(world: World, player: Vec, dt: number): void;
-export function enemyAISystem(world: World, player: Vec, dt: number, camera: Vec | null, view: Size): void;
-export function enemyAISystem(world: World, player: Vec, dt: number, camera: Vec | null = null, view: Size | null = null): void {
+export function enemyAISystem(world: World, player: Vec, dt: number, camera: Vec | null, view: Size, slow?: number): void;
+export function enemyAISystem(world: World, player: Vec, dt: number, camera: Vec | null = null, view: Size | null = null, slow = 1): void {
   for (let i = 0; i < world.high; i++) {
     if (world.kind[i] !== KIND.ENEMY) continue;
     const t = ENEMY_TYPES[world.type[i]];
     const dx = player.x - world.x[i];
     const dy = player.y - world.y[i];
     const d = Math.hypot(dx, dy) || 1;
+    const sp = slow !== 1 && world.slowT[i] > 0 ? t.speed * slow : t.speed;
     if (d > t.keepDist) {
-      world.vx[i] = (dx / d) * t.speed;
-      world.vy[i] = (dy / d) * t.speed;
+      world.vx[i] = (dx / d) * sp;
+      world.vy[i] = (dy / d) * sp;
     } else {
       world.vx[i] = 0;
       world.vy[i] = 0;

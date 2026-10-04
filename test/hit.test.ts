@@ -3,15 +3,18 @@ import assert from 'node:assert/strict';
 import { KIND } from '../src/core/world.ts';
 import { collisionSystem } from '../src/core/systems.ts';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
+import { COLORS } from '../src/render/webgl.ts';
 import { createGame, tick } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { updateShockwave } from '../src/game/weapons/shockwave.ts';
+import { updateChain } from '../src/game/weapons/chain.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
-import { hitEnemy, explosionSystem, HIT_CRIT, HIT_KNOCK } from '../src/game/hit.ts';
-import { BLAST_CAP } from '../src/game/modifiers.ts';
+import { hitEnemy, explosionSystem, statusSystem, HIT_CRIT, HIT_KNOCK, HIT_STATUS } from '../src/game/hit.ts';
+import { BLAST_CAP, FROST_TINT, IGNITE_TINT, FROST_SECS, IGNITE_SECS, IGNITE_DPS } from '../src/game/modifiers.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
+import { stateHash } from '../src/replay/hash.ts';
 import type { Game, GameFx } from '../src/game/game.ts';
 
 const arenaGame = () => createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
@@ -353,4 +356,216 @@ test('knockback cues nothing for a kill, an unflagged hit, a zero direction, lev
   g.world.x[w] = g.bounds.w - g.world.radius[w]; // against the right wall
   hitEnemy(g, w, 1, HIT_KNOCK, 1, 0);
   assert.deepEqual(calls, []);
+});
+
+test('stateHash changes when a status timer is set on a live enemy and is restored when it clears', () => {
+  const g = arenaGame();
+  const j = at(g, 100);
+  const base = stateHash(g);
+  g.world.slowT[j] = 1.5;
+  const slowed = stateHash(g);
+  assert.notEqual(slowed, base);
+  g.world.slowT[j] = 0;
+  g.world.burnT[j] = 2;
+  const burning = stateHash(g);
+  assert.notEqual(burning, base);
+  assert.notEqual(burning, slowed);
+  g.world.burnT[j] = 0;
+  assert.equal(stateHash(g), base);
+});
+
+test('a surviving HIT_STATUS hit sets the timers by level, refreshes rather than stacks, and a kill sets nothing', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  const j = at(g, 100);
+  hitEnemy(g, j, 1, HIT_STATUS, 0, 0); // levels are 0: nothing set
+  assert.equal(g.world.slowT[j], 0);
+  assert.equal(g.world.burnT[j], 0);
+  s.frost = 1;
+  hitEnemy(g, j, 1, HIT_STATUS, 0, 0); // only frost owned
+  assert.equal(g.world.slowT[j], FROST_SECS);
+  assert.equal(g.world.burnT[j], 0);
+  s.ignite = 1;
+  g.world.slowT[j] = 0.5; // partly run down: a re-hit refreshes to the full duration, it does not add
+  hitEnemy(g, j, 1, HIT_STATUS, 0, 0);
+  assert.equal(g.world.slowT[j], FROST_SECS);
+  assert.equal(g.world.burnT[j], IGNITE_SECS);
+  const k = at(g, 300);
+  assert.equal(hitEnemy(g, k, 1e6, HIT_STATUS, 0, 0), 1); // lethal: the slot is despawned, no timer is left behind
+  assert.equal(g.world.slowT[k], 0);
+  assert.equal(g.world.burnT[k], 0);
+});
+
+test('hits without HIT_STATUS (blades, boomerang, burn, blasts) never apply a status', () => {
+  const g = arenaGame();
+  g.player.stats.frost = 5;
+  g.player.stats.ignite = 5;
+  const j = at(g, 100);
+  hitEnemy(g, j, 1, 0, 0, 0);
+  hitEnemy(g, j, 1, HIT_CRIT | HIT_KNOCK, 1, 0); // crit/knock alone carry no status either
+  assert.equal(g.world.slowT[j], 0);
+  assert.equal(g.world.burnT[j], 0);
+});
+
+test('arrows, the Shockwave ring and Chain zaps carry HIT_STATUS', () => {
+  const g = arenaGame();
+  g.player.stats.frost = 1;
+  const a = at(g, 100);
+  g.hits.arrow(a, 1, 1, 0); // the persistent arrow callback
+  assert.equal(g.world.slowT[a], FROST_SECS);
+  const b = at(g, 120, 40);
+  applySkill(g.player.stats, 'shockwave');
+  settle(g);
+  g.wstate.shock.cd = 0;
+  tick(g, 1 / 60);
+  for (let t = 0; t < 120 && g.world.slowT[b] === 0; t++) tick(g, 1 / 60); // the ring reaches it
+  assert.ok(g.world.slowT[b] > 0, 'shockwave applies frost');
+  const g2 = arenaGame();
+  g2.player.stats.frost = 1;
+  applySkill(g2.player.stats, 'chain');
+  const c = at(g2, 80);
+  settle(g2);
+  g2.wstate.chain.cd = 0;
+  updateChain(g2, 1, 1 / 60); // called directly: tick's own arrows could also hit it and mask the zap
+  assert.ok(g2.world.slowT[c] > 0, 'chain applies frost');
+});
+
+test('tick slows a Frost-hit chaser: it covers less ground than an unhit twin (Frost 5 vs 0 over the same ticks)', () => {
+  const run = (frost: number) => {
+    const g = arenaGame();
+    g.player.stats.frost = frost;
+    const a = spawnEnemy(g.world, ENEMY.CHASER, 100, 100);
+    g.player.x = 800;
+    g.player.y = 100;
+    g.world.slowT[a] = 5; // as if hit; the arrow path is covered above
+    for (let t = 0; t < 30; t++) tick(g, 1 / 60);
+    return g.world.x[a] - 100;
+  };
+  const free = run(0);
+  const slowed = run(5);
+  assert.ok(slowed > 0 && slowed < free * 0.5, `slowed ${slowed} vs free ${free}`);
+});
+
+test('statusSystem decrements both timers, floors at 0, and burn damage scales with dt and level', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.ignite = 2;
+  const j = at(g, 100);
+  const hp0 = g.world.hp[j];
+  g.world.slowT[j] = 0.05;
+  g.world.burnT[j] = 1;
+  statusSystem(g, 0.1);
+  assert.ok(Math.abs(g.world.burnT[j] - 0.9) < 1e-6);
+  assert.equal(g.world.slowT[j], 0);
+  assert.ok(Math.abs(hp0 - g.world.hp[j] - IGNITE_DPS * 2 * s.damageMult * 0.1) < 1e-4);
+  const k = at(g, 200);
+  g.world.burnT[k] = 1;
+  statusSystem(g, 0.2); // twice the dt: twice the damage on a twin burning the same way
+  assert.ok(Math.abs(g.world.hp[k] - (hp0 - IGNITE_DPS * 2 * s.damageMult * 0.2)) < 1e-4);
+  assert.ok(Math.abs(g.world.hp[j] - (hp0 - IGNITE_DPS * 2 * s.damageMult * 0.3)) < 1e-4); // j burned again in the second call
+});
+
+test('statusSystem does nothing without a status level, and an expired timer stops burning', () => {
+  const g = arenaGame();
+  const j = at(g, 100);
+  g.world.burnT[j] = 1; // no levels: the system returns before touching the world
+  const hp0 = g.world.hp[j];
+  assert.equal(statusSystem(g, 0.5), 0);
+  assert.equal(g.world.burnT[j], 1);
+  assert.equal(g.world.hp[j], hp0);
+  g.player.stats.ignite = 1;
+  g.world.burnT[j] = 0; // expired: no damage
+  statusSystem(g, 0.5);
+  assert.equal(g.world.hp[j], hp0);
+});
+
+test('burn kills count once, heal (Vampiric), queue a blast (Explosive) and never apply a status', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.ignite = 5;
+  s.vamp = 2;
+  s.explode = 1;
+  s.frost = 1;
+  g.player.hp = g.player.maxHp - 10;
+  const hp = g.player.hp;
+  const j = at(g, 100);
+  g.world.hp[j] = 0.001;
+  g.world.burnT[j] = 1;
+  const seen: number[] = [];
+  g.onKill = (x) => seen.push(x);
+  assert.equal(statusSystem(g, 1 / 60), 1);
+  assert.deepEqual(seen, [j]);
+  assert.equal(g.player.hp, hp + 2);
+  assert.equal(g.blasts.n, 1);
+  const other = at(g, 150);
+  g.world.burnT[other] = 1;
+  statusSystem(g, 1 / 60);
+  assert.equal(g.world.slowT[other], 0, 'a burn tick never starts Frost');
+});
+
+test('over a crowd burn kills equal onKill calls and no slot is killed twice (Splitter spawns recycle slots mid-loop)', () => {
+  const g = arenaGame();
+  g.player.stats.ignite = 5;
+  const killed: number[] = [];
+  const modeKill = g.onKill; // the arena's own onKill spawns Swarmers from a dead Splitter
+  g.onKill = (j) => {
+    killed.push(g.world.gen[j] * 100000 + j);
+    modeKill?.(j);
+  };
+  for (let n = 0; n < 60; n++) {
+    const j = spawnEnemy(g.world, n % 3 === 0 ? ENEMY.SPLITTER : ENEMY.CHASER, g.player.x + 50 + n * 4, g.player.y + (n % 7) * 20);
+    g.world.hp[j] = 0.01;
+    g.world.burnT[j] = 1;
+  }
+  const kills = statusSystem(g, 1 / 60);
+  assert.equal(kills, killed.length);
+  assert.equal(new Set(killed).size, killed.length);
+  assert.ok(kills >= 60, 'every seeded enemy burned to death');
+});
+
+test('a burn kill through tick() drains its blast the same tick and the blast hits a neighbour', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.ignite = 1;
+  s.explode = 5;
+  const a = at(g, 300);
+  const b = at(g, 320);
+  g.world.hp[a] = 0.001;
+  g.world.burnT[a] = 1;
+  const hpB = g.world.hp[b];
+  tick(g, 1 / 60);
+  assert.equal(g.world.kind[a], KIND.NONE, 'the burning enemy died');
+  assert.equal(g.blasts.n, 0, 'the queue is empty at the end of the tick');
+  assert.ok(g.world.hp[b] < hpB - 1, 'the blast damaged the neighbour this tick');
+});
+
+test('a 3 s burn deals damage on exactly IGNITE_SECS * 60 ticks (float32 residue is treated as expired)', () => {
+  const g = arenaGame();
+  g.player.stats.ignite = 1;
+  const j = at(g, 100);
+  g.world.burnT[j] = Math.fround(IGNITE_SECS);
+  let n = 0;
+  for (let t = 0; t < 400 && g.world.burnT[j] > 0; t++) {
+    const hp = g.world.hp[j];
+    statusSystem(g, 1 / 60);
+    if (g.world.hp[j] < hp) n++;
+  }
+  assert.equal(g.world.burnT[j], 0);
+  assert.equal(n, IGNITE_SECS * 60);
+});
+
+test('the status tints are not any other enemy, gem, shot, flash or canvas colour (CIE Lab distance > 30)', () => {
+  const lin = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const lab = (h: string) => {
+    const n = parseInt(h.slice(1), 16);
+    const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255].map(lin);
+    const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047), y = f(0.2126 * r + 0.7152 * g + 0.0722 * b), z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+  };
+  const dist = (a: string, b: string) => Math.hypot(...lab(a).map((v, i) => v - lab(b)[i]));
+  const others = [...new Set([...COLORS, '#161b22', '#30363d'])].filter((c) => c !== FROST_TINT && c !== IGNITE_TINT);
+  assert.ok(others.length > 12);
+  for (const tint of [FROST_TINT, IGNITE_TINT]) for (const c of others) assert.ok(dist(tint, c) > 30, `${tint} vs ${c}`);
+  assert.ok(dist(FROST_TINT, IGNITE_TINT) > 30);
 });

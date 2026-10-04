@@ -9,8 +9,14 @@ export const BLAST_BASE = 40; // px radius at level 0
 export const BLAST_PER = 10; // px radius per level
 export const BLAST_DMG = 10; // damage per level (x damageMult)
 export const BLAST_CAP = 64; // queued blasts per tick; the overflow is dropped
+export const FROST_SLOW = 0.12; // speed lost per level while slowed
+export const FROST_SECS = 2;
+export const IGNITE_DPS = 6; // per level, x damageMult
+export const IGNITE_SECS = 3;
+export const FROST_TINT = '#00e5ff'; // enemy tints, shared by both renderers; no other palette colour may sit near them (tested)
+export const IGNITE_TINT = '#ff2d00';
 
-export type ModKey = 'crit' | 'knockback' | 'explode' | 'vamp';
+export type ModKey = 'crit' | 'knockback' | 'explode' | 'vamp' | 'frost' | 'ignite';
 export interface ModDef { id: string; name: string; desc: string; key: ModKey }
 
 export const MODS: ModDef[] = [
@@ -18,4 +24,6 @@ export const MODS: ModDef[] = [
   { id: 'knockback', name: 'Knockback', desc: 'Arrows and lightning push enemies back (+10 px per level)', key: 'knockback' },
   { id: 'vamp', name: 'Vampiric', desc: 'Kills heal you (+1 HP per level)', key: 'vamp' },
   { id: 'explode', name: 'Explosive Kills', desc: 'Kills explode and hurt nearby enemies', key: 'explode' },
+  { id: 'frost', name: 'Frost', desc: 'Arrows, shockwave and lightning slow enemies (-12% speed per level, 2 s)', key: 'frost' },
+  { id: 'ignite', name: 'Ignite', desc: 'Arrows, shockwave and lightning set enemies on fire (6 damage per second per level, 3 s)', key: 'ignite' },
 ];
