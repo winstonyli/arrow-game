@@ -4,6 +4,7 @@ import { followCamera } from '../core/camera.ts';
 import { moveSystem, projectileSystem, collisionSystem } from '../core/systems.ts';
 import { createPlayer, movePlayer, autoFire } from './player.ts';
 import { enemyAISystem } from './enemies.ts';
+import { FROST_SLOW } from './modifiers.ts';
 import { applySkill } from './skills.ts';
 import { gemSystem } from './gems.ts';
 import { orbitSystem } from './orbit.ts';
@@ -146,7 +147,7 @@ export function tick(game: Game, dt: number): void {
   const { world, grid, player, bounds } = game;
   movePlayer(player, game.input, dt, bounds);
   player.hp = Math.min(player.maxHp, player.hp + player.stats.regen * dt);
-  enemyAISystem(world, player, dt, game.enemyFireOnScreen ? game.camera : null, game.view);
+  enemyAISystem(world, player, dt, game.enemyFireOnScreen ? game.camera : null, game.view, 1 - FROST_SLOW * player.stats.frost);
   moveSystem(world, dt);
   projectileSystem(world, dt, bounds, grid);
   grid.rebuild(world, KIND.ENEMY);

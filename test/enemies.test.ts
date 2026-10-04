@@ -60,3 +60,16 @@ test('with a camera, a shooter outside the view holds fire and inside it fires',
   enemyAISystem(on, player, 2.1, { x: 0, y: 0 }, view);
   assert.equal(on.kindCount[KIND.ENEMY_PROJECTILE], 1);
 });
+
+test('a slowed enemy moves at the slow factor, an unslowed twin and a factor of 1 are unaffected', () => {
+  const w = new World(10);
+  const slowed = spawnEnemy(w, ENEMY.CHASER, 100, 100);
+  const twin = spawnEnemy(w, ENEMY.CHASER, 100, 300);
+  w.slowT[slowed] = 1;
+  enemyAISystem(w, { x: 600, y: 200 }, 1 / 60, null, { w: 900, h: 600 }, 0.4);
+  const speed = (i: number) => Math.hypot(w.vx[i], w.vy[i]);
+  assert.ok(Math.abs(speed(slowed) - 0.4 * speed(twin)) < 1e-3);
+  assert.ok(speed(twin) > 0);
+  enemyAISystem(w, { x: 600, y: 200 }, 1 / 60, null, { w: 900, h: 600 }); // default factor: no slowdown
+  assert.ok(Math.abs(speed(slowed) - speed(twin)) < 1e-3);
+});

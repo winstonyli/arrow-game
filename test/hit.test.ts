@@ -428,3 +428,19 @@ test('arrows, the Shockwave ring and Chain zaps carry HIT_STATUS', () => {
   updateChain(g2, 1, 1 / 60); // called directly: tick's own arrows could also hit it and mask the zap
   assert.ok(g2.world.slowT[c] > 0, 'chain applies frost');
 });
+
+test('tick slows a Frost-hit chaser: it covers less ground than an unhit twin and none without Frost', () => {
+  const run = (frost: number) => {
+    const g = arenaGame();
+    g.player.stats.frost = frost;
+    const a = spawnEnemy(g.world, ENEMY.CHASER, 100, 100);
+    g.player.x = 800;
+    g.player.y = 100;
+    g.world.slowT[a] = 5; // as if hit; the arrow path is covered above
+    for (let t = 0; t < 30; t++) tick(g, 1 / 60);
+    return g.world.x[a] - 100;
+  };
+  const free = run(0);
+  const slowed = run(5);
+  assert.ok(slowed > 0 && slowed < free * 0.5, `slowed ${slowed} vs free ${free}`);
+});
