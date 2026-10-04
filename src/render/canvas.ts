@@ -6,6 +6,7 @@ import { bladePos, BLADE_RADIUS } from '../game/orbit.ts';
 import { CHAIN_LIFE } from '../game/weapons/chain.ts';
 import { BOOM_RADIUS } from '../game/weapons/boomerang.ts';
 import { FLAME_LEVELS, FIRE_CAP, FIRE_ALPHA } from '../game/weapons/flame.ts';
+import { MINE_CAP, MINE_RADIUS, mineAlpha } from '../game/weapons/mines.ts';
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
@@ -154,7 +155,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     drawWorldGrid(ctx, cam, view, bounds);
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
-    // Same layer order as webgl.ts: gems, fire patches, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs), player.
+    // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs), player.
     if (fx) tails(world, KIND.GEM, -1, GEM_COLOR, fx);
     circles(world, KIND.GEM, -1, GEM_COLOR);
     // Fire patches sit above the gems but below enemies and shots (opaque ones hid them), at a capped alpha.
@@ -166,6 +167,16 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       ctx.globalAlpha = FIRE_ALPHA * Math.min(1, fr.life[k] / fl.life);
       ctx.beginPath();
       ctx.arc(fr.x[k], fr.y[k], fl.radius, 0, TAU);
+      ctx.fill();
+    }
+    // Mines share the fire patches' layer; their alpha shows armed state and fade.
+    const mn = game.wstate.mines;
+    ctx.fillStyle = '#ffa657'; // the colour the boomerangs use
+    for (let k = 0; k < MINE_CAP; k++) {
+      if (!mn.on[k]) continue;
+      ctx.globalAlpha = mineAlpha(mn.age[k]);
+      ctx.beginPath();
+      ctx.arc(mn.x[k], mn.y[k], MINE_RADIUS, 0, TAU);
       ctx.fill();
     }
     ctx.globalAlpha = 1;

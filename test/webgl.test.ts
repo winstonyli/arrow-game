@@ -12,6 +12,7 @@ import { CHAIN_LIFE } from '../src/game/weapons/chain.ts';
 import { BOOM_RADIUS } from '../src/game/weapons/boomerang.ts';
 import { WEAPON_INSTANCES, COLORS } from '../src/render/webgl.ts';
 import { FLAME_LEVELS, FIRE_ALPHA } from '../src/game/weapons/flame.ts';
+import { MINE_RADIUS, MINE_LIFE } from '../src/game/weapons/mines.ts';
 import { IGNITE_TINT } from '../src/game/modifiers.ts';
 
 type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons'> };
@@ -254,4 +255,33 @@ test('packInstances draws each live fire patch as a burn-coloured disc at most F
   assert.ok(Math.abs(discs[0][1] - FIRE_ALPHA) < 1e-6);
   assert.ok(Math.abs(discs[1][1] - FIRE_ALPHA / 2) < 1e-6);
   assert.ok(enemyAt >= 0 && discs.every((d) => d[2] < enemyAt), 'fire patches pack (draw) before enemies');
+});
+
+test('packInstances draws each live mine as a weapon-coloured disc: dim unarmed, solid armed, fading near expiry, dead ones skipped, all packed before enemies', () => {
+  const w = new World(4);
+  spawnEnemy(w, ENEMY.CHASER, 300, 300); // must pack after every mine
+  const ws = createWeaponState();
+  const m = ws.mines;
+  const set = (k: number, x: number, age: number, on = 1) => { m.on[k] = on; m.x[k] = x; m.y[k] = 100; m.age[k] = age; };
+  set(0, 100, 0.1); // unarmed
+  set(1, 150, 5); // armed
+  set(2, 200, MINE_LIFE - 0.75); // armed, half faded
+  set(3, 250, 5, 0); // dead slot
+  const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
+  const n = packInstances(w, player(), G({ wstate: ws }), out);
+  const pw = TT + 7; // P_WEAPON, as in the boomerang test
+  const discs: number[][] = [];
+  let enemyAt = -1;
+  for (let i = 0; i < n; i++) {
+    const o = i * STRIDE;
+    if (out[o + 3] === pw && out[o + 1] === 100) discs.push([out[o], out[o + 2], out[o + 4], i]);
+    else if (out[o] === 300) enemyAt = i;
+  }
+  assert.equal(discs.length, 3);
+  assert.deepEqual(discs.map((d) => d[0]), [100, 150, 200]);
+  assert.ok(discs.every((d) => d[1] === MINE_RADIUS));
+  assert.ok(Math.abs(discs[0][2] - 0.35) < 1e-6);
+  assert.ok(Math.abs(discs[1][2] - 1) < 1e-6);
+  assert.ok(Math.abs(discs[2][2] - 0.5) < 1e-6);
+  assert.ok(enemyAt >= 0 && discs.every((d) => d[3] < enemyAt), 'mines pack (draw) before enemies');
 });
