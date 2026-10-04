@@ -72,3 +72,14 @@ test('maxRadius is the largest radius of the wanted kind at the last rebuild', (
   grid.rebuild(world, KIND.PROJECTILE);
   assert.equal(grid.maxRadius, 0);
 });
+
+test('nearest skips a slot despawned since the rebuild', () => {
+  const { world, grid } = setup();
+  const dead = enemy(world, 110, 100);
+  const live = enemy(world, 300, 100);
+  grid.rebuild(world, KIND.ENEMY);
+  world.despawn(dead);
+  assert.equal(grid.nearest(world, 100, 100, 500), live);
+  world.despawn(live);
+  assert.equal(grid.nearest(world, 100, 100, 500), -1);
+});

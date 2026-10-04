@@ -1,3 +1,4 @@
+import { KIND } from './world.ts';
 import type { World, Kind } from './world.ts';
 
 // Uniform grid, rebuilt every tick by counting sort (no allocation).
@@ -76,6 +77,7 @@ export class Grid {
     let bestD = maxR * maxR;
     for (let k = 0; k < n; k++) {
       const i = this.out[k];
+      if (world.kind[i] !== KIND.ENEMY) continue; // the grid is built at the start of the tick; slots despawned since are skipped
       const dx = world.x[i] - x;
       const dy = world.y[i] - y;
       const d = dx * dx + dy * dy;

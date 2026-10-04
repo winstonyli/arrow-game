@@ -248,3 +248,33 @@ test('chain lightning scales with level', () => {
   updateChain(g, 5, 1 / 60);
   assert.ok(Math.abs(damage(g, e) - CHAIN_LEVELS[4].damage) < 1e-3);
 });
+
+test('chain lightning ignores an enemy despawned after the grid was built', () => {
+  const g = arenaGame();
+  let kills = 0;
+  g.onKill = () => kills++;
+  const dead = at(g, 80);
+  const live = at(g, 200);
+  settle(g);
+  g.world.despawn(dead);
+  const free = g.world.freeCount;
+  assert.equal(updateChain(g, 1, 1 / 60), 0);
+  assert.equal(kills, 0);
+  assert.equal(g.kills, 0);
+  assert.equal(g.world.freeCount, free);
+  assert.equal(new Set(g.world.free.subarray(0, g.world.freeCount)).size, g.world.freeCount);
+  assert.ok(damage(g, live) > 0);
+});
+
+test("chain lightning hits jumps + 1 distinct targets at every level, with that level's damage", () => {
+  for (let lv = 1; lv <= CHAIN_LEVELS.length; lv++) {
+    const g = arenaGame();
+    const ids: number[] = [];
+    for (let k = 0; k < 12; k++) ids.push(at(g, 100 + k * 40));
+    settle(g);
+    updateChain(g, lv, 1 / 60);
+    const L = CHAIN_LEVELS[lv - 1];
+    assert.equal(ids.filter((j) => damage(g, j) > 0).length, L.jumps + 1, `level ${lv}`);
+    assert.ok(Math.abs(damage(g, ids[0]) - L.damage) < 1e-3, `level ${lv}`);
+  }
+});
