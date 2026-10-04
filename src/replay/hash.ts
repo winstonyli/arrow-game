@@ -1,6 +1,7 @@
 // FNV-1a over the sim state (world arrays, player, scalars). Equal hashes mean equal sim state; used by the
 // determinism tests, the golden replays and (later) a server-side verifier.
 import type { Game } from '../game/game.ts';
+import { WEAPONS } from '../game/weapons.ts';
 
 /** `g` is a game from createGame. */
 export function stateHash(g: Game): number {
@@ -26,7 +27,7 @@ export function stateHash(g: Game): number {
     mix(w.bounce[i]);
   }
   for (const k of ['x', 'y', 'hp', 'cd', 'invuln'] as const) num(g.player[k]);
-  for (const id of ['blade', 'shockwave', 'chain', 'boomerang']) mix(g.player.stats.weapons[id] ?? 0);
+  for (const { id } of WEAPONS) mix(g.player.stats.weapons[id] ?? 0);
   const sh = g.wstate.shock;
   mix(sh.on ? 1 : 0);
   for (const v of [sh.cd, sh.x, sh.y, sh.r, sh.max]) num(v);
