@@ -4,14 +4,25 @@ import { drawWorldGrid } from './grid-lines.ts';
 import { POOL, RING } from './fx.ts';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.ts';
 import { drawGhost } from './ghost-marker.ts';
+import type { World, Kind } from '../core/world.ts';
+import type { Size } from '../core/math.ts';
+import type { Game, Mode } from '../game/game.ts';
+import type { Fx } from './fx.ts';
 
 const TAU = Math.PI * 2;
 const GEM_COLOR = '#f2cc60';
 
-export function createCanvasRenderer(canvas, view) {
+// The game as the renderers see it: fx (when present) is the render fx from createFx.
+export type RenderGame = Game<Mode, Fx>;
+// The render(game, hud) contract both renderers return: draws one frame, `hud` lines at the bottom.
+export type Renderer = (game: RenderGame, hud: string[]) => void;
+
+export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Renderer {
   canvas.width = view.w;
   canvas.height = view.h;
-  const ctx = canvas.getContext('2d');
+  // DOM boundary: a fresh canvas always yields a 2D context; a null (canvas already holding another context type)
+  // still throws on the next line, as before.
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
   const vignette = ctx.createRadialGradient(view.w / 2, view.h / 2, view.h * 0.35, view.w / 2, view.h / 2, Math.hypot(view.w, view.h) / 2);
   vignette.addColorStop(0, 'rgba(248,81,73,0)');
   vignette.addColorStop(1, 'rgba(248,81,73,0.85)');
@@ -21,7 +32,7 @@ export function createCanvasRenderer(canvas, view) {
 
   // Tapered tails (see trail.ts): a smooth quadratic curve from the mover's centre through the tail's bend to its
   // tip, widest at the mover and tapering to a point, appended to the current path from the tail in `tv`.
-  function tailPath(x, y, radius) {
+  function tailPath(x: number, y: number, radius: number): void {
     const le = Math.hypot(tv.ex, tv.ey);
     if (le < 0.5) return;
     const cx = 2 * tv.mx - tv.ex / 2; // control point of the curve through the bend
@@ -40,7 +51,7 @@ export function createCanvasRenderer(canvas, view) {
   }
 
   // One fill per group.
-  function tails(world, kind, type, color, fx) {
+  function tails(world: World, kind: Kind, type: number, color: string, fx: Fx): void {
     ctx.fillStyle = color;
     ctx.globalAlpha = 0.3;
     ctx.beginPath();
@@ -54,7 +65,7 @@ export function createCanvasRenderer(canvas, view) {
   }
 
   // The tail of the player (track 0) or blade k (track 1 + k) at x, y.
-  function trackTail(fx, t, x, y, r, color) {
+  function trackTail(fx: Fx, t: number, x: number, y: number, r: number, color: string): void {
     fx.trackTail(t, x, y, r, tv);
     ctx.fillStyle = color;
     ctx.globalAlpha = 0.3;
@@ -65,7 +76,7 @@ export function createCanvasRenderer(canvas, view) {
   }
 
   // type < 0 matches any type. One path and one fill per colour group.
-  function circles(world, kind, type, color) {
+  function circles(world: World, kind: Kind, type: number, color: string): void {
     ctx.fillStyle = color;
     ctx.beginPath();
     for (let i = 0; i < world.high; i++) {
@@ -78,7 +89,7 @@ export function createCanvasRenderer(canvas, view) {
   }
 
   // Enemies in their hit-flash window, drawn white over their type colour.
-  function flashed(world, fx) {
+  function flashed(world: World, fx: Fx): void {
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     for (let i = 0; i < world.high; i++) {
@@ -90,7 +101,7 @@ export function createCanvasRenderer(canvas, view) {
     ctx.fill();
   }
 
-  function particles(fx) {
+  function particles(fx: Fx): void {
     const p = fx.p;
     for (let k = 0; k < POOL; k++) {
       if (p.life[k] <= 0) continue;
@@ -113,7 +124,7 @@ export function createCanvasRenderer(canvas, view) {
   // The fallback renderer does not cull and draws no outline or shadow; the WebGL renderer is the one
   // built for large counts and depth.
   const bp = { x: 0, y: 0 };
-  return function render(game, hud) {
+  return function render(game: RenderGame, hud: string[]): void {
     const { world, player, camera, bounds, fx } = game;
     cam.x = camera.x + (fx ? fx.sx : 0);
     cam.y = camera.y + (fx ? fx.sy : 0);

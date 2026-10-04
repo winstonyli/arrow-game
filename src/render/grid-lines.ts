@@ -1,6 +1,8 @@
+import type { Vec, Size } from '../core/math.ts';
+
 // Faint 100 px grid and a red world border so camera motion is visible. Screen space: call with an
 // identity transform. Does nothing when the whole world fits in the view (rooms mode).
-export function drawWorldGrid(ctx, camera, view, bounds, step = 100) {
+export function drawWorldGrid(ctx: CanvasRenderingContext2D, camera: Vec, view: Size, bounds: Size, step = 100): void {
   if (bounds.w <= view.w && bounds.h <= view.h) return;
   ctx.save();
   ctx.lineWidth = 1;

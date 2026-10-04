@@ -3,7 +3,8 @@
 // hits, pickups, level-ups, damage, game over) from state changes.
 // createSfx(ctx) takes an AudioContext (or a test fake). Nothing plays until ctx.state is 'running', which
 // browsers allow only after a user gesture: call resume() from the first key press or touch.
-import type { Game } from '../game/game.ts';
+import type { Game, Mode } from '../game/game.ts';
+import type { Fx } from '../render/fx.ts';
 
 export const MASTER_GAIN = 0.4;
 const ATTACK = 0.014; // seconds; slower than a click so shots and hits thump instead of snap
@@ -187,10 +188,8 @@ export function createSfx(ctx: AudioContext, storage: Pick<Storage, 'getItem' | 
 
     // Derives shots, hits, pickups, level-ups, damage and game over from state changes since the last call.
     // A different game object (restart) resets the baselines instead of firing sounds.
-    observe(game: Game) {
-      const { player } = game;
-      // The sim's GameFx hook type has no counter; the render fx object this is called with does (hits).
-      const fx = game.fx as (Game['fx'] & { hits: number }) | undefined;
+    observe(game: Game<Mode, Fx>) {
+      const { player, fx } = game;
       const hits = fx ? fx.hits : 0;
       if (seen !== game || prev === null) {
         seen = game;

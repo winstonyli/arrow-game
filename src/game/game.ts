@@ -9,6 +9,7 @@ import { gemSystem } from './gems.ts';
 import { orbitSystem } from './orbit.ts';
 import type { Vec, Size } from '../core/math.ts';
 import type { Player } from './player.ts';
+import type { GhostState } from '../replay/ghost.ts';
 
 // The run's rules: modes/arena, modes/rooms or modes/stress. Hooks run inside createGame, tick and choose.
 export interface Mode {
@@ -62,6 +63,7 @@ export interface Game<M extends Mode = Mode, F extends GameFx = GameFx> {
   bossAt: number;
   onKill?: (enemyIndex: number) => void; // assigned right after construction (undefined when nothing listens)
   enemyFireOnScreen?: boolean; // set by the arena's start
+  ghost?: GhostState | null; // set by main.js each frame for the renderers and HUD; the sim never reads it
 }
 
 export interface GameOptions<M extends Mode, F extends GameFx> {

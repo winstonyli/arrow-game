@@ -2,6 +2,9 @@
 //  - a tapered tail behind every enemy, arrow and gem, bent through where the mover actually was: fx.ts keeps
 //    a short per-slot position history and `bentTail` turns two samples of it into the tail;
 //  - the player and each orbit blade get the same tail from a ring of samples kept by fx.ts.
+// A tail's bend (mx, my) and tip (ex, ey), as offsets from the mover's centre.
+export type Tail = { mx: number; my: number; ex: number; ey: number };
+
 export const TRAIL_MAX = 80; // px cap on a tail's length
 export const TRAIL_PER_R = 8; // a mover's tail is also capped at this many of its radii, so small movers get short tails
 export const TRAIL_N = 10; // history samples per mover, one per sim tick (fx.sample)
@@ -14,7 +17,7 @@ export const TRAIL_END = TRAIL_N - 1; // age of the tail's tip
 // the rim: a slow, large enemy still shows a tail. The length is capped at TRAIL_MAX and, when `r` is known,
 // at TRAIL_PER_R * r. Both points scale together, keeping the shape; zero if the
 // mover has not moved.
-export function bentTail(mx, my, ex, ey, out, r = 0) {
+export function bentTail(mx: number, my: number, ex: number, ey: number, out: Tail, r = 0): void {
   const l = Math.hypot(ex, ey);
   if (l < 1e-6) {
     out.mx = out.my = out.ex = out.ey = 0;

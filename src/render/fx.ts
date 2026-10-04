@@ -4,6 +4,10 @@
 import { KIND } from '../core/world.ts';
 import { bladePos, MAX_BLADES } from '../game/orbit.ts';
 import { TRAIL_N, TRAIL_MID, TRAIL_END, bentTail } from './trail.ts';
+import type { Tail } from './trail.ts';
+import type { World } from '../core/world.ts';
+import type { Game } from '../game/game.ts';
+import type { Player } from '../game/player.ts';
 
 export const FLASH_TIME = 0.08; // seconds an enemy stays white after a hit
 export const POOL = 512;
@@ -12,7 +16,9 @@ export const RING = 1;
 export const PAL_GEM = -1; // particle palette: an enemy type index, or this for gem gold
 const TAU = Math.PI * 2;
 
-export function createFx(capacity, rng = Math.random) {
+export type Fx = ReturnType<typeof createFx>;
+
+export function createFx(capacity: number, rng: () => number = Math.random) {
   const lastHp = new Float32Array(capacity);
   const lastGen = new Int32Array(capacity).fill(-1); // -1: slot not seen yet (gen starts at 0)
   const flashUntil = new Float32Array(capacity);
@@ -40,7 +46,7 @@ export function createFx(capacity, rng = Math.random) {
   const trail = { x: new Float32Array(TRACKS * TRAIL_N), y: new Float32Array(TRACKS * TRAIL_N), count: new Uint8Array(TRACKS), head: new Uint8Array(TRACKS) };
   const bp = { x: 0, y: 0 };
 
-  function record(t, x, y) {
+  function record(t: number, x: number, y: number): void {
     const h = (trail.head[t] + 1) % TRAIL_N;
     trail.head[t] = h;
     trail.x[t * TRAIL_N + h] = x;
@@ -48,7 +54,7 @@ export function createFx(capacity, rng = Math.random) {
     if (trail.count[t] < TRAIL_N) trail.count[t]++;
   }
 
-  function sampleMovers(world) {
+  function sampleMovers(world: World): void {
     seq++;
     const h = seq % TRAIL_N;
     for (let i = 0; i < world.high; i++) {
@@ -63,9 +69,9 @@ export function createFx(capacity, rng = Math.random) {
   }
 
   let next = 0;
-  let lastPlayerHp = null;
+  let lastPlayerHp: number | null = null;
 
-  function emit(x, y, vx, vy, r, dr, life, shape, pal) {
+  function emit(x: number, y: number, vx: number, vy: number, r: number, dr: number, life: number, shape: number, pal: number): void {
     const k = next;
     next = (next + 1) % POOL;
     p.x[k] = x;
@@ -79,7 +85,7 @@ export function createFx(capacity, rng = Math.random) {
     p.pal[k] = pal;
   }
 
-  function dots(x, y, n, speed, spread, r, life, pal) {
+  function dots(x: number, y: number, n: number, speed: number, spread: number, r: number, life: number, pal: number): void {
     for (let k = 0; k < n; k++) {
       const a = (k / n) * TAU + rng() * 0.6;
       const s = speed + rng() * spread;
@@ -98,11 +104,11 @@ export function createFx(capacity, rng = Math.random) {
     hits: 0, // running count of enemy hp drops seen by observe (the audio reads it)
     trail,
 
-    flashing: (i) => flashUntil[i] > fx.clock,
+    flashing: (i: number): boolean => flashUntil[i] > fx.clock,
 
     // Writes slot i's tail (see bentTail) to `out`; zero until it has two samples, and for a slot whose
     // current occupant has none yet, so a recycled slot never inherits a ghost.
-    tail(world, i, out) {
+    tail(world: World, i: number, out: Tail): void {
       const avail = histGen[i] === world.gen[i] ? seq - born[i] : 0;
       if (avail < 1) {
         out.mx = out.my = out.ex = out.ey = 0;
@@ -121,7 +127,7 @@ export function createFx(capacity, rng = Math.random) {
 
     // Same as tail() for the player (track 0) or blade k (track 1 + k), which are not slots: x, y is its current
     // centre and r its radius.
-    trackTail(t, x, y, r, out) {
+    trackTail(t: number, x: number, y: number, r: number, out: Tail): void {
       const avail = trail.count[t] - 1;
       if (avail < 1) {
         out.mx = out.my = out.ex = out.ey = 0;
@@ -138,21 +144,21 @@ export function createFx(capacity, rng = Math.random) {
       }
     },
 
-    kill(x, y, r, pal) {
+    kill(x: number, y: number, r: number, pal: number): void {
       emit(x, y, 0, 0, r, 70, 0.3, RING, pal);
       dots(x, y, 5, 80, 60, 2.5, 0.35, pal);
     },
 
-    burst(x, y) {
+    burst(x: number, y: number): void {
       dots(x, y, 5, 50, 50, 2, 0.4, PAL_GEM);
     },
 
-    shake(a) {
+    shake(a: number): void {
       fx.trauma = Math.min(1, fx.trauma + a);
     },
 
     // Derives flashes and the hurt vignette from sim state. hp only ever falls on a hit, so a drop is a hit.
-    observe(game) {
+    observe(game: Game): void {
       const { world, player } = game;
       for (let i = 0; i < world.high; i++) {
         const kind = world.kind[i];
@@ -178,7 +184,7 @@ export function createFx(capacity, rng = Math.random) {
 
     // Records one position sample of every mover. game.js calls it once per sim tick, so history is spaced by
     // sim time and tail length does not depend on the frame rate or on paused frames.
-    sample(game) {
+    sample(game: Game): void {
       const { world, player } = game;
       sampleMovers(world);
       record(0, player.x, player.y);
@@ -193,7 +199,7 @@ export function createFx(capacity, rng = Math.random) {
       }
     },
 
-    update(dt) {
+    update(dt: number): void {
       fx.clock += dt;
       const drag = Math.max(0, 1 - 5 * dt);
       for (let k = 0; k < POOL; k++) {
@@ -213,7 +219,7 @@ export function createFx(capacity, rng = Math.random) {
     },
 
     // Red vignette strength in [0, 1]: a decaying flash after a hit, or a slow pulse below 30% hp.
-    vignette(player) {
+    vignette(player: Player): number {
       const low = player.hp > 0 && player.hp < player.maxHp * 0.3 ? 0.25 + 0.1 * Math.sin(fx.clock * 6) : 0;
       return Math.max(fx.hurt * 0.6, low);
     },

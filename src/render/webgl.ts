@@ -5,6 +5,10 @@ import { POOL, RING } from './fx.ts';
 import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.ts';
 import { TRAIL_MAX } from './trail.ts';
 import { drawGhost } from './ghost-marker.ts';
+import type { World } from '../core/world.ts';
+import type { Size } from '../core/math.ts';
+import type { Player } from '../game/player.ts';
+import type { RenderGame } from './canvas.ts';
 
 export const STRIDE = 9; // floats per instance: x, y, radius, palette index, fade, tail bend x, y, tail tip x, y
 // fade: SOLID = entity (outline + shadow); (0, 1] = dot particle alpha; [-1, 0) = ring particle, alpha -fade.
@@ -26,7 +30,7 @@ const LAYERS = [KIND.GEM, KIND.ENEMY, KIND.ENEMY_PROJECTILE, KIND.PROJECTILE];
 const bp = { x: 0, y: 0 };
 const tv = { mx: 0, my: 0, ex: 0, ey: 0 };
 
-function put(out, o, x, y, r, pal, fade, mx, my, ex, ey) {
+function put(out: Float32Array, o: number, x: number, y: number, r: number, pal: number, fade: number, mx: number, my: number, ex: number, ey: number): void {
   out[o] = x;
   out[o + 1] = y;
   out[o + 2] = r;
@@ -43,7 +47,7 @@ function put(out, o, x, y, r, pal, fade, mx, my, ex, ey) {
 // are on a canvas below; the HP bar, vignette and HUD text on one above. Within a layer instances draw in
 // slot order. Entities carry their tail's bend and tip (see trail.ts); zero without fx.
 // Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
-export function packInstances(world, player, game, out) {
+export function packInstances(world: World, player: Player, game: Pick<RenderGame, 'camera' | 'view' | 'fx' | 'time'>, out: Float32Array): number {
   const { camera, view, fx } = game;
   const pad = fx ? SHAKE_PAD + TRAIL_MAX : 0;
   const x0 = camera.x - pad;
@@ -94,7 +98,7 @@ export function packInstances(world, player, game, out) {
   return n;
 }
 
-const hex = (c) => [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16) / 255);
+const hex = (c: string): number[] => [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16) / 255);
 
 const VERT = `#version 300 es
 in vec4 aInst; // x, y, radius, palette index (world coordinates)
@@ -175,30 +179,32 @@ void main() {
   }
 }`;
 
-function compile(gl, type, src) {
-  const s = gl.createShader(type);
+function compile(gl: WebGL2RenderingContext, type: GLenum, src: string): WebGLShader {
+  // GL boundary: createShader is null only on a lost context, and then shaderSource throws, as before.
+  const s = gl.createShader(type) as WebGLShader;
   gl.shaderSource(s, src);
   gl.compileShader(s);
-  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(String(gl.getShaderInfoLog(s))); // String(): same message as Error(null) gave
   return s;
 }
 
 // Same render(game, hud) contract as createCanvasRenderer. Throws if WebGL2 is unavailable.
 // `bgCanvas` (below) holds the background and world grid; `hudCanvas` (above) holds the player's HP bar,
 // the damage vignette and the HUD text, so the grid never draws over entities.
-export function createWebGLRenderer(canvas, hudCanvas, bgCanvas, view) {
+export function createWebGLRenderer(canvas: HTMLCanvasElement, hudCanvas: HTMLCanvasElement, bgCanvas: HTMLCanvasElement, view: Size) {
   canvas.width = hudCanvas.width = bgCanvas.width = view.w;
   canvas.height = hudCanvas.height = bgCanvas.height = view.h;
-  const gl = canvas.getContext('webgl2', { antialias: false, alpha: true }); // transparent: the background and grid sit on bgCanvas below
-  if (!gl) throw new Error('WebGL2 unavailable');
+  const glOrNull = canvas.getContext('webgl2', { antialias: false, alpha: true }); // transparent: the background and grid sit on bgCanvas below
+  if (!glOrNull) throw new Error('WebGL2 unavailable');
+  const gl: WebGL2RenderingContext = glOrNull; // narrowed once, so the hoisted render() below sees it non-null
   const ext = gl.getExtension('WEBGL_debug_renderer_info');
-  const adapter = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : 'unknown';
+  const adapter: string = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : 'unknown';
 
   const prog = gl.createProgram();
   gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VERT));
   gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, FRAG));
   gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(String(gl.getProgramInfoLog(prog))); // String(): same message as Error(null) gave
   gl.useProgram(prog);
   gl.uniform2f(gl.getUniformLocation(prog, 'uSize'), view.w, view.h);
   const uCam = gl.getUniformLocation(prog, 'uCam');
@@ -222,16 +228,17 @@ export function createWebGLRenderer(canvas, hudCanvas, bgCanvas, view) {
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.viewport(0, 0, view.w, view.h);
   gl.clearColor(0, 0, 0, 0);
-  const bg2d = bgCanvas.getContext('2d');
+  // DOM boundary, as in canvas.ts: a null 2D context is not checked here (it fails on first use, as before).
+  const bg2d = bgCanvas.getContext('2d') as CanvasRenderingContext2D;
 
-  let data = null; // sized on first frame from the world's capacity
-  const hud2d = hudCanvas.getContext('2d');
+  let data: Float32Array | null = null; // sized on first frame from the world's capacity
+  const hud2d = hudCanvas.getContext('2d') as CanvasRenderingContext2D; // DOM boundary, as bg2d
   const vignette = hud2d.createRadialGradient(view.w / 2, view.h / 2, view.h * 0.35, view.w / 2, view.h / 2, Math.hypot(view.w, view.h) / 2);
   vignette.addColorStop(0, 'rgba(248,81,73,0)');
   vignette.addColorStop(1, 'rgba(248,81,73,0.85)');
   const cam = { x: 0, y: 0 }; // the camera plus the current shake offset
 
-  function render(game, hud) {
+  function render(game: RenderGame, hud: string[]): void {
     const { world, player, camera, bounds, fx } = game;
     if (!data) {
       data = new Float32Array((world.capacity + 1 + POOL + MAX_BLADES) * STRIDE);
