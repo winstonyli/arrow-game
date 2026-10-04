@@ -11,8 +11,6 @@
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
-    "allowJs": true,
-    "checkJs": false,
     "skipLibCheck": true
   },
   "include": ["src", "test", "scripts", "vite.config.ts"]

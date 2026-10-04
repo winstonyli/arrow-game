@@ -13,7 +13,8 @@ export interface ArrowGameDebug {
   readonly lastReplay: Replay | null;
   readonly watch: WatchSession | null;
   readonly seed: number;
-  /** Recent rAF intervals (median, p95) plus the smoothed sim and draw times, all in ms. */
+  /** Recent rAF intervals (median, p95) plus the smoothed sim and draw times, all in ms. medianMs and p95Ms are
+   *  undefined at runtime (despite the type) until the first frame interval is recorded. */
   frameStats(): { n: number; medianMs: number; p95Ms: number; simMs: number; drawMs: number };
   renderer: TaggedRenderer['kind'];
 }

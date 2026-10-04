@@ -93,7 +93,9 @@ const codeButton = (label: string, cls: string, getCode: () => CodeSource, onErr
     try {
       code = await getCode();
     } catch (e) {
-      // getCode is toCode (or null): its own failures are ReplayErrors; anything else had no such code.
+      // getCode is main.ts's toCode on the last or stored replay (or null). toCode throws ReplayError 'too-large' past the
+      // code size limits, or validate's codes ('invalid' covers its length caps, e.g. MAX_TICKS; also 'version').
+      // 'too-large' and 'invalid' read as too long to share; anything else gets the generic message.
       const msg = e instanceof ReplayError && (e.code === 'too-large' || e.code === 'invalid') ? 'Too long to share' : 'Could not make a code';
       if (onError) onError(msg);
       else flash(msg);

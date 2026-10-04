@@ -95,7 +95,7 @@ test('toCode refuses replays fromCode would refuse (too-large)', async () => {
 test('any code toCode accepts round-trips through fromCode', async () => {
   for (const runs of [1, 1000, 50000, 75000, 90000, 100000, 120000]) {
     const r = noisyReplay(runs, runs);
-    let code;
+    let code: string;
     try {
       code = await toCode(r);
     } catch (e) {

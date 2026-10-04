@@ -1,18 +1,18 @@
-// Browser render benchmark: drives a real Chrome window over CDP (no dependencies; needs Node's global WebSocket).
-// Usage: node scripts/render-bench.ts [--renderer=webgl,canvas2d] [--n=1000,5000,10000,20000]
+// Browser render benchmark: drives a real Chrome window over CDP (no dependencies; uses the runtime's global WebSocket).
+// Usage: bun scripts/render-bench.ts [--renderer=webgl,canvas2d] [--n=1000,5000,10000,20000]
 //        [--scenario=dense,converge] [--secs=13] [--shot=dir] [--mode=background|headed|headless]
 // --mode: `background` (default) opens an off-screen window with Chrome's occlusion/backgrounding throttling off, so it
 // neither takes focus nor slows down when other windows cover it; `headed` is the old visible window (steals focus,
 // and is throttled if covered); `headless` has no window at all (GPU path may differ: compare before trusting).
 // Serves the Vite build (`vite build` first if dist/ is missing or older than the sources) with `vite preview` on a free
-// port, plus a throwaway Chrome profile; stops both when done, on errors too.
+// port, plus a throwaway Chrome profile; stops both when done, on errors too, and deletes the profile.
 // Reports the median/p95 rAF interval; sim/draw ms are the HUD's CPU-side EMAs. Frame time is the number
 // that counts: draw ms cannot see GPU rasterization.
 import { spawn, spawnSync } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
-import { tmpdir } from 'node:os';
+import { constants, tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -41,22 +41,28 @@ interface FrameSample { r: string; v: string; fs: { n: number; medianMs: number 
 
 // Stops a child and everything it started: `bun x vite` and Chrome both spawn helpers that kill() alone can orphan on Windows.
 const children: ChildProcess[] = [];
+const tempDirs: string[] = []; // Chrome profiles this run created
 const cleanup = () => {
   for (const c of children.splice(0)) {
-    if (c.exitCode !== null || c.pid === undefined) continue;
+    // Already gone (exited or killed by a signal): its pid may belong to someone else by now, so do not taskkill it.
+    if (c.exitCode !== null || c.signalCode !== null || c.pid === undefined) continue;
     if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(c.pid), '/T', '/F'], { stdio: 'ignore' });
     else c.kill();
   }
+  // Best effort: Chrome can hold profile files for a moment after it is killed.
+  for (const d of tempDirs.splice(0)) try { rmSync(d, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch {}
 };
 process.on('exit', cleanup); // also runs after an uncaught error
-process.on('SIGINT', () => process.exit(130)); // Ctrl+C: exit through the handler above
+// Ctrl+C, Ctrl+Break, console closed, kill: exit through the handler above with the usual 128 + signal code.
+for (const sig of ['SIGINT', 'SIGBREAK', 'SIGHUP', 'SIGTERM'] as const) process.on(sig, () => process.exit(128 + constants.signals[sig]));
 
-// Build only when needed: dist/index.html older than anything under src/ (or index.html, vite.config.ts) means stale.
+// Build only when needed: dist/index.html older than any build input (src/, assets/ fonts, index.html, vite.config.ts,
+// package.json, bun.lock) means stale.
 const newest = (path: string): number =>
   statSync(path).isDirectory() ? Math.max(0, ...readdirSync(path).map((f) => newest(join(path, f)))) : statSync(path).mtimeMs;
 const built = join(root, 'dist', 'index.html');
-const sources = Math.max(newest(join(root, 'src')), newest(join(root, 'index.html')), newest(join(root, 'vite.config.ts')));
-const stale = !existsSync(built) ? 'dist/ missing' : statSync(built).mtimeMs < sources ? 'dist/ older than src/' : '';
+const sources = Math.max(...['src', 'assets', 'index.html', 'vite.config.ts', 'package.json', 'bun.lock'].map((p) => newest(join(root, p))));
+const stale = !existsSync(built) ? 'dist/ missing' : statSync(built).mtimeMs < sources ? 'dist/ older than its sources' : '';
 // Status goes to stderr so stdout keeps the table format.
 if (stale) {
   console.error(`${stale}: running vite build`);
@@ -81,7 +87,9 @@ for (let k = 0; ; k++) {
   if (k >= 80) throw new Error(`vite preview did not answer on :${WEB} within 20 s`);
   await sleep(250);
 }
-const chrome = spawn(CHROME, [`--remote-debugging-port=${DEBUG}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'chrome-bench-'))}`, '--window-size=1100,800', ...MODE_FLAGS, '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore' });
+const profile = mkdtempSync(join(tmpdir(), 'chrome-bench-'));
+tempDirs.push(profile);
+const chrome = spawn(CHROME, [`--remote-debugging-port=${DEBUG}`, `--user-data-dir=${profile}`, '--window-size=1100,800', ...MODE_FLAGS, '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore' });
 children.push(chrome);
 
 try {
@@ -96,7 +104,7 @@ try {
   await new Promise<void>((r) => (ws.onopen = () => r()));
   let id = 0;
   const pending = new Map<number, (m: CdpMessage) => void>();
-  ws.onmessage = (e) => { const m = JSON.parse(String(e.data)) as CdpMessage; if (m.id === undefined) return; pending.get(m.id)?.(m); pending.delete(m.id); };
+  ws.onmessage = (e) => { const m = JSON.parse(String(e.data)) as CdpMessage; if (m.id === undefined) return; pending.get(m.id)?.(m); pending.delete(m.id); }; // cast trusts Chrome's CDP framing (protocol docs)
   // R is the method's result shape, per the protocol docs: the cast trusts Chrome.
   const cdp = <R = unknown>(method: string, params: object = {}) => new Promise<{ result: R }>((r) => { const i = ++id; pending.set(i, (m) => r(m as { result: R })); ws.send(JSON.stringify({ id: i, method, params })); });
   const evalJs = async <T>(expr: string): Promise<T> => (await cdp<{ result: { value: T } }>('Runtime.evaluate', { expression: expr, returnByValue: true })).result.result.value;
@@ -112,7 +120,7 @@ try {
         await cdp('Page.navigate', { url: `http://localhost:${WEB}/?stress=${n}&scenario=${scenario}&renderer=${renderer}` });
         await sleep(n >= 20000 ? secs * 2000 : secs * 1000);
         gpu ??= await evalJs<string>(`(()=>{const g=document.createElement('canvas').getContext('webgl');const e=g&&g.getExtension('WEBGL_debug_renderer_info');return e?g.getParameter(e.UNMASKED_RENDERER_WEBGL):'n/a'})()`);
-        const r = JSON.parse(await evalJs<string>('JSON.stringify({ r: arrowGame.renderer, v: document.visibilityState, fs: arrowGame.frameStats() })')) as FrameSample;
+        const r = JSON.parse(await evalJs<string>('JSON.stringify({ r: arrowGame.renderer, v: document.visibilityState, fs: arrowGame.frameStats() })')) as FrameSample; // our own JSON.stringify of window.arrowGame (see globals.d.ts)
         const f = (v: number | null) => (v == null ? '-' : v.toFixed(1)).padStart(8);
         console.log(`${renderer.padEnd(9)} ${scenario.padEnd(9)} ${String(n).padStart(6)}  ${r.r.padEnd(8)}${String(r.fs.n).padStart(6)} ${f(r.fs.medianMs)} ${f(r.fs.p95Ms)} ${f(r.fs.simMs)} ${f(r.fs.drawMs)}${r.v === 'visible' ? '' : '  (tab hidden!)'}`);
         if (shotDir) writeFileSync(join(shotDir, `${renderer}-${scenario}-${n}.png`), Buffer.from((await cdp<{ data: string }>("Page.captureScreenshot")).result.data, 'base64'));

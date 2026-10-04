@@ -18,7 +18,7 @@ for (const mode of ['arena', 'rooms']) {
     validate(fx.replay);
     assert.equal(fx.replay.sim, SIM_VERSION, 'SIM_VERSION changed: regenerate with node scripts/make-golden.ts');
     const advice = 'sim behaviour changed: bump SIM_VERSION in src/replay/version.ts, then run node scripts/make-golden.ts';
-    let out;
+    let out: ReturnType<typeof runReplay>;
     try {
       out = runReplay(fx.replay);
     } catch (e) {

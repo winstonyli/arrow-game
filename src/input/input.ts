@@ -1,9 +1,6 @@
-export interface Vec2 {
-  x: number;
-  y: number;
-}
+import type { Vec } from '../core/math.ts';
 
-export function keysToVector(keys: ReadonlySet<string>): Vec2 {
+export function keysToVector(keys: ReadonlySet<string>): Vec {
   let x = 0;
   let y = 0;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) x -= 1;
@@ -24,7 +21,7 @@ interface Stick {
   y: number;
 }
 
-export function createInput(target: Window = window): Vec2 {
+export function createInput(target: Window = window): Vec {
   const input = { x: 0, y: 0 };
   const keys = new Set<string>();
   let stick: Stick | null = null;

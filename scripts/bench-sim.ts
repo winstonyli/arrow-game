@@ -64,7 +64,8 @@ const sorted = (a: number[]): Float64Array => Float64Array.from(a).sort();
 const pct = (s: Float64Array, p: number): number => s[Math.min(s.length - 1, Math.floor(s.length * p))];
 const f = (v: number): string => v.toFixed(2).padStart(7);
 
-console.log(`cell ${cellSize}, node ${process.version}, ${ticks} ticks after ${WARMUP} warmup, ms per tick`);
+const runtime = typeof Bun !== 'undefined' ? `Bun ${Bun.version} (JavaScriptCore)` : `node ${process.version} (V8)`;
+console.log(`cell ${cellSize}, ${runtime}, ${ticks} ticks after ${WARMUP} warmup, ms per tick`);
 console.log(['scenario', 'N', 'tick', 'tick p95', ...STAGES, 'dropped'].map((h) => h.padStart(9)).join(''));
 for (const scenario of scenarios) {
   for (const n of ns) {
