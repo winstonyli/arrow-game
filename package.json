@@ -4,9 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test",
-    "start": "node scripts/serve.js",
-    "bench": "node scripts/bench-sim.js",
-    "soak": "node scripts/soak-arena.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "bench": "bun scripts/bench-sim.js",
+    "soak": "bun scripts/soak-arena.js --minutes=10",
+    "bench:render": "bun scripts/render-bench.mjs"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2"
   }
 }

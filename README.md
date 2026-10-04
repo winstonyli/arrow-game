@@ -2,13 +2,13 @@
 
 Browser archer roguelite (Archero / arrow.io style). Plain JS, typed-array simulation.
 
-- Run: `npm start` then open http://localhost:8000
-- Test: `npm test`
+- Run: `bun run dev` then open http://localhost:8000
+- Test: `bun test`
 - Design: `docs/superpowers/specs/2026-10-02-arrow-game-design.md`
 - Plan: `docs/superpowers/plans/2026-10-02-arrow-game-core-and-rooms.md`
 
 ## Status
-Plan 1 (core + rooms mode) implemented; playable at `npm start`. Gameplay feel not yet tuned.
+Plan 1 (core + rooms mode) implemented; playable at `bun run dev`. Gameplay feel not yet tuned.
 Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Plan 3 (arena mode + camera) implemented; play it at `/?mode=arena` (rooms stays the default at `/`).
 
 ## Branches
@@ -25,7 +25,7 @@ Commits are Conventional Commits, `type: summary`, scope optional. Types in use:
 Prereleases are tagged on `dev` at points the owner picks. `v0.1.0` is the first tag (made after the checklist below passed); the next release number is chosen per release. Release checklist:
 1. `node --test` passes on the tagged commit.
 2. If `SIM_VERSION` changed, the goldens are regenerated and committed.
-3. `scripts/render-bench` and `npm run soak` have run, with CPU load and Defender state recorded next to the numbers.
+3. `scripts/render-bench` and `bun run soak` have run, with CPU load and Defender state recorded next to the numbers.
 4. `package.json` version and the tag match; a `CHANGELOG.md` entry lists the changes and any `SIM_VERSION` bump (the file is created with the first tag).
 5. For a full release only: `main` fast-forwards to the tag.
 
@@ -68,7 +68,7 @@ Gems are captured when they enter the pickup radius and stay captured. A capture
 `src/audio/sfx.js` synthesizes every effect with WebAudio (no asset files): shot, hit, kill (heavier for bruisers and bosses), gem pickup (pitch climbs a pentatonic scale while pickups keep coming, restarts after 0.5 s), level-up arpeggio, damage, boss spawn, game over. Presentation-only like fx: `game.sfx` is optional, the sim only calls `sfx.kill` (via `onKill`) and `sfx.boss`; `sfx.observe(game)` derives the rest from state changes once per frame. Per-sound throttles (`MIN_GAP`), a 24-voice cap and a compressor keep a crowd from turning to noise. Audio starts on the first key press or touch (browser autoplay rules); **M** mutes (remembered in localStorage, shown in the HUD). There is no sound in stress mode. Levels were checked offline (every sound peaks between 0.06 and 0.45, no NaN), but nobody has judged how it sounds yet; all gains and pitches are first guesses in that file.
 
 ## Arena soak
-`npm run soak` (`node scripts/soak-arena.js --minutes=10`) runs the arena headless with a stationary invulnerable player, taking the first offered skill at each level-up, and prints one line per game minute (node v26.10.0, seed 1, Defender real-time protection off, machine CPU ~30% busy at the time):
+`bun run soak` (`node scripts/soak-arena.js --minutes=10`) runs the arena headless with a stationary invulnerable player, taking the first offered skill at each level-up, and prints one line per game minute (node v26.10.0, seed 1, Defender real-time protection off, machine CPU ~30% busy at the time):
 
 | min | enemies | gems | high | dropped | level | kills | tick ms (median / p95) |
 |---|---|---|---|---|---|---|---|
@@ -86,7 +86,7 @@ Gems are captured when they enter the pickup radius and stay captured. A capture
 Caveat (table above, taken before the kiting change): the player is stationary, so this is a load proxy, not a difficulty measure. The table predates the balance pass below; spawn rates and kiting have changed since. Entity counts stay far below the 50k capacity and nothing is dropped.
 
 ## Stress benchmarks (plan 2)
-- Sim: `npm run bench` (headless, per-system ms/tick; `--n=`, `--scenario=`, `--ticks=`). N is total entities, half enemies and half player projectiles.
+- Sim: `bun run bench` (headless, per-system ms/tick; `--n=`, `--scenario=`, `--ticks=`). N is total entities, half enemies and half player projectiles.
 - Browser: open `/?stress=N` (add `&scenario=converge` for chasers). Add `&debug` to show sim, draw and frame ms at the bottom; `arrowGame.frameStats()` returns median and p95 frame interval.
 
 Sim results, node v26.10.0, median ms per tick (budget 16.7), Defender real-time protection off, machine CPU ~46% busy from stray python processes, so treat as upper bounds:
@@ -132,7 +132,7 @@ Median frame ms (p95), same machine and load as above (iGPU 780M, ~46% CPU busy)
 WebGL draw CPU time is ~0.5 ms at every N, so rendering no longer limits frame time. At 20k the frame time is about 4-5 sim steps (the stepper's catch-up cap) at 37-46 ms each: the sim's collision cost under 900x600 crowding is the remaining limit. Spikes at 10k converge (p95 84 ms) come from the same sim cost as chasers pile up.
 
 ## Collision search radius (plan 2c)
-The candidate search used a fixed boss-sized radius (36) for every projectile; it now uses `grid.maxRadius`, the largest radius among the enemies of the current tick (boss rooms still pay for the boss). Sim median ms per tick at 20k, two alternating before/after runs on the same loaded machine (`npm run bench`):
+The candidate search used a fixed boss-sized radius (36) for every projectile; it now uses `grid.maxRadius`, the largest radius among the enemies of the current tick (boss rooms still pay for the boss). Sim median ms per tick at 20k, two alternating before/after runs on the same loaded machine (`bun run bench`):
 
 | scenario | before | after |
 |---|---|---|
