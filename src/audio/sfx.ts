@@ -3,18 +3,25 @@
 // hits, pickups, level-ups, damage, game over) from state changes.
 // createSfx(ctx) takes an AudioContext (or a test fake). Nothing plays until ctx.state is 'running', which
 // browsers allow only after a user gesture: call resume() from the first key press or touch.
+import type { Game } from '../game/game.ts';
+
 export const MASTER_GAIN = 0.4;
 const ATTACK = 0.014; // seconds; slower than a click so shots and hits thump instead of snap
 const TONE_CUTOFF = 3500; // Hz, master low-pass that takes the edge off everything
 const GAIN_SCALE = 4; // per-voice gains below are relative; this sets the overall level (measured offline: a kill peaks near 0.1)
 export const MAX_VOICES = 24;
-export const MIN_GAP = { fire: 0.045, hit: 0.035, kill: 0.03, pickup: 0.02, hurt: 0.1 }; // seconds between plays of one sound
+export type SoundName = 'fire' | 'hit' | 'kill' | 'pickup' | 'hurt';
+export const MIN_GAP: Record<SoundName, number> = { fire: 0.045, hit: 0.035, kill: 0.03, pickup: 0.02, hurt: 0.1 }; // seconds between plays of one sound
 export const STREAK_RESET = 0.5; // seconds without a pickup before the pitch run starts over
 export const PENTATONIC = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21]; // semitones above C5, climbed while pickups keep coming
 const C5 = 523.25;
 const HEAVY_RADIUS = 17; // bruisers and bosses get the heavy kill
 
-export function createSfx(ctx, storage = null) {
+type ToneOptions = { f0: number; f1?: number; dur: number; type?: OscillatorType; gain?: number; at?: number };
+type NoiseOptions = { f0: number; f1?: number; q?: number; dur: number; gain?: number; at?: number };
+type Baseline = { cd: number; hp: number; xp: number; level: number; over: boolean };
+
+export function createSfx(ctx: AudioContext, storage: Pick<Storage, 'getItem' | 'setItem'> | null = null) {
   const master = ctx.createGain();
   const comp = ctx.createDynamicsCompressor();
   // Gentle limiting so a pile-up of kills cannot clip.
@@ -42,21 +49,21 @@ export function createSfx(ctx, storage = null) {
   for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
 
   let voices = 0;
-  const last = {};
-  const jitter = (amt) => 1 + (Math.random() * 2 - 1) * amt;
+  const last: Partial<Record<SoundName, number>> = {};
+  const jitter = (amt: number) => 1 + (Math.random() * 2 - 1) * amt;
 
   const live = () => ctx.state === 'running';
   // True if sound `name` may play now (not muted, not too soon after its last play, voices free).
-  function allow(name) {
+  function allow(name: SoundName) {
     if (muted || !live() || voices >= MAX_VOICES) return false;
     const t = ctx.currentTime;
-    if (name in last && t - last[name] < (MIN_GAP[name] ?? 0)) return false;
+    if (name in last && t - last[name]! < (MIN_GAP[name] ?? 0)) return false;
     last[name] = t;
     return true;
   }
 
   // A tone gliding from f0 to f1 over dur seconds with a fast attack and an exponential decay.
-  function tone({ f0, f1 = f0, dur, type = 'sine', gain = 0.3, at = 0 }) {
+  function tone({ f0, f1 = f0, dur, type = 'sine', gain = 0.3, at = 0 }: ToneOptions) {
     const t = ctx.currentTime + at;
     const o = ctx.createOscillator();
     const g = ctx.createGain();
@@ -75,7 +82,7 @@ export function createSfx(ctx, storage = null) {
   }
 
   // Band-passed noise sweeping from f0 to f1 over dur seconds.
-  function noise({ f0, f1 = f0, q = 1, dur, gain = 0.3, at = 0 }) {
+  function noise({ f0, f1 = f0, q = 1, dur, gain = 0.3, at = 0 }: NoiseOptions) {
     const t = ctx.currentTime + at;
     const s = ctx.createBufferSource();
     const f = ctx.createBiquadFilter();
@@ -101,8 +108,8 @@ export function createSfx(ctx, storage = null) {
   let lastPickup = -Infinity;
 
   // Baselines for observe(); reset when a new game starts.
-  let seen = null;
-  let prev = null;
+  let seen: Game | null = null;
+  let prev: Baseline | null = null;
   let prevHits = 0;
 
   const sfx = {
@@ -180,10 +187,12 @@ export function createSfx(ctx, storage = null) {
 
     // Derives shots, hits, pickups, level-ups, damage and game over from state changes since the last call.
     // A different game object (restart) resets the baselines instead of firing sounds.
-    observe(game) {
-      const { player, fx } = game;
+    observe(game: Game) {
+      const { player } = game;
+      // The sim's GameFx hook type has no counter; the render fx object this is called with does (hits).
+      const fx = game.fx as (Game['fx'] & { hits: number }) | undefined;
       const hits = fx ? fx.hits : 0;
-      if (seen !== game) {
+      if (seen !== game || prev === null) {
         seen = game;
         prev = { cd: player.cd, hp: player.hp, xp: game.xp, level: game.level, over: game.over };
         prevHits = hits;
