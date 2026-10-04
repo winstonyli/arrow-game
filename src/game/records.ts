@@ -19,16 +19,18 @@ export function loadBest(storage: RecordStorage | null | undefined, kind: ModeNa
 }
 
 // result: { time, kills } for arena, { room } for rooms. A field is "new" when it beats the stored value.
+// A field may be undefined (Mode.room is optional in the types): like NaN, it is never new and never stored.
 export function submit(
   storage: RecordStorage | null | undefined,
   kind: ModeName,
-  result: Bests,
+  result: Record<string, number | undefined>,
 ): { best: Bests; isNew: Record<string, boolean> } {
   const best = { ...loadBest(storage, kind) };
   const isNew: Record<string, boolean> = {};
   for (const [field, v] of Object.entries(result)) {
-    isNew[field] = Number.isFinite(v) && v > (best[field] ?? 0);
-    if (isNew[field]) best[field] = v;
+    const beats = v !== undefined && Number.isFinite(v) && v > (best[field] ?? 0); // `v !== undefined` only narrows: Number.isFinite(undefined) is false
+    isNew[field] = beats;
+    if (beats) best[field] = v;
   }
   try {
     storage?.setItem(key(kind), JSON.stringify(best));

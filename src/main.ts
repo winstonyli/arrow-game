@@ -18,11 +18,35 @@ import { toCode, fromCode, ReplayError } from './replay/codec.ts';
 import { createGhostBuilder, ghostAt } from './replay/ghost.ts';
 import { engineTag } from './replay/recorder.ts';
 import { SIM_VERSION, TICK_HZ } from './replay/version.ts';
+import type { Mode, ModeName } from './game/game.ts';
+import type { Renderer, RenderGame } from './render/canvas.ts';
+import type { Fx } from './render/fx.ts';
+import type { Screen } from './ui/ui.ts';
+import type { Replay } from './replay/codec.ts';
+import type { GhostState } from './replay/ghost.ts';
+
+/** The renderer plus the name main tags it with (makeRenderer always sets it; read by window.arrowGame). */
+export type TaggedRenderer = Renderer & { kind?: 'webgl' | 'canvas2d' };
+/** A non-stress live run: the session that quantizes, ticks and records. */
+export type LiveSession = ReturnType<typeof createSession<Fx>>;
+/** A replay being watched; `from: 'challenges'` returns there when it is left. */
+export interface WatchSession {
+  pb: ReturnType<typeof createPlayback<Fx>>;
+  speed: number;
+  done: boolean;
+  note: string;
+  from: string;
+}
+/** A seeded run: its seed and the label that names its stored replay. */
+interface Challenge {
+  seed: number;
+  label: string;
+}
 
 const input = createInput();
 
-let game;
-let shownOffer = null;
+let game: RenderGame;
+let shownOffer: string[] | null | undefined = null;
 let simMs = 0;
 let drawMs = 0;
 let frameMs = 0;
@@ -34,19 +58,24 @@ let lastFrame = 0;
 const params = new URLSearchParams(location.search);
 
 // ?renderer=canvas2d forces the fallback; otherwise WebGL2 when available.
-function makeRenderer() {
-  const canvas = document.getElementById('game');
+function makeRenderer(): TaggedRenderer {
+  const canvas = document.getElementById('game') as HTMLCanvasElement; // DOM lookup: index.html's <canvas id="game">
   if (params.get('renderer') !== 'canvas2d') {
     try {
-      const r = createWebGLRenderer(canvas, document.getElementById('hud'), document.getElementById('bg'), VIEW);
+      const r: ReturnType<typeof createWebGLRenderer> & TaggedRenderer = createWebGLRenderer(
+        canvas,
+        document.getElementById('hud') as HTMLCanvasElement, // DOM lookup: index.html's <canvas id="hud">
+        document.getElementById('bg') as HTMLCanvasElement, // DOM lookup: index.html's <canvas id="bg">
+        VIEW,
+      );
       console.info('renderer: webgl2 on', r.adapter);
       r.kind = 'webgl';
       return r;
     } catch (e) {
-      console.warn('WebGL renderer unavailable, using Canvas2D:', e.message);
+      console.warn('WebGL renderer unavailable, using Canvas2D:', e instanceof Error ? e.message : String(e));
     }
   }
-  const r = createCanvasRenderer(canvas, VIEW);
+  const r: TaggedRenderer = createCanvasRenderer(canvas, VIEW);
   r.kind = 'canvas2d';
   return r;
 }
@@ -54,17 +83,18 @@ const render = makeRenderer();
 const stressN = Number(params.get('stress')) || 0;
 const debug = params.has('debug');
 const direct = !!stressN || params.has('mode'); // benchmarks and verify scripts: no title, no auto-pause
-let kind = params.get('mode') === 'arena' ? 'arena' : 'rooms';
-let screen = 'title'; // title | play | pause | over | watch | challenges | none (stress: no UI, the sim always runs)
-let session = null; // non-stress runs: quantizes input, ticks, records (replay.js); null in stress mode
+let kind: ModeName = params.get('mode') === 'arena' ? 'arena' : 'rooms';
+let screen: Screen = 'title'; // title | play | pause | over | watch | challenges | none (stress: no UI, the sim always runs)
+let session: LiveSession | null = null; // non-stress runs: quantizes input, ticks, records (replay.js); null in stress mode
 let seed = 0;
-let challenge = null; // { seed, label } for a seeded run, null for a random one
-let lastReplay = null; // the run that just ended (kept for Watch replay / Copy code until the next run starts)
-let watch = null; // { pb, speed, done, note, from } while a replay is being watched; from: 'challenges' returns there
+let challenge: Challenge | null = null; // { seed, label } for a seeded run, null for a random one
+let lastReplay: Replay | null = null; // the run that just ended (kept for Watch replay / Copy code until the next run starts)
+let watch: WatchSession | null = null; // { pb, speed, done, note, from } while a replay is being watched; from: 'challenges' returns there
 let importToken = 0; // bumped per import and whenever Challenges is left: a stale import must not open a watch
-let ghostBuild = null; // a seeded run races the stored best for its (mode, seed): builds its track a slice per frame
-const ghostOut = {};
-const storage = (() => {
+let ghostBuild: ReturnType<typeof createGhostBuilder> | null = null; // a seeded run races the stored best for its (mode, seed): builds its track a slice per frame
+// ghostAt overwrites every field before it returns this object, so these zeros are never observed (was `{}`).
+const ghostOut: GhostState = { x: 0, y: 0, alive: false, fade: 0, level: 0, kills: 0, room: 0 };
+const storage: Storage | null = (() => {
   try {
     return localStorage;
   } catch {
@@ -82,26 +112,27 @@ function frameStats() {
 
 // Sound: one context for the page, started on the first key press or touch (browser autoplay rules). M mutes.
 // No sound in stress mode or where AudioContext is missing.
-let sfx;
+let sfx: ReturnType<typeof createSfx> | undefined;
 if (!stressN) {
   try {
     sfx = createSfx(new AudioContext(), storage);
-    const unlock = () => sfx.resume();
+    // `sfx!` in these listeners: assigned just above and never reassigned (they are only added if it was)
+    const unlock = () => sfx!.resume();
     addEventListener('keydown', unlock);
     addEventListener('pointerdown', unlock);
-    addEventListener('keydown', (e) => {
-      if (e.code === 'KeyM' && !e.repeat && !(e.target instanceof HTMLInputElement)) sfx.toggleMute(); // not while typing a seed or code
+    addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.code === 'KeyM' && !e.repeat && !(e.target instanceof HTMLInputElement)) sfx!.toggleMute(); // not while typing a seed or code
     });
   } catch (e) {
-    console.warn('Audio unavailable:', e.message);
+    console.warn('Audio unavailable:', e instanceof Error ? e.message : String(e));
   }
 }
 
-function newGame({ seed: s } = {}) {
+function newGame({ seed: s }: { seed?: number } = {}) {
   seed = s ?? randomSeed();
   if (stressN) {
     session = null;
-    game = createGame({ mode: makeStress(), input, fx: undefined, sfx });
+    game = createGame<Mode, Fx>({ mode: makeStress(), input, fx: undefined, sfx });
   } else {
     session = createSession({ mode: kind, seed, fx: createFx(CAPACITY), sfx });
     game = session.game;
@@ -109,7 +140,7 @@ function newGame({ seed: s } = {}) {
   shownOffer = undefined;
 }
 
-function setScreen(next) {
+function setScreen(next: Screen) {
   if (next !== 'challenges') {
     importToken++; // an import still checking was abandoned
     ui.setImportBusy(false);
@@ -117,7 +148,7 @@ function setScreen(next) {
   screen = next;
   ui.show(next);
 }
-function play(k, opts) {
+function play(k: ModeName, opts?: Challenge) {
   kind = k;
   challenge = opts ?? null; // its label names the stored run (finish)
   lastReplay = null;
@@ -161,7 +192,7 @@ function openChallenges() {
   refreshChallenges();
   setScreen('challenges');
 }
-async function importCode(text) {
+async function importCode(text: string) {
   const t = ++importToken;
   const live = () => t === importToken && screen === 'challenges'; // false once Challenges was left or another import began
   ui.setImportBusy(true);
@@ -180,15 +211,15 @@ async function importCode(text) {
     }
     startWatch(replay, { from: 'challenges', note });
   } catch (e) {
-    if (live()) ui.setStatus(importError(e?.code));
+    if (live()) ui.setStatus(importError(e instanceof ReplayError ? e.code : undefined)); // other errors carry no import code: the generic message
   } finally {
     if (t === importToken) ui.setImportBusy(false);
   }
 }
 function setWatchUi(note = '') {
-  ui.setWatch({ speed: watch.speed, done: watch.done, note });
+  ui.setWatch({ speed: watch!.speed, done: watch!.done, note }); // `!`: only called while a replay is being watched
 }
-function startWatch(replay, { from = '', note = '' } = {}) {
+function startWatch(replay: Replay | null, { from = '', note = '' }: { from?: string; note?: string } = {}) {
   if (!replay || replay.sim !== SIM_VERSION) return;
   kind = replay.mode;
   challenge = null;
@@ -201,24 +232,25 @@ function startWatch(replay, { from = '', note = '' } = {}) {
   setWatchUi(watch.note);
   setScreen('watch');
 }
+// `watch!` below: only stepped while screen === 'watch', which startWatch enters after setting `watch`.
 function stepWatch() {
-  if (watch.done) return;
+  if (watch!.done) return;
   try {
-    for (let i = 0; i < watch.speed; i++) {
-      if (!watch.pb.step()) {
-        watch.done = true;
+    for (let i = 0; i < watch!.speed; i++) {
+      if (!watch!.pb.step()) {
+        watch!.done = true;
         break;
       }
     }
   } catch (e) {
     if (!(e instanceof ReplayError)) throw e;
-    watch.done = true;
-    watch.note = 'Replay went out of sync';
+    watch!.done = true;
+    watch!.note = 'Replay went out of sync';
   }
-  if (watch.done) setWatchUi(watch.note);
+  if (watch!.done) setWatchUi(watch!.note);
 }
 
-const ui = createUi(document.getElementById('ui'), {
+const ui = createUi(document.getElementById('ui')!, { // `!`: DOM lookup, index.html's <div id="ui">
   onPlay: play,
   onResume: resume,
   onQuit: () => (screen === 'watch' ? leaveWatch() : quit()),
@@ -229,8 +261,9 @@ const ui = createUi(document.getElementById('ui'), {
   onWatchLast: () => startWatch(lastReplay),
   onCopyLast: () => (lastReplay ? toCode(lastReplay) : null),
   onWatchSpeed: () => {
-    watch.speed = watch.speed === 1 ? 4 : 1;
-    return watch.speed;
+    // `!`: the speed button is only on the watch screen, which exists only while `watch` is set
+    watch!.speed = watch!.speed === 1 ? 4 : 1;
+    return watch!.speed;
   },
   onChallenges: openChallenges,
   onBack: () => setScreen('title'),
@@ -260,7 +293,7 @@ const ui = createUi(document.getElementById('ui'), {
   onImport: importCode,
 });
 
-addEventListener('keydown', (e) => {
+addEventListener('keydown', (e: KeyboardEvent) => {
   if (e.repeat || (e.code !== 'Escape' && e.code !== 'KeyP')) return;
   if (screen === 'play') pause();
   else if (screen === 'pause') resume();
@@ -282,7 +315,7 @@ function syncUI() {
   if (screen === 'play' || screen === 'pause' || screen === 'watch') ui.update(hudModel(game, kind), sfx?.muted);
 }
 
-const urlSeed = params.has('seed') ? customSeed(params.get('seed')) : null; // ?mode=arena&seed=123 for reproducible direct runs
+const urlSeed = params.has('seed') ? customSeed(params.get('seed')!) : null; // ?mode=arena&seed=123 for reproducible direct runs; `!`: has('seed') was just checked
 newGame(urlSeed === null ? {} : { seed: urlSeed });
 refreshBests();
 setScreen(stressN ? 'none' : direct ? 'play' : 'title');
@@ -320,7 +353,7 @@ startLoop(
         ghostBuild.work(6);
         game.ghost = ghostAt(ghostBuild.track, game.ticks, ghostOut);
       } catch (e) {
-        console.warn('ghost unavailable:', e.message);
+        console.warn('ghost unavailable:', e instanceof Error ? e.message : String(e));
         ghostBuild = null;
         game.ghost = null;
       }

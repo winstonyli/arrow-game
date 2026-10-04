@@ -8,7 +8,8 @@ const MAX_JSON_BYTES = 2_000_000;
 // Typed `unknown[]` so `includes` takes untrusted values; `satisfies` still checks every entry is a ModeName.
 const MODES: readonly unknown[] = ['arena', 'rooms'] satisfies readonly ModeName[];
 
-export type ReplayErrorCode = 'invalid' | 'version' | 'bad-code' | 'too-large' | 'unsupported' | 'corrupt' | 'desync';
+// 'engine' and 'mismatch' are thrown by main.ts's import check (verify failed), not by the codec itself.
+export type ReplayErrorCode = 'invalid' | 'version' | 'bad-code' | 'too-large' | 'unsupported' | 'corrupt' | 'desync' | 'engine' | 'mismatch';
 
 export class ReplayError extends Error {
   declare code: ReplayErrorCode; // `declare`: no class-field emit, so the property is still set only in the constructor
