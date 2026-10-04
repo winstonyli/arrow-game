@@ -1,4 +1,3 @@
-// @ts-check
 import { createPlayback } from './playback.js';
 
 const POS_EVERY = 6; // ticks between stored positions (10 Hz); the renderer interpolates

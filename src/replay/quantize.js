@@ -1,4 +1,3 @@
-// @ts-check
 // Movement input as a signed byte per axis. Both the sim and the recorder see the dequantized value,
 // so a live run and its replay see identical inputs.
 /** @param {number} v */

@@ -1,4 +1,3 @@
-// @ts-check
 // FNV-1a over the sim state (world arrays, player, scalars). Equal hashes mean equal sim state; used by the
 // determinism tests, the golden replays and (later) a server-side verifier.
 /** @param {any} g a game from createGame */

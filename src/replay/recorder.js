@@ -1,4 +1,3 @@
-// @ts-check
 import { SIM_VERSION } from './version.js';
 import { REPLAY_VERSION } from './codec.js';
 

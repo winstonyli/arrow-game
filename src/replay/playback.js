@@ -1,4 +1,3 @@
-// @ts-check
 import { newRun } from '../game/run.js';
 import { tick, choose } from '../game/game.js';
 import { dequantize } from './quantize.js';

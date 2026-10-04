@@ -1,4 +1,3 @@
-// @ts-check
 import { SKILLS_BY_ID } from '../game/skills.js';
 
 export const REPLAY_VERSION = 1;

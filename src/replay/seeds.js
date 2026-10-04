@@ -1,4 +1,3 @@
-// @ts-check
 /** FNV-1a over the UTF-8 bytes of `s`. @returns {number} uint32 */
 export function hashString(/** @type {string} */ s) {
   let h = 2166136261 >>> 0;

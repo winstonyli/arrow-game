@@ -1,4 +1,3 @@
-// @ts-check
 import { SIM_VERSION } from './version.js';
 import { validate } from './codec.js';
 
