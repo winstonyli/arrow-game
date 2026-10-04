@@ -6,7 +6,7 @@ import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
 import { createGame } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
-import { hitEnemy, HIT_CRIT } from '../src/game/hit.ts';
+import { hitEnemy, HIT_CRIT, HIT_KNOCK } from '../src/game/hit.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
@@ -102,4 +102,46 @@ test('the crit modifier is an arena skill that levels to 5 and shows its level s
   const rooms = pickChoices(seeded(3), 50, null, false);
   assert.ok(!rooms.includes('crit'));
   assert.ok(pickChoices(seeded(3), 50, null, true).includes('crit'));
+});
+
+test('knockback pushes a surviving enemy along the hit direction, per level', () => {
+  const g = arenaGame();
+  g.player.stats.knockback = 2;
+  const j = at(g, 100);
+  const x = g.world.x[j];
+  const y = g.world.y[j];
+  hitEnemy(g, j, 1, HIT_KNOCK, 3, 4); // direction (0.6, 0.8), 2 levels x 10 px
+  assert.ok(Math.abs(g.world.x[j] - (x + 12)) < 1e-3);
+  assert.ok(Math.abs(g.world.y[j] - (y + 16)) < 1e-3);
+});
+
+test('knockback skips unflagged hits, zero-direction hits, a level-0 player and kills', () => {
+  const g = arenaGame();
+  const j = at(g, 100);
+  const x = g.world.x[j];
+  hitEnemy(g, j, 1, HIT_KNOCK, 1, 0); // level 0
+  g.player.stats.knockback = 3;
+  hitEnemy(g, j, 1, 0, 1, 0); // flag missing
+  hitEnemy(g, j, 1, HIT_KNOCK, 0, 0); // no direction
+  assert.equal(g.world.x[j], x);
+  const killed = at(g, 200);
+  const kx = g.world.x[killed];
+  hitEnemy(g, killed, 1e6, HIT_KNOCK, 1, 0);
+  assert.equal(g.world.kind[killed], 0);
+  assert.equal(g.world.x[killed], kx);
+});
+
+test('knockback stops at the arena wall', () => {
+  const g = arenaGame();
+  g.player.stats.knockback = 5; // 50 px
+  const j = spawnEnemy(g.world, ENEMY.BRUISER, ARENA_BOUNDS.w - 30, 500);
+  hitEnemy(g, j, 1, HIT_KNOCK, 1, 0);
+  assert.equal(g.world.x[j], ARENA_BOUNDS.w - g.world.radius[j]);
+});
+
+test('the knockback modifier is a levelled arena skill', () => {
+  const s = baseStats();
+  applySkill(s, 'knockback');
+  assert.equal(s.knockback, 1);
+  assert.ok(!pickChoices(seeded(3), 50, null, false).includes('knockback'));
 });
