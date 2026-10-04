@@ -1,4 +1,6 @@
 import { KIND } from '../core/world.ts';
+import { damageEnemy } from '../core/damage.ts';
+import type { HitFn } from '../core/systems.ts';
 import type { World } from '../core/world.ts';
 import type { Grid } from '../core/grid.ts';
 import type { Vec } from '../core/math.ts';
@@ -28,6 +30,7 @@ export function orbitSystem(
   time: number,
   dt: number,
   onKill?: ((enemyIndex: number) => void) | null,
+  hit?: HitFn | null,
 ): number {
   let kills = 0;
   for (let k = 0; k < player.stats.orbit; k++) {
@@ -40,12 +43,8 @@ export function orbitSystem(
       const dy = world.y[j] - pos.y;
       const rr = BLADE_RADIUS + world.radius[j];
       if (dx * dx + dy * dy > rr * rr) continue;
-      world.hp[j] -= player.stats.bladeDps * player.stats.damageMult * dt;
-      if (world.hp[j] <= 0) {
-        if (onKill) onKill(j);
-        world.despawn(j);
-        kills++;
-      }
+      const dmg = player.stats.bladeDps * player.stats.damageMult * dt;
+      kills += hit ? hit(j, dmg, 0, 0) : damageEnemy(world, j, dmg, onKill);
     }
   }
   return kills;

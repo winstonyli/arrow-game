@@ -1,3 +1,4 @@
+import { damageEnemy } from './damage.ts';
 import { KIND } from './world.ts';
 import type { World } from './world.ts';
 import type { Grid } from './grid.ts';
@@ -85,12 +86,17 @@ function hurt(player: Player, dmg: number): void {
   player.invuln = 0.5;
 }
 
-// grid must be rebuilt for KIND.ENEMY this tick; grid.maxRadius sizes the candidate search. onKill(enemyIndex), if given, runs before a killed enemy is despawned. Returns the number of enemies killed.
+// A hit on enemy `j` for `dmg`, travelling along (dx, dy) (zero when it has no direction). Returns 1 for a kill. The
+// game passes hitEnemy-backed ones; without one the plain damageEnemy runs.
+export type HitFn = (j: number, dmg: number, dx: number, dy: number) => number;
+
+// grid must be rebuilt for KIND.ENEMY this tick; grid.maxRadius sizes the candidate search. A projectile hit goes through `hit` if given (it owns the kill callback), else damageEnemy with onKill(enemyIndex), which runs before a killed enemy is despawned. Returns the number of enemies killed.
 export function collisionSystem(
   world: World,
   grid: Grid,
   player: Player,
   onKill?: ((enemyIndex: number) => void) | null,
+  hit?: HitFn | null,
 ): number {
   let kills = 0;
   for (let i = 0; i < world.high; i++) {
@@ -106,12 +112,8 @@ export function collisionSystem(
         const dy = world.y[j] - world.y[i];
         const rr = world.radius[i] + world.radius[j];
         if (dx * dx + dy * dy > rr * rr) continue;
-        world.hp[j] -= world.damage[i];
-        if (world.hp[j] <= 0) {
-          if (onKill) onKill(j);
-          world.despawn(j);
-          kills++;
-        }
+        const dmg = world.damage[i];
+        kills += hit ? hit(j, dmg, world.vx[i], world.vy[i]) : damageEnemy(world, j, dmg, onKill);
         if (world.pierce[i] > 0) {
           world.pierce[i]--;
           world.lastHit[i] = j;

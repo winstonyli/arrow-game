@@ -1,5 +1,5 @@
 import { KIND } from '../../core/world.ts';
-import { damageEnemy } from './common.ts';
+import { hitEnemy, HIT_CRIT, HIT_KNOCK } from '../hit.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -46,10 +46,12 @@ export function updateChain(game: Game, level: number, dt: number): number {
     const cx = world.x[cur];
     const cy = world.y[cur];
     hit[k] = cur;
+    const hx = cx - s.px[s.n - 1];
+    const hy = cy - s.py[s.n - 1];
     s.px[s.n] = cx;
     s.py[s.n] = cy;
     s.n++;
-    kills += damageEnemy(world, cur, dmg, game.onKill);
+    kills += hitEnemy(game, cur, dmg, HIT_CRIT | HIT_KNOCK, hx, hy);
     dmg *= CHAIN_FALLOFF;
     if (k === L.jumps) break;
     let best = -1;
