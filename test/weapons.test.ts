@@ -256,6 +256,7 @@ test('chain lightning ignores an enemy despawned after the grid was built', () =
   const dead = at(g, 80);
   const live = at(g, 200);
   settle(g);
+  g.world.hp[dead] = 0; // as after a contact or blade kill earlier in the tick: a stale slot has hp <= 0
   g.world.despawn(dead);
   const free = g.world.freeCount;
   assert.equal(updateChain(g, 1, 1 / 60), 0);
