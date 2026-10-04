@@ -5,11 +5,11 @@ export const GEM_LIFE = 60; // seconds before an uncollected gem despawns
 // A captured gem is a damped orbit around the player, simulated in the player's frame of reference (so a
 // moving player drags its gems along and a gem cannot be outrun): a spring-like pull of strength PULL^2 per px
 // plus drag DRAG on the velocity relative to the player, and a sideways push that fades out over the first
-// SWING_TIME so it swings around instead of dropping straight in. About 1 s and 0.6 of a turn from the edge of the pickup radius.
-const PULL = 4.5; // rad/s: natural frequency of the pull (acceleration = PULL^2 * distance)
-const DRAG = 3; // 1/s: how fast the relative velocity dies out
-const SWING = 6; // 1/s: sideways acceleration, as a multiple of PULL * distance, that fades out over SWING_TIME
-const SWING_TIME = 0.4; // s: the sideways push builds momentum without a jolt, then stops
+// SWING_TIME so it swings around instead of dropping straight in. About 0.8 s from the edge of the pickup radius.
+const PULL = 6.5; // rad/s: natural frequency of the pull (acceleration = PULL^2 * distance)
+const DRAG = 5; // 1/s: how fast the relative velocity dies out
+const SWING = 10;// 1/s: sideways acceleration, as a multiple of PULL * distance, that fades out over SWING_TIME
+const SWING_TIME = 0.5; // s: the sideways push builds momentum without a jolt, then stops
 const MAX_REL = 600; // px/s cap on the speed relative to the player, a safety net
 
 export function spawnGem(world, x, y, value) {
