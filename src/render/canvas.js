@@ -19,25 +19,23 @@ export function createCanvasRenderer(canvas, view) {
 
   const tv = { mx: 0, my: 0, ex: 0, ey: 0 };
 
-  // Tapered tails (see trail.js): a quad from a mover's flanks through the tail's bend to its tip, appended to
-  // the current path from the tail in `tv`.
+  // Tapered tails (see trail.js): a smooth quadratic curve from the mover's centre through the tail's bend to its
+  // tip, widest at the mover and tapering to a point, appended to the current path from the tail in `tv`.
   function tailPath(x, y, radius) {
     const le = Math.hypot(tv.ex, tv.ey);
     if (le < 0.5) return;
-    const lm = Math.hypot(tv.mx, tv.my);
-    const sx = lm > 0.5 ? tv.mx : tv.ex; // direction of the first segment
-    const sy = lm > 0.5 ? tv.my : tv.ey;
-    const sl = lm > 0.5 ? lm : le;
+    const cx = 2 * tv.mx - tv.ex / 2; // control point of the curve through the bend
+    const cy = 2 * tv.my - tv.ey / 2;
+    const lc = Math.hypot(cx, cy);
+    const sx = lc > 0.5 ? cx : tv.ex; // start tangent
+    const sy = lc > 0.5 ? cy : tv.ey;
+    const sl = lc > 0.5 ? lc : le;
     const r = radius * 0.85;
-    const n0x = (-sy / sl) * r;
-    const n0y = (sx / sl) * r;
-    const n1x = (-tv.ey / le) * r * 0.5; // the bend is half as wide, on the normal of the overall direction
-    const n1y = (tv.ex / le) * r * 0.5;
-    ctx.moveTo(x + n0x, y + n0y);
-    ctx.lineTo(x + tv.mx + n1x, y + tv.my + n1y);
-    ctx.lineTo(x + tv.ex, y + tv.ey);
-    ctx.lineTo(x + tv.mx - n1x, y + tv.my - n1y);
-    ctx.lineTo(x - n0x, y - n0y);
+    const nx = (-sy / sl) * r;
+    const ny = (sx / sl) * r;
+    ctx.moveTo(x + nx, y + ny);
+    ctx.quadraticCurveTo(x + cx + nx * 0.5, y + cy + ny * 0.5, x + tv.ex, y + tv.ey); // the edge offset is r at the start, 0 at the tip
+    ctx.quadraticCurveTo(x + cx - nx * 0.5, y + cy - ny * 0.5, x - nx, y - ny);
     ctx.closePath();
   }
 

@@ -123,7 +123,9 @@ void main() {
   vTail = aTail;
 }`;
 
+const TAIL_STEPS = 6; // capsules the tail's curve is split into
 const FRAG = `#version 300 es
+#define TAIL_STEPS ${TAIL_STEPS}
 precision highp float; // the tail's dot products reach ~7000
 uniform vec4 uPalette[${COLORS.length}];
 flat in float vIdx;
@@ -141,22 +143,26 @@ void main() {
     vec3 rgb = mix(c.rgb, c.rgb * 0.55, edge);
     float ca = c.a * a;
     float sa = clamp(vR + 0.5 - length(vOff - vec2(2.0, 3.0)), 0.0, 1.0) * 0.35;
-    // Tail: two tapered capsules, centre -> bend -> tip, fading toward the tip, over the shadow, under the body.
-    vec2 bend = vTail.xy;
+    // Tail: a quadratic curve centre -> tip passing through the bend, walked in TAIL_STEPS short capsules; width
+    // and alpha taper continuously along it. Over the shadow, under the body.
     vec2 tip = vTail.zw;
     float ta = 0.0;
-    float l1 = dot(bend, bend);
-    if (l1 > 0.25) {
-      float s = clamp(dot(vOff, bend) / l1, 0.0, 1.0) * 0.5;
-      float tr = vR * 0.85 * (1.0 - s);
-      ta = clamp(tr + 0.5 - length(vOff - bend * s * 2.0), 0.0, 1.0) * 0.4 * (1.0 - s);
-    }
-    vec2 seg = tip - bend;
-    float l2 = dot(seg, seg);
-    if (l2 > 0.25) {
-      float s = 0.5 + clamp(dot(vOff - bend, seg) / l2, 0.0, 1.0) * 0.5;
-      float tr = vR * 0.85 * (1.0 - s);
-      ta = max(ta, clamp(tr + 0.5 - length(vOff - bend - seg * (s - 0.5) * 2.0), 0.0, 1.0) * 0.4 * (1.0 - s));
+    if (dot(tip, tip) > 0.25) {
+      vec2 ctrl = 2.0 * vTail.xy - 0.5 * tip; // B(t) = 2(1-t)t ctrl + t^2 tip, so B(0.5) = bend
+      vec2 a = vec2(0.0);
+      for (int k = 0; k < TAIL_STEPS; k++) {
+        float t1 = float(k + 1) / float(TAIL_STEPS);
+        vec2 b = 2.0 * (1.0 - t1) * t1 * ctrl + t1 * t1 * tip;
+        vec2 ab = b - a;
+        float l2 = dot(ab, ab);
+        if (l2 > 1e-6) {
+          float h = clamp(dot(vOff - a, ab) / l2, 0.0, 1.0);
+          float s = (float(k) + h) / float(TAIL_STEPS);
+          float tr = vR * 0.85 * (1.0 - s);
+          ta = max(ta, clamp(tr + 0.5 - length(vOff - a - ab * h), 0.0, 1.0) * 0.4 * (1.0 - s));
+        }
+        a = b;
+      }
     }
     vec4 under = vec4(c.rgb * c.a * ta, c.a * ta) + (1.0 - ta) * vec4(0.0, 0.0, 0.0, sa);
     outColor = vec4(rgb * ca, ca) + (1.0 - ca) * under; // premultiplied; the shadow is black
