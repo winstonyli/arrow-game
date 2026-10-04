@@ -39,6 +39,7 @@ export interface GameFx {
   push(x: number, y: number, dx: number, dy: number): void;
   shake(a: number): void;
   sample(game: Game): void;
+  soft(j: number, dmg: number): void; // an hp drop of `dmg` on slot `j` that is not a hit
 }
 
 // Sound hooks the sim calls (audio/sfx).

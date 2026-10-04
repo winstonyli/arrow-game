@@ -9,7 +9,7 @@ import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { updateShockwave } from '../src/game/weapons/shockwave.ts';
 import { updateChain } from '../src/game/weapons/chain.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
-import { hitEnemy, explosionSystem, statusSystem, HIT_CRIT, HIT_KNOCK, HIT_STATUS } from '../src/game/hit.ts';
+import { hitEnemy, explosionSystem, statusSystem, HIT_CRIT, HIT_KNOCK, HIT_STATUS, HIT_TICK } from '../src/game/hit.ts';
 import { BLAST_CAP, FROST_TINT, IGNITE_TINT, FROST_SECS, IGNITE_SECS, IGNITE_DPS } from '../src/game/modifiers.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
@@ -234,7 +234,7 @@ test('no explosion without the modifier', () => {
 test('each blast shows one ring at least as wide as its damage radius', () => {
   const g = arenaGame();
   const rings: number[][] = [];
-  g.fx = { kill: (x, y, r, pal) => rings.push([x, y, r, pal]), burst: () => {}, shake: () => {}, sample: () => {}, crit: () => {}, push: () => {} };
+  g.fx = { kill: (x, y, r, pal) => rings.push([x, y, r, pal]), burst: () => {}, shake: () => {}, sample: () => {}, crit: () => {}, push: () => {}, soft: () => {} };
   g.player.stats.explode = 3; // radius 70
   hitEnemy(g, at(g, 100), 1e6, 0, 0, 0);
   hitEnemy(g, at(g, 300), 1e6, 0, 0, 0);
@@ -305,7 +305,7 @@ test('the explosive modifier is a levelled arena skill', () => {
 function cueFx(g: Game): string[][] {
   const calls: string[][] = [];
   const rec = (name: string) => (...a: number[]) => void calls.push([name, ...a.map(String)]);
-  const fx: GameFx = { kill: () => {}, burst: () => {}, shake: () => {}, sample: () => {}, crit: rec('crit'), push: rec('push') };
+  const fx: GameFx = { kill: () => {}, burst: () => {}, shake: () => {}, sample: () => {}, crit: rec('crit'), push: rec('push'), soft: () => {} };
   g.fx = fx;
   return calls;
 }
@@ -568,4 +568,28 @@ test('the status tints are not any other enemy, gem, shot, flash or canvas colou
   assert.ok(others.length > 12);
   for (const tint of [FROST_TINT, IGNITE_TINT]) for (const c of others) assert.ok(dist(tint, c) > 30, `${tint} vs ${c}`);
   assert.ok(dist(FROST_TINT, IGNITE_TINT) > 30);
+});
+
+test('a HIT_TICK hit that survives tells fx.soft; other hits and kills do not', () => {
+  const g = arenaGame();
+  const soft: Array<[number, number]> = [];
+  g.fx = { kill: () => {}, burst: () => {}, shake: () => {}, sample: () => {}, crit: () => {}, push: () => {}, soft: (j, d) => soft.push([j, d]) };
+  const j = at(g, 100);
+  hitEnemy(g, j, 3, 0, 0, 0);
+  assert.equal(soft.length, 0);
+  hitEnemy(g, j, 3, HIT_TICK, 0, 0);
+  assert.deepEqual(soft, [[j, 3]]);
+  hitEnemy(g, j, 1e6, HIT_TICK, 0, 0); // lethal: the slot is despawned, nothing to soften
+  assert.equal(soft.length, 1);
+});
+
+test('burn ticks are soft: statusSystem tells fx.soft for each burn tick', () => {
+  const g = arenaGame();
+  g.player.stats.ignite = 2;
+  const soft: number[] = [];
+  g.fx = { kill: () => {}, burst: () => {}, shake: () => {}, sample: () => {}, crit: () => {}, push: () => {}, soft: (j) => soft.push(j) };
+  const j = at(g, 100);
+  g.world.burnT[j] = 1;
+  statusSystem(g, 0.1);
+  assert.deepEqual(soft, [j]);
 });

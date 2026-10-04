@@ -109,6 +109,11 @@ export function createFx(capacity: number, rng: () => number = Math.random) {
 
     flashing: (i: number): boolean => flashUntil[i] > fx.clock,
 
+    // An hp drop of `dmg` on slot j that is continuous damage, not a hit: forget it so observe sees no drop.
+    soft(j: number, dmg: number): void {
+      lastHp[j] -= dmg;
+    },
+
     // Writes slot i's tail (see bentTail) to `out`; zero until it has two samples, and for a slot whose
     // current occupant has none yet, so a recycled slot never inherits a ghost.
     tail(world: World, i: number, out: Tail): void {
