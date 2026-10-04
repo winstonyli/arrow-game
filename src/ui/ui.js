@@ -123,6 +123,9 @@ export function createUi(root, on) {
   importField.setAttribute('aria-label', 'Replay code');
   const list = h('div', 'list');
   const status = h('div', 'status');
+  status.setAttribute('role', 'status');
+  const importBtn = button('Import', 'g', () => on.onImport(importField.value));
+  const backBtn = button('Back', 'b', () => on.onBack());
   const row = (...kids) => {
     const r = h('div', 'row');
     r.append(...kids);
@@ -134,9 +137,9 @@ export function createUi(root, on) {
     row(seedField, button('Arena', 'g', () => on.onSeed('arena', seedField.value)), button('Rooms', 'g', () => on.onSeed('rooms', seedField.value))),
     h('div', 'mu', 'Your best runs (race them as a ghost)'),
     list,
-    row(importField, button('Import', 'g', () => on.onImport(importField.value))),
+    row(importField, importBtn),
     status,
-    button('Back', 'b', () => on.onBack()),
+    backBtn,
   );
   challenges.append(chPanel);
 
@@ -153,7 +156,14 @@ export function createUi(root, on) {
             if (!r.stale) {
               e.append(button('Watch', 'g', () => on.onWatchEntry(r.mode, r.seed)), button('Race', '', () => on.onRace(r.mode, r.seed)), codeButton('Copy', 'b', () => on.onCopyEntry(r.mode, r.seed)));
             }
-            e.append(button('✕', '', () => on.onDelete(r.mode, r.seed)));
+            e.append(
+              button('✕', '', () => {
+                // The list is rebuilt: keep focus at the same position (the next row), else on Back.
+                const i = [...list.children].indexOf(e);
+                on.onDelete(r.mode, r.seed);
+                (list.children[i]?.querySelector('button') ?? backBtn).focus({ preventScroll: true });
+              }),
+            );
             e.lastChild.setAttribute('aria-label', 'Delete');
             return e;
           })
@@ -161,6 +171,7 @@ export function createUi(root, on) {
     );
   }
   const setStatus = (t) => setText(status, t);
+  const setImportBusy = (busy) => (importBtn.disabled = busy);
 
   const picker = h('div', 'overlay picker');
   const pickHead = h('h2', 'glow-text');
@@ -297,5 +308,5 @@ export function createUi(root, on) {
     bests.rooms.textContent = `Rooms: ${b.rooms}`;
   }
 
-  return { show, update, setOffer, showOver, setBests, setWatch, setChallenges, setStatus };
+  return { show, update, setOffer, showOver, setBests, setWatch, setChallenges, setStatus, setImportBusy };
 }

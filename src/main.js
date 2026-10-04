@@ -6,12 +6,12 @@ import { createWebGLRenderer } from './render/webgl.js';
 import { createFx } from './render/fx.js';
 import { createSfx } from './audio/sfx.js';
 import { createUi } from './ui/ui.js';
-import { hudModel, overModel, resultOf, bestLine, challengeRows, importError, pastedCode } from './ui/model.js';
+import { hudModel, overModel, resultOf, bestLine, challengeRows, importError, pastedCode, importLabel, raceLabel } from './ui/model.js';
 import { loadBest, submit } from './game/records.js';
 import { createStress } from './modes/stress.js';
 import { ENEMY } from './game/enemies.js';
 import { createSession } from './replay/session.js';
-import { createStore } from './replay/store.js';
+import { createStore, better } from './replay/store.js';
 import { randomSeed, customSeed, dailySeed, dailyLabel } from './replay/seeds.js';
 import { createPlayback, verify } from './replay/playback.js';
 import { toCode, fromCode, ReplayError } from './replay/codec.js';
@@ -60,7 +60,8 @@ let session = null; // non-stress runs: quantizes input, ticks, records (replay.
 let seed = 0;
 let challenge = null; // { seed, label } for a seeded run, null for a random one
 let lastReplay = null; // the run that just ended (kept for Watch replay / Copy code until the next run starts)
-let watch = null; // { pb, speed, done, note } while a replay is being watched
+let watch = null; // { pb, speed, done, note, from } while a replay is being watched; from: 'challenges' returns there
+let importToken = 0; // bumped per import and whenever Challenges is left: a stale import must not open a watch
 let ghostBuild = null; // a seeded run races the stored best for its (mode, seed): builds its track a slice per frame
 const ghostOut = {};
 const storage = (() => {
@@ -109,6 +110,10 @@ function newGame({ seed: s } = {}) {
 }
 
 function setScreen(next) {
+  if (next !== 'challenges') {
+    importToken++; // an import still checking was abandoned
+    ui.setImportBusy(false);
+  }
   screen = next;
   ui.show(next);
 }
@@ -131,14 +136,16 @@ function resume() {
 function refreshBests() {
   ui.setBests({ arena: bestLine('arena', loadBest(storage, 'arena')), rooms: bestLine('rooms', loadBest(storage, 'rooms')) });
 }
-function quit() {
+function quit(to = 'title') {
   challenge = null;
   watch = null;
   ghostBuild = null;
   newGame();
-  setScreen('title');
+  if (to === 'challenges') openChallenges();
+  else setScreen('title');
   refreshBests();
 }
+const leaveWatch = () => quit(watch?.from);
 function finish() {
   const rec = direct ? null : submit(storage, kind, resultOf(game, kind));
   lastReplay = session ? session.finish() : null;
@@ -155,22 +162,33 @@ function openChallenges() {
   setScreen('challenges');
 }
 async function importCode(text) {
+  const t = ++importToken;
+  const live = () => t === importToken && screen === 'challenges'; // false once Challenges was left or another import began
+  ui.setImportBusy(true);
   try {
     const replay = await fromCode(pastedCode(text));
+    if (!live()) return;
     if (replay.sim !== SIM_VERSION) throw new ReplayError('version');
     ui.setStatus('Checking replay...');
     await new Promise((r) => setTimeout(r)); // let the status paint before the blocking re-simulation
-    if (!verify(replay)) throw new ReplayError('mismatch');
-    store.submit(replay, 'Imported');
-    startWatch(replay);
+    if (!live()) return;
+    if (!verify(replay)) throw new ReplayError(replay.engine !== engineTag() ? 'engine' : 'mismatch');
+    const prev = store.list().find((e) => e.mode === replay.mode && e.seed === replay.seed);
+    let note = '';
+    if (!store.submit(replay, importLabel(prev)).saved) {
+      note = prev && !prev.stale && !better(replay.mode, replay.result, prev) ? 'Not saved: your stored run is better' : 'Not saved: storage is unavailable';
+    }
+    startWatch(replay, { from: 'challenges', note });
   } catch (e) {
-    ui.setStatus(importError(e?.code));
+    if (live()) ui.setStatus(importError(e?.code));
+  } finally {
+    if (t === importToken) ui.setImportBusy(false);
   }
 }
 function setWatchUi(note = '') {
   ui.setWatch({ speed: watch.speed, done: watch.done, note });
 }
-function startWatch(replay) {
+function startWatch(replay, { from = '', note = '' } = {}) {
   if (!replay || replay.sim !== SIM_VERSION) return;
   kind = replay.mode;
   challenge = null;
@@ -178,7 +196,8 @@ function startWatch(replay) {
   const pb = createPlayback(replay, { fx: createFx(CAPACITY), sfx });
   game = pb.game;
   shownOffer = undefined;
-  watch = { pb, speed: 1, done: false, note: replay.engine !== engineTag() ? 'Recorded on another browser engine: may drift' : '' };
+  const drift = replay.engine !== engineTag() ? 'Recorded on another browser engine: may drift' : '';
+  watch = { pb, speed: 1, done: false, note: [note, drift].filter(Boolean).join(' · '), from };
   setWatchUi(watch.note);
   setScreen('watch');
 }
@@ -202,7 +221,7 @@ function stepWatch() {
 const ui = createUi(document.getElementById('ui'), {
   onPlay: play,
   onResume: resume,
-  onQuit: quit,
+  onQuit: () => (screen === 'watch' ? leaveWatch() : quit()),
   onAgain: () => play(kind, challenge ?? undefined),
   onPause: pause,
   onPick: (id) => session?.pick(id),
@@ -215,7 +234,10 @@ const ui = createUi(document.getElementById('ui'), {
   },
   onChallenges: openChallenges,
   onBack: () => setScreen('title'),
-  onDaily: (mode) => play(mode, { seed: dailySeed(mode), label: dailyLabel() }),
+  onDaily: (mode) => {
+    const d = new Date(); // one clock read: the seed and the label always name the same day
+    play(mode, { seed: dailySeed(mode, d), label: dailyLabel(d) });
+  },
   onSeed: (mode, text) => {
     const s = customSeed(text);
     if (s === null) ui.setStatus('Enter a seed first');
@@ -223,10 +245,10 @@ const ui = createUi(document.getElementById('ui'), {
   },
   onWatchEntry: (mode, s) => {
     const r = store.get(mode, s);
-    if (r) startWatch(r);
+    if (r) startWatch(r, { from: 'challenges' });
     else ui.setStatus('That replay is not available');
   },
-  onRace: (mode, s) => play(mode, { seed: s, label: store.list().find((e) => e.mode === mode && e.seed === s)?.label ?? '' }),
+  onRace: (mode, s) => play(mode, { seed: s, label: raceLabel(store.list().find((e) => e.mode === mode && e.seed === s)) }),
   onCopyEntry: async (mode, s) => {
     const r = store.get(mode, s);
     return r ? toCode(r) : null;
@@ -242,7 +264,7 @@ addEventListener('keydown', (e) => {
   if (e.repeat || (e.code !== 'Escape' && e.code !== 'KeyP')) return;
   if (screen === 'play') pause();
   else if (screen === 'pause') resume();
-  else if (screen === 'watch' && e.code === 'Escape') quit();
+  else if (screen === 'watch' && e.code === 'Escape') leaveWatch();
   else if (screen === 'challenges' && e.code === 'Escape') setScreen('title');
 });
 if (!direct) {

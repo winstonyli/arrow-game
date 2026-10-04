@@ -6,7 +6,7 @@ import { createRooms } from '../src/modes/rooms.js';
 import { seeded } from '../src/core/math.js';
 import { KIND } from '../src/core/world.js';
 import { SKILLS } from '../src/game/skills.js';
-import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError, pastedCode } from '../src/ui/model.js';
+import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError, pastedCode, importLabel, raceLabel } from '../src/ui/model.js';
 import { toCode, fromCode, ReplayError } from '../src/replay/codec.js';
 import { fakeReplay } from '../scripts/lib/fake-replay.js';
 import { icon } from '../src/ui/icons.js';
@@ -147,4 +147,14 @@ ${code.slice(7, 15)}
   assert.equal(pastedCode(wrapped), code);
   assert.deepEqual(await fromCode(pastedCode(wrapped)), r);
   assert.equal(pastedCode(undefined), '');
+});
+
+test('importLabel keeps the replaced entry label; raceLabel drops "Imported"', () => {
+  assert.equal(importLabel(undefined), 'Imported');
+  assert.equal(importLabel({ label: '' }), 'Imported');
+  assert.equal(importLabel({ label: 'Daily 2026-10-03' }), 'Daily 2026-10-03');
+  assert.equal(raceLabel(undefined), '');
+  assert.equal(raceLabel({ label: 'Imported' }), '');
+  assert.equal(raceLabel({ label: 'hello' }), 'hello');
+  assert.match(importError('engine'), /another browser engine; it does not reproduce here/);
 });

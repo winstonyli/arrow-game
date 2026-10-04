@@ -86,7 +86,12 @@ const IMPORT_ERRORS = {
   unsupported: 'This browser cannot read that code',
   invalid: 'Replay data is invalid',
   mismatch: 'Replay does not reproduce on this version',
+  engine: 'Recorded on another browser engine; it does not reproduce here',
 };
+// Label for an imported replay that is stored: it keeps the label of the entry it replaces (e.g. "Daily ...").
+export const importLabel = (prev) => prev?.label || 'Imported';
+// Label for a race against a stored entry: "Imported" names where that run came from, not your new run.
+export const raceLabel = (entry) => (!entry || entry.label === 'Imported' ? '' : entry.label);
 // Pasted share codes often arrive wrapped or indented (chat apps, email): a code never contains whitespace, so drop it all.
 export const pastedCode = (text) => String(text ?? '').replace(/\s+/g, '');
-export const importError =(code) => IMPORT_ERRORS[code] ?? 'Could not import that code';
+export const importError = (code) => IMPORT_ERRORS[code] ?? 'Could not import that code';
