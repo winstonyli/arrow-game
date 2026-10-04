@@ -1,5 +1,5 @@
 // Headless sim benchmark: ms per tick by system at several entity counts.
-// Usage: node scripts/bench-sim.js [--n=1000,5000,10000,20000] [--scenario=dense,sparse,converge] [--ticks=300]
+// Usage: node scripts/bench-sim.ts [--n=1000,5000,10000,20000] [--scenario=dense,sparse,converge] [--ticks=300]
 //   dense:    static targets in the 900x600 arena (very crowded)
 //   sparse:   static targets, arena scaled so density stays at 1 entity per 2500 px^2
 //   converge: chasers pile onto the player in the 900x600 arena (worst case for the grid)

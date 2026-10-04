@@ -9,9 +9,9 @@
     "preview": "vite preview",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "bench": "bun scripts/bench-sim.js",
-    "soak": "bun scripts/soak-arena.js --minutes=10",
-    "bench:render": "bun scripts/render-bench.mjs"
+    "bench": "bun scripts/bench-sim.ts",
+    "soak": "bun scripts/soak-arena.ts --minutes=10",
+    "bench:render": "bun scripts/render-bench.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

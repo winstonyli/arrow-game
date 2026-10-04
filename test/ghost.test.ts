@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { driveLive } from '../scripts/lib/drive.js';
+import { driveLive } from '../scripts/lib/drive.ts';
 import { runReplay, createPlayback } from '../src/replay/playback.ts';
 import { createGhostBuilder, ghostAt } from '../src/replay/ghost.ts';
 

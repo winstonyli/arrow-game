@@ -1,5 +1,5 @@
 // Browser render benchmark: drives a real Chrome window over CDP (no dependencies; needs Node's global WebSocket).
-// Usage: node scripts/render-bench.mjs [--renderer=webgl,canvas2d] [--n=1000,5000,10000,20000]
+// Usage: node scripts/render-bench.ts [--renderer=webgl,canvas2d] [--n=1000,5000,10000,20000]
 //        [--scenario=dense,converge] [--secs=13] [--shot=dir] [--mode=background|headed|headless]
 // --mode: `background` (default) opens an off-screen window with Chrome's occlusion/backgrounding throttling off, so it
 // neither takes focus nor slows down when other windows cover it; `headed` is the old visible window (steals focus,

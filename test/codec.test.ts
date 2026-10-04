@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validate, toCode, fromCode, ReplayError, MAX_TICKS } from '../src/replay/codec.ts';
 import type { Replay, ReplayErrorCode } from '../src/replay/codec.ts';
-import { fakeReplay } from '../scripts/lib/fake-replay.js';
+import { fakeReplay } from '../scripts/lib/fake-replay.ts';
 
 const rejects = (fn: () => Promise<unknown>, code?: ReplayErrorCode) =>
   assert.rejects(fn, (e) => e instanceof ReplayError && (code ? e.code === code : true));

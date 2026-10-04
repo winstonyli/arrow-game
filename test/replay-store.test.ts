@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStore, better } from '../src/replay/store.ts';
-import { fakeReplay } from '../scripts/lib/fake-replay.js';
+import { fakeReplay } from '../scripts/lib/fake-replay.ts';
 import { SIM_VERSION } from '../src/replay/version.ts';
 import type { StorageLike } from '../src/replay/store.ts';
 import type { ReplayResult } from '../src/replay/codec.ts';

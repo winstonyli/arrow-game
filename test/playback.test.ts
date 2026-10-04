@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { driveLive } from '../scripts/lib/drive.js';
+import { driveLive } from '../scripts/lib/drive.ts';
 import { runReplay, createPlayback, verify } from '../src/replay/playback.ts';
 import { validate, ReplayError } from '../src/replay/codec.ts';
 import { stateHash } from '../src/replay/hash.ts';

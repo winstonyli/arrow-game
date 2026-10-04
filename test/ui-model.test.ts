@@ -8,7 +8,7 @@ import { KIND } from '../src/core/world.ts';
 import { SKILLS } from '../src/game/skills.ts';
 import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError, pastedCode, importLabel, raceLabel } from '../src/ui/model.ts';
 import { toCode, fromCode, ReplayError } from '../src/replay/codec.ts';
-import { fakeReplay } from '../scripts/lib/fake-replay.js';
+import { fakeReplay } from '../scripts/lib/fake-replay.ts';
 import { icon } from '../src/ui/icons.ts';
 import type { Game } from '../src/game/game.ts';
 import type { GhostState } from '../src/replay/ghost.ts';

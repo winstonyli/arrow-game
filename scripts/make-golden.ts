@@ -1,7 +1,7 @@
 // Regenerates test/fixtures/golden-<mode>.json. Run after bumping SIM_VERSION when sim behaviour changed on purpose.
 // Refuses to overwrite a fixture whose hash would change without a SIM_VERSION bump (pass --force to override).
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { driveLive } from './lib/drive.js';
+import { driveLive } from './lib/drive.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import { SIM_VERSION } from '../src/replay/version.ts';
 
