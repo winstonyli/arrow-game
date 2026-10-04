@@ -183,7 +183,7 @@ export function createFx(capacity: number, rng: () => number = Math.random) {
       fx.trauma = Math.min(1, fx.trauma + a);
     },
 
-    // Derives flashes and the hurt vignette from sim state. hp only ever falls on a hit, so a drop is a hit.
+    // Derives flashes and the hurt vignette from sim state. hp only ever falls on a hit, so a drop is a hit (except soft ticks).
     observe(game: Game): void {
       const { world, player } = game;
       for (let i = 0; i < world.high; i++) {
