@@ -77,6 +77,12 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
           gone.push(e);
         };
         while (next.length > cap) free(next.splice(next.indexOf(oldestOf(next, entry)), 1)[0]);
+        let oldBlob = null; // the previous best's data, so a failed improvement can put it back
+        if (old) {
+          try {
+            oldBlob = storage.getItem(keyOf(replay.mode, replay.seed));
+          } catch {}
+        }
         const put = () => {
           storage.setItem(keyOf(replay.mode, replay.seed), JSON.stringify(replay));
           storage.setItem(INDEX, JSON.stringify(next));
@@ -91,9 +97,16 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
             free(victim); // free its data before retrying
             put();
           } catch {
-            // Roll back to a consistent state: no data without an index entry, no entry without data.
+            // Roll back to a consistent state: no data without an index entry, no entry without data. The previous best comes back if its data can be rewritten.
             drop(entry);
-            const keep = idx.filter((x) => x !== old && !gone.includes(x));
+            let restored = false;
+            if (old && oldBlob != null) {
+              try {
+                storage.setItem(keyOf(replay.mode, replay.seed), oldBlob);
+                restored = true;
+              } catch {}
+            }
+            const keep = idx.filter((x) => (x !== old || restored) && !gone.includes(x));
             try {
               storage.setItem(INDEX, JSON.stringify(keep));
             } catch {}

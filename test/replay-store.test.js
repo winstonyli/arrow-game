@@ -140,13 +140,42 @@ test('a failed retry rolls back to a consistent store', () => {
   }
 });
 
-test('a failed submit over an existing entry drops it consistently', () => {
+test('a failed improvement keeps the previous best', () => {
   const st = memory(400);
   const s = createStore(st);
   s.submit(arena(1, 10));
   const r = s.submit(arena(1, 20, 0, { savedAt: 99 }));
   consistent(st, s);
-  if (!r.saved) assert.equal(s.list().length, 0);
+  if (!r.saved) assert.equal(s.get('arena', 1).result.time, 10);
+});
+
+test('when every write of the improvement fails, the previous best is restored and listed', () => {
+  const st = memory();
+  const s = createStore(st);
+  s.submit(arena(1, 10), 'Daily');
+  const before = s.get('arena', 1);
+  const realSet = st.setItem;
+  st.setItem = (k, v) => {
+    if (String(v).includes('"time":20')) throw new Error('QuotaExceededError'); // the new replay never fits
+    return realSet(k, v);
+  };
+  assert.deepEqual(s.submit(arena(1, 20, 0, { savedAt: 99 })), { saved: false, isBest: false });
+  consistent(st, s);
+  assert.deepEqual(s.get('arena', 1), before);
+  assert.equal(s.list().find((e) => e.seed === 1).label, 'Daily');
+});
+
+test('when the previous best cannot be rewritten either, nothing dangles', () => {
+  const st = memory();
+  const s = createStore(st);
+  s.submit(arena(1, 10));
+  const realSet = st.setItem;
+  st.setItem = (k, v) => {
+    if (k === 'arrow-replay-arena-1') throw new Error('QuotaExceededError'); // no data write succeeds
+    return realSet(k, v);
+  };
+  assert.equal(s.submit(arena(1, 20, 0, { savedAt: 99 })).saved, false);
+  consistent(st, s);
 });
 
 test('a cap of 0 or less never drops the just-saved entry', () => {
