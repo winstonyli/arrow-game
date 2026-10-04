@@ -6,11 +6,11 @@ import { applySkill } from '../src/game/skills.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import { seeded } from '../src/core/math.ts';
 
-// All five weapons and all six modifiers at level 5, an invulnerable drifting player, checkpoints every 20 s.
-function run(seen?: { slow: boolean; burn: boolean; fire: boolean }): number[] {
+// All six weapons and all six modifiers at level 5 (applySkill does not check slots), an invulnerable drifting player, checkpoints every 20 s.
+function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean }): number[] {
   const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(7), input: { x: 0.6, y: 0.3 } });
   g.player.hp = g.player.maxHp = 1e9;
-  for (const id of ['blade', 'shockwave', 'chain', 'boomerang', 'flame', 'crit', 'knockback', 'explode', 'vamp', 'frost', 'ignite']) {
+  for (const id of ['blade', 'shockwave', 'chain', 'boomerang', 'flame', 'mines', 'crit', 'knockback', 'explode', 'vamp', 'frost', 'ignite']) {
     for (let k = 0; k < 5; k++) applySkill(g.player.stats, id);
   }
   const out: number[] = [];
@@ -24,12 +24,13 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean }): number[] {
         if (g.world.burnT[i] > 0) seen.burn = true;
       }
       for (let k = 0; k < g.wstate.fire.life.length; k++) if (g.wstate.fire.life[k] > 0) seen.fire = true;
+      for (let k = 0; k < g.wstate.mines.on.length; k++) if (g.wstate.mines.on[k] === 1) seen.mines = true;
     }
   }
   return out;
 }
 
-const EXPECTED: number[] = [3997869663, 1847073997, 2331811289];
+const EXPECTED: number[] = [3549097361, 761497525, 3697002078];
 
 test('a maxed build hashes the same on every run and on both engines', () => {
   const a = run();
@@ -37,8 +38,8 @@ test('a maxed build hashes the same on every run and on both engines', () => {
   assert.deepEqual(a, EXPECTED);
 });
 
-test('the maxed build actually slows and burns enemies and drops fire patches, so the hashes cover them', () => {
-  const seen = { slow: false, burn: false, fire: false };
+test('the maxed build actually slows and burns enemies and drops fire patches and mines, so the hashes cover them', () => {
+  const seen = { slow: false, burn: false, fire: false, mines: false };
   run(seen);
-  assert.deepEqual(seen, { slow: true, burn: true, fire: true });
+  assert.deepEqual(seen, { slow: true, burn: true, fire: true, mines: true });
 });

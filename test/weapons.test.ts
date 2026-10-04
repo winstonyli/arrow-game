@@ -16,6 +16,7 @@ import { updateShockwave, SHOCK_LEVELS } from '../src/game/weapons/shockwave.ts'
 import { updateChain, CHAIN_LEVELS, CHAIN_LIFE, CHAIN_FALLOFF } from '../src/game/weapons/chain.ts';
 import { updateBoomerang, BOOM_LEVELS, BOOM_RADIUS } from '../src/game/weapons/boomerang.ts';
 import { updateFlame, FLAME_LEVELS, FIRE_CAP, FIRE_SPACING, FIRE_TICK } from '../src/game/weapons/flame.ts';
+import { updateMines, MINE_LEVELS, MINE_CAP, MINE_SPACING, MINE_LIFE, MINE_ARM } from '../src/game/weapons/mines.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import type { Game } from '../src/game/game.ts';
 
@@ -515,4 +516,169 @@ test('Flame trail is a levelled arena-only weapon offer that takes a slot, with 
   full.weapons = { blade: 1, shockwave: 1, chain: 1, boomerang: 1 }; // the bow plus four fill the five slots
   assert.equal(flame.available!(full), false);
   assert.equal(Object.keys(full.weapons).length + 1, MAX_WEAPONS); // four weapons plus the bow fill the slots
+});
+
+const liveMines = (g: Game) => g.wstate.mines.on.reduce((n, v) => n + v, 0);
+const BR = ENEMY_TYPES[ENEMY.BRUISER].radius;
+const run = (g: Game, level: number, secs: number) => {
+  let kills = 0;
+  for (let t = 0; t < Math.round(secs * 60); t++) { settle(g); kills += updateMines(g, level, 1 / 60); }
+  return kills;
+};
+
+test('mines drop one on the first update, none while standing still, and another only after the interval and 20 px', () => {
+  const g = arenaGame();
+  run(g, 1, 1 / 60);
+  assert.equal(liveMines(g), 1);
+  run(g, 1, 5); // standing still: spacing never met, so the timer waits and nothing drops
+  assert.equal(liveMines(g), 1);
+  g.player.x += MINE_SPACING; // far enough, and the 3 s interval has long elapsed: drops on the next update
+  run(g, 1, 1 / 60);
+  assert.equal(liveMines(g), 2);
+  g.player.x += MINE_SPACING; // far enough again but the interval was just reset: waits for it
+  run(g, 1, 1);
+  assert.equal(liveMines(g), 2);
+  run(g, 1, 2.1);
+  assert.equal(liveMines(g), 3);
+  g.player.x += MINE_SPACING - 1; // not far enough
+  run(g, 1, 3.5); // past the 3 s interval, yet short of the first mine's 12 s life
+  assert.equal(liveMines(g), 3);
+});
+
+test('a full pool skips the drop and overwrites nothing', () => {
+  const g = arenaGame();
+  const m = g.wstate.mines;
+  for (let k = 0; k < MINE_CAP; k++) { m.on[k] = 1; m.x[k] = 100000 + k; m.y[k] = 100000; m.age[k] = 0; }
+  m.started = true; m.lx = -1e6; m.ly = -1e6; m.cd = 0;
+  run(g, 1, 1 / 60);
+  assert.equal(liveMines(g), MINE_CAP);
+  for (let k = 0; k < MINE_CAP; k++) assert.equal(m.x[k], 100000 + k);
+  assert.ok(m.cd <= 0); // not reset: it retries
+});
+
+test('an unarmed mine ignores a nearby enemy and detonates once it is armed', () => {
+  const g = arenaGame();
+  const j = at(g, 0, 0);
+  run(g, 1, MINE_ARM - 0.15); // the mine drops at the end of the first update and ages after it
+  assert.equal(damage(g, j), 0);
+  assert.equal(liveMines(g), 1);
+  run(g, 1, 0.4);
+  assert.equal(liveMines(g), 0);
+  assert.ok(damage(g, j) > 0);
+});
+
+test('a mine triggers inside 30 px plus the enemy radius, ignores a farther one, and its blast reaches the blast radius only', () => {
+  const g = arenaGame();
+  const farOnly = at(g, 30 + BR + 10, 0); // outside the trigger, inside the 60 px blast
+  run(g, 1, 2);
+  assert.equal(liveMines(g), 1); // armed, never triggered
+  assert.equal(damage(g, farOnly), 0);
+  const trigger = at(g, 30 + BR - 1, 0); // inside the trigger
+  const edge = at(g, 0, MINE_LEVELS[0].radius + BR - 1); // inside the blast, outside the trigger
+  const out = at(g, 0, MINE_LEVELS[0].radius + BR + 20); // outside the blast
+  run(g, 1, 1 / 60);
+  assert.equal(liveMines(g), 0);
+  assert.ok(damage(g, trigger) > 0 && damage(g, edge) > 0 && damage(g, farOnly) > 0);
+  assert.equal(damage(g, out), 0);
+});
+
+test('a blast deals exactly level damage times damageMult, never crits, applies Frost and Ignite, and pushes outward with Knockback only', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.damageMult = 2; s.crit = 10; s.frost = 1; s.ignite = 1; s.knockback = 0;
+  const j = at(g, 6, 0);
+  const x0 = g.world.x[j];
+  run(g, 1, 1);
+  assert.equal(liveMines(g), 0);
+  assert.ok(Math.abs(damage(g, j) - MINE_LEVELS[0].dmg * 2) < 1e-3); // crit 10 is chance 1: any crit flag would show
+  assert.ok(g.world.slowT[j] > 0 && g.world.burnT[j] > 0);
+  assert.equal(g.world.x[j], x0); // no Knockback modifier, no push
+  const g2 = arenaGame();
+  g2.player.stats.knockback = 3;
+  const k = at(g2, 6, 0);
+  const x1 = g2.world.x[k];
+  run(g2, 1, 1);
+  assert.ok(g2.world.x[k] > x1); // pushed away from the mine (+x)
+});
+
+test('a detonated mine is consumed: it cannot hit again, and a stationary player drops no replacement before the interval', () => {
+  const g = arenaGame();
+  const j = at(g, 0, 0);
+  run(g, 1, 1);
+  const d = damage(g, j);
+  assert.ok(d > 0);
+  run(g, 1, 1);
+  assert.equal(damage(g, j), d);
+  assert.equal(liveMines(g), 0);
+});
+
+test('a mine expires after MINE_LIFE without detonating', () => {
+  const g = arenaGame();
+  run(g, 1, 1 / 60);
+  assert.equal(liveMines(g), 1);
+  run(g, 1, MINE_LIFE - 0.5);
+  assert.equal(liveMines(g), 1);
+  const kills = run(g, 1, 1);
+  assert.equal(liveMines(g), 0);
+  assert.equal(kills, 0);
+});
+
+test('a mine kill counts once, heals and queues an explosion; over a crowd kills equal onKill calls with no double kill', () => {
+  const g = arenaGame();
+  g.player.stats.vamp = 2;
+  g.player.stats.explode = 1;
+  g.player.hp = g.player.maxHp - 10;
+  const j = at(g, 0, 0);
+  g.world.hp[j] = 0.001;
+  const killed: number[] = [];
+  g.onKill = (x) => killed.push(g.world.gen[x] * 100000 + x);
+  const kills = run(g, 1, 1);
+  assert.equal(kills, 1);
+  assert.equal(killed.length, 1);
+  assert.equal(g.player.hp, g.player.maxHp - 8);
+  assert.equal(g.blasts.n, 1);
+  const g2 = arenaGame();
+  for (let n = 0; n < 40; n++) {
+    const e = spawnEnemy(g2.world, n % 3 === 0 ? ENEMY.SPLITTER : ENEMY.CHASER, g2.player.x + (n % 8) * 3, g2.player.y + Math.floor(n / 8) * 3);
+    g2.world.hp[e] = 0.01;
+  }
+  const seen: number[] = [];
+  g2.onKill = (x) => seen.push(g2.world.gen[x] * 100000 + x);
+  const k2 = run(g2, 5, 1);
+  assert.equal(k2, seen.length);
+  assert.equal(new Set(seen).size, seen.length);
+});
+
+test('stateHash changes with a mine age, a mine position and the drop point', () => {
+  const g = arenaGame();
+  settle(g);
+  const empty = stateHash(g);
+  updateMines(g, 1, 1 / 60);
+  const dropped = stateHash(g);
+  assert.notEqual(dropped, empty);
+  const m = g.wstate.mines;
+  const k = m.on.indexOf(1);
+  m.age[k] += 0.5;
+  assert.notEqual(stateHash(g), dropped);
+  m.age[k] -= 0.5;
+  m.x[k] += 1;
+  assert.notEqual(stateHash(g), dropped);
+  m.x[k] -= 1;
+  m.lx += 1;
+  assert.notEqual(stateHash(g), dropped);
+});
+
+test('Mines is a levelled arena-only weapon offer that takes a slot, with an icon', () => {
+  const mines = SKILLS.find((k) => k.id === 'mines')!;
+  assert.ok(mines.arena);
+  assert.ok(WEAPONS.some((w) => w.id === 'mines'));
+  const s = baseStats();
+  assert.equal(mines.tag!(s), 'NEW');
+  for (let n = 0; n < 5; n++) applySkill(s, 'mines');
+  assert.equal(s.weapons.mines, 5);
+  assert.equal(mines.available!(s), false);
+  const full = baseStats();
+  full.weapons = { blade: 1, shockwave: 1, chain: 1, boomerang: 1 }; // the bow plus four fill the five slots
+  assert.equal(Object.keys(full.weapons).length + 1, MAX_WEAPONS);
+  assert.equal(mines.available!(full), false);
 });

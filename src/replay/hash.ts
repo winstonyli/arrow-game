@@ -50,6 +50,18 @@ export function stateHash(g: Game): number {
     mix(k);
     for (const v of [fr.x[k], fr.y[k], fr.life[k], fr.cd[k]]) num(v);
   }
+  const mn = g.wstate.mines;
+  mix(mn.started ? 1 : 0);
+  num(mn.lx);
+  num(mn.ly);
+  num(mn.cd);
+  for (let k = 0; k < mn.on.length; k++) {
+    mix(mn.on[k]);
+    if (!mn.on[k]) continue;
+    num(mn.x[k]);
+    num(mn.y[k]);
+    num(mn.age[k]);
+  }
   num(g.time);
   num(g.xp);
   mix(g.kills);
