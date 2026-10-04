@@ -8,7 +8,7 @@ export const BLADE_ORBIT = 60; // px from the player's centre
 export const BLADE_RADIUS = 8;
 export const BLADE_SPEED = 3; // rad/s
 export const MAX_BLADES = 8; // the renderers' buffers assume this cap
-export const BLADE_DPS = 30; // per blade, to each enemy it overlaps
+export const BLADE_DPS = 30; // base per-blade damage rate (a level's dps lives in weapons/blade.ts and is written to stats.bladeDps)
 
 // Writes blade k's centre to `out`. Shared by the sim and the renderers so they cannot disagree.
 export function bladePos(player: Player, time: number, k: number, out: Vec): void {
@@ -40,7 +40,7 @@ export function orbitSystem(
       const dy = world.y[j] - pos.y;
       const rr = BLADE_RADIUS + world.radius[j];
       if (dx * dx + dy * dy > rr * rr) continue;
-      world.hp[j] -= BLADE_DPS * dt;
+      world.hp[j] -= player.stats.bladeDps * player.stats.damageMult * dt;
       if (world.hp[j] <= 0) {
         if (onKill) onKill(j);
         world.despawn(j);

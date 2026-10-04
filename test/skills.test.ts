@@ -45,7 +45,7 @@ test('rooms never offers arena skills; arena does, minus owned or maxed ones', (
   for (const id of arenaIds) assert.ok(seen.has(id), id);
   const s = baseStats();
   applySkill(s, 'homing');
-  s.orbit = 8;
+  s.weapons.blade = 5;
   for (let k = 0; k < 100; k++) {
     const picks = pickChoices(Math.random, 3, s, true);
     assert.ok(!picks.includes('homing') && !picks.includes('blade'));

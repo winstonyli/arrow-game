@@ -121,13 +121,14 @@ test('orbit blades sit on the ring, spaced evenly, and damage overlapped enemies
   assert.equal(world.kind[e], KIND.NONE);
 });
 
-test('orbit blades do nothing at zero orbit, and the blade skill caps at MAX_BLADES', () => {
+test('orbit blades do nothing at zero orbit, and the blade weapon caps at MAX_BLADES', () => {
   const { world, grid, player } = rig();
   spawnEnemy(world, ENEMY.CHASER, player.x + BLADE_ORBIT, player.y);
   grid.rebuild(world, KIND.ENEMY);
   assert.equal(orbitSystem(world, grid, player, 0, 1, null), 0);
-  for (let k = 0; k < MAX_BLADES + 3; k++) applySkill(player.stats, 'blade');
+  for (let k = 0; k < 8; k++) applySkill(player.stats, 'blade'); // five levels, then clamped
   assert.equal(player.stats.orbit, MAX_BLADES);
+  assert.equal(player.stats.weapons.blade, 5);
 });
 
 test('a blade kill in a real tick counts as a kill and drops a gem', () => {

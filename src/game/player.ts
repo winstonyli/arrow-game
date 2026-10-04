@@ -3,6 +3,7 @@ import type { World } from '../core/world.ts';
 import type { Grid } from '../core/grid.ts';
 import { clamp } from '../core/math.ts';
 import type { Vec, Size } from '../core/math.ts';
+import { BLADE_DPS } from './orbit.ts';
 
 export type PlayerStats = ReturnType<typeof baseStats>;
 export type Player = ReturnType<typeof createPlayer>;
@@ -23,6 +24,10 @@ export function baseStats() {
     homing: 0, // 1 = arrows steer toward the nearest enemy
     orbit: 0, // blades circling the player
     moveFireRate: 0, // fire-rate multiplier while moving; 0 = no shooting on the move (rooms), arena sets 0.5
+    weapons: {} as Record<string, number>, // weapon id -> level (1..maxLevel); the bow is not listed and uses a slot
+    damageMult: 1, // all weapons (Power Shot)
+    cooldownMult: 1, // all weapons: multiplies every interval (Rapid Fire divides it)
+    bladeDps: BLADE_DPS, // per blade, set by the Orbit Blade level
   };
 }
 
@@ -60,7 +65,7 @@ export function fireVolley(world: World, p: Player, angle: number): number {
       0,
     );
     if (i < 0) continue;
-    world.damage[i] = s.damage;
+    world.damage[i] = s.damage * s.damageMult;
     world.life[i] = s.range / s.projectileSpeed;
     world.type[i] = s.homing; // projectile flag read by projectileSystem; the slot may hold a stale enemy type
     world.pierce[i] = s.pierce;
@@ -76,6 +81,6 @@ export function autoFire(p: Player, world: World, grid: Grid, dt: number): numbe
   if (rate <= 0 || p.cd > 0) return 0;
   const t = grid.nearest(world, p.x, p.y, p.stats.range);
   if (t < 0) return 0;
-  p.cd = p.stats.attackInterval / rate;
+  p.cd = (p.stats.attackInterval * p.stats.cooldownMult) / rate;
   return fireVolley(world, p, Math.atan2(world.y[t] - p.y, world.x[t] - p.x));
 }
