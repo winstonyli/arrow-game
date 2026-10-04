@@ -1,4 +1,17 @@
 import { createPlayback } from './playback.ts';
+import type { Replay } from './codec.ts';
+
+export type GhostTrack = ReturnType<typeof createGhostBuilder>['track'];
+/** The ghost at one tick, as ghostAt writes it (the renderers read it from `game.ghost`). */
+export interface GhostState {
+  x: number;
+  y: number;
+  alive: boolean;
+  fade: number; // seconds since the replay ended (0 while alive)
+  level: number;
+  kills: number;
+  room: number;
+}
 
 const POS_EVERY = 6; // ticks between stored positions (10 Hz); the renderer interpolates
 const STAT_EVERY = 60; // ticks between stored level / kills / room (1 Hz)
@@ -7,7 +20,7 @@ const STAT_EVERY = 60; // ticks between stored level / kills / room (1 Hz)
  * Simulates a stored replay once into a track of positions and stats, in slices so it never stalls a frame.
  * The track fills far faster than live play advances, so the ghost is always ready by the time it is needed.
  */
-export function createGhostBuilder(/** @type {import('./codec.ts').Replay} */ replay) {
+export function createGhostBuilder(replay: Replay) {
   const pb = createPlayback(replay);
   const g = pb.game;
   const np = Math.floor(replay.ticks / POS_EVERY) + 1;
@@ -40,7 +53,7 @@ export function createGhostBuilder(/** @type {import('./codec.ts').Replay} */ re
   return {
     track,
     /** Simulates for about `budgetMs` (always at least one tick). Returns true once the whole track exists. */
-    work(/** @type {number} */ budgetMs) {
+    work(budgetMs: number) {
       const t0 = performance.now();
       while (!done) {
         if (!pb.step()) {
@@ -59,7 +72,11 @@ export function createGhostBuilder(/** @type {import('./codec.ts').Replay} */ re
  * The ghost at live tick `tick`, written into `out`. Returns null while the track has not reached that tick.
  * At or after the replay's last tick the ghost is out (`alive: false`) and `fade` counts seconds since.
  */
-export function ghostAt(/** @type {ReturnType<typeof createGhostBuilder>['track']} */ track, /** @type {number} */ tick, out = /** @type {any} */ ({})) {
+export function ghostAt(
+  track: GhostTrack,
+  tick: number,
+  out: GhostState = { x: 0, y: 0, alive: false, fade: 0, level: 0, kills: 0, room: 0 }, // every field is overwritten before it is returned
+): GhostState | null {
   // Past the end the ghost is parked, so any tick is answerable once the whole track exists.
   if (tick > track.ready && track.ready < track.total) return null;
   if (tick >= track.total) {

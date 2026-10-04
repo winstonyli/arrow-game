@@ -1,19 +1,25 @@
 import { SIM_VERSION } from './version.ts';
-import { validate } from './codec.ts';
+import { validate, asRecord } from './codec.ts';
+import type { Replay, ReplayResult, ReplayEntry } from './codec.ts';
 
 export const CAP = 40;
 const INDEX = 'arrow-replay-index';
-const keyOf = (/** @type {string} */ mode, /** @type {number} */ seed) => `arrow-replay-${mode}-${seed}`;
+const keyOf = (mode: string, seed: number) => `arrow-replay-${mode}-${seed}`;
+
+/** The Web Storage methods the store uses (localStorage in the browser, a fake in tests). */
+export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 /** Does result `a` beat result `b`? Arena: longest survival, then kills. Rooms: highest room, then time. */
-export const better = (/** @type {string} */ mode, /** @type {any} */ a, /** @type {any} */ b) =>
+export const better = (mode: string, a: ReplayResult, b: ReplayResult): boolean =>
   mode === 'rooms' ? a.room > b.room || (a.room === b.room && a.time > b.time) : a.time > b.time || (a.time === b.time && a.kills > b.kills);
 
-const isEntry = (/** @type {any} */ e) =>
-  e && (e.mode === 'arena' || e.mode === 'rooms') && Number.isInteger(e.seed) && e.seed >= 0 && e.seed <= 0xffffffff &&
-  ['time', 'kills', 'level', 'room', 'savedAt', 'sim'].every((k) => Number.isFinite(e[k])) && typeof e.label === 'string';
+const isEntry = (v: unknown): v is ReplayEntry => {
+  const e = asRecord(v);
+  return !!e && (e.mode === 'arena' || e.mode === 'rooms') && typeof e.seed === 'number' && Number.isInteger(e.seed) && e.seed >= 0 && e.seed <= 0xffffffff &&
+    ['time', 'kills', 'level', 'room', 'savedAt', 'sim'].every((k) => Number.isFinite(e[k])) && typeof e.label === 'string';
+};
 
-const summary = (/** @type {any} */ r, /** @type {string} */ label) => ({
+const summary = (r: Replay, label: string): ReplayEntry => ({
   mode: r.mode, seed: r.seed, label: String(label).slice(0, 40),
   time: r.result.time, kills: r.result.kills, level: r.result.level, room: r.result.room, savedAt: r.savedAt, sim: r.sim,
 });
@@ -22,12 +28,17 @@ const summary = (/** @type {any} */ r, /** @type {string} */ label) => ({
  * Best replay per (mode, seed) on top of a Web Storage-shaped `storage` ({getItem, setItem, removeItem}, may be null).
  * Every access is guarded: storage can be missing, full or throw.
  */
-export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
+export function createStore(storage: StorageLike | null, { cap = CAP }: { cap?: number } = {}) {
   cap = Math.max(1, cap);
+  /** The storage, or a TypeError when it is missing: callers sit in try blocks and treat that like any failed access. */
+  const st = (): StorageLike => {
+    if (!storage) throw new TypeError('no storage');
+    return storage;
+  };
   /** The valid index entries, or null when the index cannot be read (distinct from empty). */
   const tryIndex = () => {
     try {
-      const v = JSON.parse(storage?.getItem(INDEX) ?? '[]');
+      const v: unknown = JSON.parse(storage?.getItem(INDEX) ?? '[]');
       return Array.isArray(v) ? v.filter(isEntry) : null;
     } catch {
       return null;
@@ -35,14 +46,14 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
   };
   const readIndex = () => tryIndex() ?? [];
   /** Eviction victim: the oldest unlabelled (random-seed) entry, else the oldest overall, so daily and custom-seed bests outlive random runs. */
-  const oldestOf = (/** @type {any[]} */ list, /** @type {any} */ except) => {
+  const oldestOf = (list: ReplayEntry[], except: ReplayEntry) => {
     const rest = list.filter((e) => e !== except);
     const pool = rest.some((e) => !e.label) ? rest.filter((e) => !e.label) : rest;
-    return pool.reduce((a, e) => (a && a.savedAt < e.savedAt ? a : e), null);
+    return pool.reduce<ReplayEntry | null>((a, e) => (a && a.savedAt < e.savedAt ? a : e), null);
   };
-  const drop = (/** @type {any} */ e) => {
+  const drop = (e: ReplayEntry) => {
     try {
-      storage.removeItem(keyOf(e.mode, e.seed));
+      st().removeItem(keyOf(e.mode, e.seed));
     } catch {}
   };
 
@@ -50,17 +61,17 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
     list() {
       return readIndex().map((e) => ({ ...e, stale: e.sim !== SIM_VERSION }));
     },
-    get(/** @type {string} */ mode, /** @type {number} */ seed) {
+    get(mode: string, seed: number): Replay | null {
       try {
         const e = readIndex().find((x) => x.mode === mode && x.seed === seed);
         if (!e || e.sim !== SIM_VERSION) return null;
-        const r = validate(JSON.parse(storage.getItem(keyOf(mode, seed))));
+        const r = validate(JSON.parse(st().getItem(keyOf(mode, seed)) ?? 'null')); // a missing item parses as null, exactly as before
         return r.sim === SIM_VERSION ? r : null;
       } catch {
         return null;
       }
     },
-    submit(/** @type {any} */ replay, label = '') {
+    submit(replay: Replay, label = '') {
       const none = { saved: false, isBest: false };
       try {
         validate(replay);
@@ -70,21 +81,22 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
         const entry = summary(replay, label);
         const next = [entry, ...idx.filter((e) => e !== old)];
         /** Entries whose data we have already removed: they must leave the index too. */
-        const gone = [];
-        const free = (/** @type {any} */ e) => {
+        const gone: ReplayEntry[] = [];
+        const free = (e: ReplayEntry) => {
           drop(e);
           gone.push(e);
         };
-        while (next.length > cap) free(next.splice(next.indexOf(oldestOf(next, entry)), 1)[0]);
-        let oldBlob = null; // the previous best's data, so a failed improvement can put it back
+        // `!`: next.length > cap >= 1, so next holds an entry besides `entry` and oldestOf cannot return null.
+        while (next.length > cap) free(next.splice(next.indexOf(oldestOf(next, entry)!), 1)[0]);
+        let oldBlob: string | null = null; // the previous best's data, so a failed improvement can put it back
         if (old) {
           try {
-            oldBlob = storage.getItem(keyOf(replay.mode, replay.seed));
+            oldBlob = st().getItem(keyOf(replay.mode, replay.seed));
           } catch {}
         }
         const put = () => {
-          storage.setItem(keyOf(replay.mode, replay.seed), JSON.stringify(replay));
-          storage.setItem(INDEX, JSON.stringify(next));
+          st().setItem(keyOf(replay.mode, replay.seed), JSON.stringify(replay));
+          st().setItem(INDEX, JSON.stringify(next));
         };
         try {
           put();
@@ -101,13 +113,13 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
             let restored = false;
             if (old && oldBlob != null) {
               try {
-                storage.setItem(keyOf(replay.mode, replay.seed), oldBlob);
+                st().setItem(keyOf(replay.mode, replay.seed), oldBlob);
                 restored = true;
               } catch {}
             }
             const keep = idx.filter((x) => (x !== old || restored) && !gone.includes(x));
             try {
-              storage.setItem(INDEX, JSON.stringify(keep));
+              st().setItem(INDEX, JSON.stringify(keep));
             } catch {}
             return none;
           }
@@ -117,12 +129,12 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
         return none;
       }
     },
-    remove(/** @type {string} */ mode, /** @type {number} */ seed) {
+    remove(mode: string, seed: number) {
       try {
         const idx = tryIndex();
         if (!idx) return;
-        storage.setItem(INDEX, JSON.stringify(idx.filter((e) => !(e.mode === mode && e.seed === seed))));
-        storage.removeItem(keyOf(mode, seed));
+        st().setItem(INDEX, JSON.stringify(idx.filter((e) => !(e.mode === mode && e.seed === seed))));
+        st().removeItem(keyOf(mode, seed));
       } catch {}
     },
   };

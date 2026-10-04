@@ -3,16 +3,17 @@ import { tick, choose } from '../game/game.ts';
 import { createRecorder } from './recorder.ts';
 import { quantize, dequantize } from './quantize.ts';
 import { TICK_DT } from './version.ts';
+import type { GameFx, GameSfx, ModeName } from '../game/game.ts';
 
 /** The one live path: quantize input, tick, record. main.js and the test driver both go through it. */
-export function createSession({ mode, seed, fx, sfx }) {
+export function createSession<F extends GameFx = GameFx>({ mode, seed, fx, sfx }: { mode: ModeName; seed: number; fx?: F; sfx?: GameSfx }) {
   const input = { x: 0, y: 0 }; // what the sim sees: the dequantized bytes
   const game = newRun({ mode, seed, input, fx, sfx });
   const rec = createRecorder({ mode, seed });
   return {
     game,
     seed,
-    step(/** @type {number} */ rawX, /** @type {number} */ rawY) {
+    step(rawX: number, rawY: number) {
       if (game.over || game.offer) return; // tick() would return early: no tick, nothing to record
       const qx = quantize(rawX);
       const qy = quantize(rawY);
@@ -21,7 +22,7 @@ export function createSession({ mode, seed, fx, sfx }) {
       tick(game, TICK_DT);
       rec.input(qx, qy);
     },
-    pick(/** @type {string} */ id) {
+    pick(id: string) {
       if (!game.offer?.includes(id)) return false;
       choose(game, id);
       rec.pick(id);

@@ -5,9 +5,11 @@ import { stateHash } from './hash.ts';
 import { ReplayError } from './codec.ts';
 import { resultFor } from './recorder.ts';
 import { TICK_DT } from './version.ts';
+import type { Replay } from './codec.ts';
+import type { Game, GameFx, GameSfx } from '../game/game.ts';
 
 /** Steps a replay one tick at a time. `fx`/`sfx` are presentation and never change the sim. */
-export function createPlayback(/** @type {import('./codec.ts').Replay} */ replay, { fx, sfx } = /** @type {any} */ ({})) {
+export function createPlayback<F extends GameFx = GameFx>(replay: Replay, { fx, sfx }: { fx?: F; sfx?: GameSfx } = {}) {
   const input = { x: 0, y: 0 };
   const game = newRun({ mode: replay.mode, seed: replay.seed, input, fx, sfx });
   let run = 0;
@@ -46,14 +48,14 @@ export function createPlayback(/** @type {import('./codec.ts').Replay} */ replay
 }
 
 /** Runs a replay to the end. `onTick(game)` fires after every tick. */
-export function runReplay(/** @type {import('./codec.ts').Replay} */ replay, { onTick } = /** @type {any} */ ({})) {
+export function runReplay(replay: Replay, { onTick }: { onTick?: (game: Game) => void } = {}) {
   const pb = createPlayback(replay);
   while (pb.step()) onTick?.(pb.game);
   return { game: pb.game, hash: stateHash(pb.game), result: resultFor(replay.mode, pb.game) };
 }
 
 /** True when the replay re-simulates without desync to exactly its claimed result. */
-export function verify(/** @type {import('./codec.ts').Replay} */ replay) {
+export function verify(replay: Replay): boolean {
   try {
     const { result } = runReplay(replay);
     const c = replay.result;

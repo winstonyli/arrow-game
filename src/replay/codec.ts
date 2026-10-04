@@ -1,75 +1,122 @@
 import { SKILLS_BY_ID } from '../game/skills.ts';
+import type { ModeName } from '../game/game.ts';
 
 export const REPLAY_VERSION = 1;
 export const MAX_TICKS = 60 * 60 * 60; // one hour of play
 const MAX_CODE_CHARS = 400_000;
 const MAX_JSON_BYTES = 2_000_000;
-const MODES = ['arena', 'rooms'];
+// Typed `unknown[]` so `includes` takes untrusted values; `satisfies` still checks every entry is a ModeName.
+const MODES: readonly unknown[] = ['arena', 'rooms'] satisfies readonly ModeName[];
+
+export type ReplayErrorCode = 'invalid' | 'version' | 'bad-code' | 'too-large' | 'unsupported' | 'corrupt' | 'desync';
 
 export class ReplayError extends Error {
-  /** @param {string} code */
-  constructor(code) {
+  declare code: ReplayErrorCode; // `declare`: no class-field emit, so the property is still set only in the constructor
+  constructor(code: ReplayErrorCode) {
     super(code);
     this.name = 'ReplayError';
     this.code = code;
   }
 }
 
-/**
- * @typedef {{ time: number, kills: number, level: number, room: number }} ReplayResult
- * @typedef {{ v: number, sim: number, engine: string, mode: 'arena'|'rooms', seed: number, ticks: number,
- *   inputs: number[][], picks: [number, string][], result: ReplayResult, savedAt: number }} Replay
- */
+/** The outcome of a run. Every mode fills every field; arena's `room` is always 0. */
+export interface ReplayResult {
+  time: number;
+  kills: number;
+  level: number;
+  room: number;
+}
+/** One run of identical quantized input: `n` ticks of (qx, qy). */
+export type InputRun = [n: number, qx: number, qy: number];
+export type ReplayInputs = InputRun[];
+/** A skill pick, applied before tick number `tick`. */
+export type ReplayPick = [tick: number, skillId: string];
+export interface Replay {
+  v: number;
+  sim: number;
+  engine: string;
+  mode: ModeName;
+  seed: number;
+  ticks: number;
+  inputs: ReplayInputs;
+  picks: ReplayPick[];
+  result: ReplayResult;
+  savedAt: number;
+}
+/** A store index entry: a replay's summary (see store.ts). */
+export interface ReplayEntry extends ReplayResult {
+  mode: ModeName;
+  seed: number;
+  label: string;
+  savedAt: number;
+  sim: number;
+}
 
-const isInt = (/** @type {any} */ v, /** @type {number} */ lo, /** @type {number} */ hi) => Number.isInteger(v) && v >= lo && v <= hi;
-const isNum = (/** @type {any} */ v) => typeof v === 'number' && Number.isFinite(v);
+const isInt = (v: unknown, lo: number, hi: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isArr = (v: unknown): v is readonly unknown[] => Array.isArray(v);
+const isModeName = (v: unknown): v is ModeName => MODES.includes(v);
+/** Views an untrusted object's fields as unknowns, or null when it is not an object. */
+export const asRecord = (v: unknown): Record<string, unknown> | null =>
+  typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null; // every field read through it is checked before use
+const isRun = (run: unknown): run is InputRun =>
+  isArr(run) && run.length === 3 && isInt(run[0], 1, MAX_TICKS) && isInt(run[1], -127, 127) && isInt(run[2], -127, 127);
+const isPick = (p: unknown, lo: number, hi: number): p is ReplayPick =>
+  isArr(p) && p.length === 2 && isInt(p[0], lo, hi) && typeof p[1] === 'string' && Object.hasOwn(SKILLS_BY_ID, p[1]);
 
 /**
  * Structural check of untrusted data. Returns a normalized copy holding only the known fields (unknown keys,
- * including `__proto__`, are dropped), or throws ReplayError. Field order matches the recorder's. @returns {Replay}
+ * including `__proto__`, are dropped), or throws ReplayError. Field order matches the recorder's.
  */
-export function validate(/** @type {any} */ r) {
-  const bad = (code = 'invalid') => {
+export function validate(r: unknown): Replay {
+  function bad(code: ReplayErrorCode = 'invalid'): never {
     throw new ReplayError(code);
-  };
-  if (!r || typeof r !== 'object') bad();
-  if (r.v !== REPLAY_VERSION) bad('version');
-  if (!isInt(r.sim, 0, 1e6)) bad();
-  if (typeof r.engine !== 'string' || r.engine.length > 32) bad();
-  if (!MODES.includes(r.mode)) bad();
-  if (!isInt(r.seed, 0, 0xffffffff)) bad();
-  if (!isInt(r.ticks, 0, MAX_TICKS)) bad();
-  if (!Array.isArray(r.inputs) || r.inputs.length > MAX_TICKS) bad();
+  }
+  const o = asRecord(r);
+  if (!o) bad();
+  if (o.v !== REPLAY_VERSION) bad('version');
+  if (!isInt(o.sim, 0, 1e6)) bad();
+  if (typeof o.engine !== 'string' || o.engine.length > 32) bad();
+  if (!isModeName(o.mode)) bad();
+  if (!isInt(o.seed, 0, 0xffffffff)) bad();
+  if (!isInt(o.ticks, 0, MAX_TICKS)) bad();
+  if (!isArr(o.inputs) || o.inputs.length > MAX_TICKS) bad();
   let sum = 0;
-  for (const run of r.inputs) {
-    if (!Array.isArray(run) || run.length !== 3 || !isInt(run[0], 1, MAX_TICKS) || !isInt(run[1], -127, 127) || !isInt(run[2], -127, 127)) bad();
+  const inputs: ReplayInputs = [];
+  for (const run of o.inputs) {
+    if (!isRun(run)) bad();
     sum += run[0];
+    const [n, x, y] = run;
+    inputs.push([n, x, y]);
   }
-  if (sum !== r.ticks) bad();
-  if (!Array.isArray(r.picks) || r.picks.length > 5000) bad();
+  if (sum !== o.ticks) bad();
+  if (!isArr(o.picks) || o.picks.length > 5000) bad();
   let prev = 0;
-  for (const p of r.picks) {
-    if (!Array.isArray(p) || p.length !== 2 || !isInt(p[0], prev, r.ticks) || typeof p[1] !== 'string' || !Object.hasOwn(SKILLS_BY_ID, p[1])) bad();
+  const picks: ReplayPick[] = [];
+  for (const p of o.picks) {
+    if (!isPick(p, prev, o.ticks)) bad();
     prev = p[0];
+    const [t, id] = p;
+    picks.push([t, id]);
   }
-  const s = r.result;
-  if (!s || typeof s !== 'object' || !isNum(s.time) || !isInt(s.kills, 0, 1e9) || !isInt(s.level, 1, 1e6) || !isInt(s.room, 0, 1e6)) bad();
-  if (!isNum(r.savedAt)) bad();
+  const s = asRecord(o.result);
+  if (!s || !isNum(s.time) || !isInt(s.kills, 0, 1e9) || !isInt(s.level, 1, 1e6) || !isInt(s.room, 0, 1e6)) bad();
+  if (!isNum(o.savedAt)) bad();
   return {
-    v: r.v, sim: r.sim, engine: r.engine, mode: r.mode, seed: r.seed, ticks: r.ticks,
-    inputs: r.inputs.map(([n, x, y]) => [n, x, y]),
-    picks: r.picks.map(([t, id]) => [t, id]),
+    v: o.v, sim: o.sim, engine: o.engine, mode: o.mode, seed: o.seed, ticks: o.ticks,
+    inputs,
+    picks,
     result: { time: s.time, kills: s.kills, level: s.level, room: s.room },
-    savedAt: r.savedAt,
+    savedAt: o.savedAt,
   };
 }
 
-const toB64 = (/** @type {Uint8Array} */ bytes) => {
+const toB64 = (bytes: Uint8Array) => {
   let s = '';
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(s).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 };
-const fromB64 = (/** @type {string} */ t) => {
+const fromB64 = (t: string) => {
   if (!/^[A-Za-z0-9_-]*$/.test(t)) throw new ReplayError('bad-code');
   try {
     const s = atob(t.replaceAll('-', '+').replaceAll('_', '/'));
@@ -80,9 +127,9 @@ const fromB64 = (/** @type {string} */ t) => {
 };
 
 // Runs bytes through a (de)compression stream, refusing to produce more than `cap` bytes (decompression bombs).
-async function pipe(/** @type {Uint8Array} */ bytes, /** @type {any} */ transform, /** @type {number} */ cap) {
+async function pipe(bytes: Uint8Array<ArrayBuffer>, transform: CompressionStream | DecompressionStream, cap: number) {
   const reader = new Blob([bytes]).stream().pipeThrough(transform).getReader();
-  const chunks = [];
+  const chunks: Uint8Array[] = [];
   let total = 0;
   try {
     for (;;) {
@@ -109,7 +156,7 @@ async function pipe(/** @type {Uint8Array} */ bytes, /** @type {any} */ transfor
 
 /** Share code: `AG1.` + base64url(deflate-raw(JSON)), or `AG0.` + base64url(JSON) where CompressionStream is missing. */
 // Copy applies the same limits as import, so every code we hand out can be read back (ReplayError 'too-large').
-export async function toCode(/** @type {Replay} */ replay) {
+export async function toCode(replay: Replay): Promise<string> {
   const json = new TextEncoder().encode(JSON.stringify(validate(replay)));
   if (json.length > MAX_JSON_BYTES) throw new ReplayError('too-large');
   const code = typeof CompressionStream === 'undefined' ? `AG0.${toB64(json)}` : `AG1.${toB64(await pipe(json, new CompressionStream('deflate-raw'), MAX_JSON_BYTES))}`;
@@ -117,8 +164,7 @@ export async function toCode(/** @type {Replay} */ replay) {
   return code;
 }
 
-/** @returns {Promise<Replay>} */
-export async function fromCode(/** @type {string} */ code) {
+export async function fromCode(code: string): Promise<Replay> {
   if (typeof code !== 'string' || code.length > MAX_CODE_CHARS) throw new ReplayError('too-large');
   const m = /^(AG[01])\.([\s\S]*)$/.exec(code.trim());
   if (!m) throw new ReplayError('bad-code');
