@@ -18,6 +18,17 @@ The screens and HUD are DOM overlays (`src/ui/`): `model.js` holds the pure view
 
 Parked: a volume slider and settings screen, a real icon set (the glyphs are simple inline SVG), key rebinding, gamepad, a tutorial, an attract-mode title background, Rooms difficulty select. Touch: a tap on the HUD pause button also starts the move stick (harmless, not fixed).
 
+## Replays and challenges
+
+Every run is recorded as its seed plus quantized per-tick inputs and skill picks (`src/replay/`), so it can be re-simulated exactly. The best run per mode and seed is kept in `localStorage` (cap 40, oldest dropped).
+
+- **Challenges** (title screen): Daily Arena / Daily Rooms (seed derived from the local date), or any text or number as a seed. A run on a seed you have a best for races it as a translucent ghost with a live comparison line.
+- **Watch replay**: from the game over screen or the Challenges list; 1x or 4x, Esc to exit.
+- **Share codes**: Copy code on the game over screen or in the list; paste into Import. Codes are `AG1.` plus base64url of deflated JSON; imports are re-simulated and rejected if they do not reproduce.
+- **Versioning**: `SIM_VERSION` in `src/replay/version.js`. Changing sim behaviour makes `test/replay-golden.test.js` fail: bump the version, then `node scripts/make-golden.mjs`. Old-version replays stay listed as stale and cannot be watched or raced.
+- **Caveat**: determinism is proven within one JS engine only. A replay recorded in another browser engine may drift (trig functions); the viewer warns.
+- `?mode=arena&seed=123` starts a direct run on a fixed seed (direct runs record and store nothing).
+
 ## Arena balance (kiting)
 In arena the player auto-fires while moving at half rate (`stats.moveFireRate = 0.5`; rooms keeps stand-still-to-fire, `moveFireRate = 0`), shooters and bosses only fire while on screen (`game.enemyFireOnScreen`), the early spawn ramp is gentler (`BASE_RATE 0.6`, `RATE_PER_SEC 0.015`), and the gem magnet is at least 1.5x the player's speed. A stationary player used to die at about 0:30.
 
