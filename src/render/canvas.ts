@@ -1,7 +1,7 @@
 import { KIND } from '../core/world.ts';
 import { ENEMY_TYPES } from '../game/enemies.ts';
 import { drawWorldGrid } from './grid-lines.ts';
-import { POOL, RING } from './fx.ts';
+import { POOL, RING, PAL_WHITE, PAL_DUST } from './fx.ts';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.ts';
 import { CHAIN_LIFE } from '../game/weapons/chain.ts';
 import { BOOM_RADIUS } from '../game/weapons/boomerang.ts';
@@ -107,7 +107,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     const p = fx.p;
     for (let k = 0; k < POOL; k++) {
       if (p.life[k] <= 0) continue;
-      const color = p.pal[k] < 0 ? GEM_COLOR : ENEMY_TYPES[p.pal[k]].color;
+      const color = p.pal[k] >= 0 ? ENEMY_TYPES[p.pal[k]].color : p.pal[k] === PAL_WHITE ? '#ffffff' : p.pal[k] === PAL_DUST ? '#c9d1d9' : GEM_COLOR;
       ctx.globalAlpha = Math.min(1, p.life[k] / p.max[k]);
       ctx.beginPath();
       ctx.arc(p.x[k], p.y[k], Math.max(0.5, p.r[k]), 0, TAU);

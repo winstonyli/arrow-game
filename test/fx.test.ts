@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
-import { createFx, FLASH_TIME, POOL, RING, DOT, PAL_GEM } from '../src/render/fx.ts';
+import { createFx, FLASH_TIME, POOL, RING, DOT, PAL_GEM, PAL_WHITE, PAL_DUST } from '../src/render/fx.ts';
 import { createGame, tick, choose } from '../src/game/game.ts';
 import { createRooms } from '../src/modes/rooms.ts';
 import { createArena, BOSS_EVERY } from '../src/modes/arena.ts';
@@ -59,6 +59,20 @@ test('kill spawns one ring and five dots that expire; burst spawns five gold dot
   fx.burst(1, 2);
   assert.equal(live(fx), 5);
   for (let k = 0; k < POOL; k++) if (fx.p.life[k] > 0) assert.ok(fx.p.shape[k] === DOT && fx.p.pal[k] === PAL_GEM);
+});
+
+test('crit is a white ring plus sparks; push is dust that drifts against the push and ignores a zero vector', () => {
+  const { fx } = mk();
+  fx.crit(5, 6);
+  assert.equal(live(fx), 7);
+  for (let k = 0; k < POOL; k++) if (fx.p.life[k] > 0) assert.equal(fx.p.pal[k], PAL_WHITE);
+  fx.update(1);
+  fx.push(5, 6, 3, 0);
+  assert.equal(live(fx), 3);
+  for (let k = 0; k < POOL; k++) if (fx.p.life[k] > 0) assert.ok(fx.p.vx[k] < 0 && fx.p.pal[k] === PAL_DUST && fx.p.x[k] === 5);
+  fx.update(1);
+  fx.push(5, 6, 0, 0);
+  assert.equal(live(fx), 0);
 });
 
 test('the particle pool overwrites the oldest instead of growing', () => {

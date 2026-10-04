@@ -13,7 +13,9 @@ export const FLASH_TIME = 0.08; // seconds an enemy stays white after a hit
 export const POOL = 512;
 export const DOT = 0;
 export const RING = 1;
-export const PAL_GEM = -1; // particle palette: an enemy type index, or this for gem gold
+export const PAL_GEM = -1; // particle palette: an enemy type index, this for gem gold, or PAL_WHITE
+export const PAL_WHITE = -2; // crit sparks: no kill uses white
+export const PAL_DUST = -3; // knockback dust: grey
 const TAU = Math.PI * 2;
 
 export type Fx = ReturnType<typeof createFx>;
@@ -151,6 +153,24 @@ export function createFx(capacity: number, rng: () => number = Math.random) {
 
     burst(x: number, y: number): void {
       dots(x, y, 5, 50, 50, 2, 0.4, PAL_GEM);
+    },
+
+    // A landed crit: a ring and fast white sparks, a palette no kill or gem uses.
+    crit(x: number, y: number): void {
+      emit(x, y, 0, 0, 6, 90, 0.2, RING, PAL_WHITE);
+      dots(x, y, 6, 110, 60, 2, 0.25, PAL_WHITE);
+    },
+
+    // A knockback: a few grey dust dots left at the old position, drifting back against the push.
+    push(x: number, y: number, dx: number, dy: number): void {
+      const m = Math.hypot(dx, dy);
+      if (m < 1e-6) return;
+      const ux = -dx / m;
+      const uy = -dy / m;
+      for (let k = 0; k < 3; k++) {
+        const s = 30 + rng() * 30;
+        emit(x, y, ux * s - uy * (rng() - 0.5) * 30, uy * s + ux * (rng() - 0.5) * 30, 2.5, -2.5 / 0.3, 0.3, DOT, PAL_DUST);
+      }
     },
 
     shake(a: number): void {

@@ -5,7 +5,7 @@ Browser archer roguelite (Archero / arrow.io style). Strict TypeScript bundled b
 - Install: `bun install` (dev dependencies only: `typescript`, `vite`, `@types/bun`)
 - Run: `bun run dev` then open http://localhost:8000 (Vite dev server, port 8000, fails rather than drifting if the port is taken)
 - Build: `bun run build` writes the bundle to `dist/`; `bun run preview` serves it on http://localhost:8000
-- Test: `bun test`; `node --test test/*.test.ts` runs the same 285 tests on Node/V8 (type stripping) as a cross-engine check of the golden hashes
+- Test: `bun test`; `node --test test/*.test.ts` runs the same 289 tests on Node/V8 (type stripping) as a cross-engine check of the golden hashes
 - Typecheck: `bun run typecheck` (`tsc --noEmit`; `strict`, explicit `.ts` import specifiers, erasable syntax only)
 - Benchmarks: `bun run bench` (sim), `bun run soak` (arena soak), `bun run bench:render` (Chrome); `node scripts/<name>.ts` runs the same scripts on V8 (checked for `bench-sim`, `soak-arena`, `gem-timing`)
 - Design: `docs/superpowers/specs/2026-10-02-arrow-game-design.md`

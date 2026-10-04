@@ -24,15 +24,21 @@ export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: 
   const { world } = game;
   if (world.kind[j] !== KIND.ENEMY || world.hp[j] <= 0) return 0;
   const s = game.player.stats;
-  if (flags & HIT_CRIT && s.crit > 0 && game.rng() < s.crit * CRIT_CHANCE) dmg *= CRIT_MULT;
+  if (flags & HIT_CRIT && s.crit > 0 && game.rng() < s.crit * CRIT_CHANCE) {
+    dmg *= CRIT_MULT;
+    game.fx?.crit(world.x[j], world.y[j]);
+  }
   world.hp[j] -= dmg;
   if (world.hp[j] > 0) {
     if (flags & HIT_KNOCK && s.knockback > 0) {
       const m = Math.hypot(dx, dy);
       if (m > 1e-6) {
         const push = (s.knockback * KNOCK_PX) / m;
-        world.x[j] = clamp(world.x[j] + dx * push, world.radius[j], game.bounds.w - world.radius[j]);
-        world.y[j] = clamp(world.y[j] + dy * push, world.radius[j], game.bounds.h - world.radius[j]);
+        const ox = world.x[j];
+        const oy = world.y[j];
+        world.x[j] = clamp(ox + dx * push, world.radius[j], game.bounds.w - world.radius[j]);
+        world.y[j] = clamp(oy + dy * push, world.radius[j], game.bounds.h - world.radius[j]);
+        if (world.x[j] !== ox || world.y[j] !== oy) game.fx?.push(ox, oy, world.x[j] - ox, world.y[j] - oy);
       }
     }
     return 0;
