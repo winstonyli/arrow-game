@@ -3,7 +3,6 @@ import { ENEMY_TYPES } from '../game/enemies.js';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.js';
-import { TRAIL_N, TRAIL_ALPHA } from './trail.js';
 import { drawGhost } from './ghost-marker.js';
 
 const TAU = Math.PI * 2;
@@ -19,9 +18,30 @@ export function createCanvasRenderer(canvas, view) {
   const cam = { x: 0, y: 0 }; // the camera plus the current shake offset
 
   const tv = { mx: 0, my: 0, ex: 0, ey: 0 };
-  const sp = { x: 0, y: 0 };
 
-  // Tapered tails (see trail.js): a quad from each mover's flanks through the tail's bend to its tip, one fill per group.
+  // Tapered tails (see trail.js): a quad from a mover's flanks through the tail's bend to its tip, appended to
+  // the current path from the tail in `tv`.
+  function tailPath(x, y, radius) {
+    const le = Math.hypot(tv.ex, tv.ey);
+    if (le < 0.5) return;
+    const lm = Math.hypot(tv.mx, tv.my);
+    const sx = lm > 0.5 ? tv.mx : tv.ex; // direction of the first segment
+    const sy = lm > 0.5 ? tv.my : tv.ey;
+    const sl = lm > 0.5 ? lm : le;
+    const r = radius * 0.85;
+    const n0x = (-sy / sl) * r;
+    const n0y = (sx / sl) * r;
+    const n1x = (-tv.ey / le) * r * 0.5; // the bend is half as wide, on the normal of the overall direction
+    const n1y = (tv.ex / le) * r * 0.5;
+    ctx.moveTo(x + n0x, y + n0y);
+    ctx.lineTo(x + tv.mx + n1x, y + tv.my + n1y);
+    ctx.lineTo(x + tv.ex, y + tv.ey);
+    ctx.lineTo(x + tv.mx - n1x, y + tv.my - n1y);
+    ctx.lineTo(x - n0x, y - n0y);
+    ctx.closePath();
+  }
+
+  // One fill per group.
   function tails(world, kind, type, color, fx) {
     ctx.fillStyle = color;
     ctx.globalAlpha = 0.3;
@@ -29,44 +49,20 @@ export function createCanvasRenderer(canvas, view) {
     for (let i = 0; i < world.high; i++) {
       if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type)) continue;
       fx.tail(world, i, tv);
-      const le = Math.hypot(tv.ex, tv.ey);
-      if (le < 0.5) continue;
-      const lm = Math.hypot(tv.mx, tv.my);
-      const sx = lm > 0.5 ? tv.mx : tv.ex; // direction of the first segment
-      const sy = lm > 0.5 ? tv.my : tv.ey;
-      const sl = lm > 0.5 ? lm : le;
-      const r = world.radius[i] * 0.85;
-      const x = world.x[i];
-      const y = world.y[i];
-      const n0x = (-sy / sl) * r;
-      const n0y = (sx / sl) * r;
-      const n1x = (-tv.ey / le) * r * 0.5; // the bend is half as wide, on the normal of the overall direction
-      const n1y = (tv.ex / le) * r * 0.5;
-      ctx.moveTo(x + n0x, y + n0y);
-      ctx.lineTo(x + tv.mx + n1x, y + tv.my + n1y);
-      ctx.lineTo(x + tv.ex, y + tv.ey);
-      ctx.lineTo(x + tv.mx - n1x, y + tv.my - n1y);
-      ctx.lineTo(x - n0x, y - n0y);
-      ctx.closePath();
+      tailPath(world.x[i], world.y[i], world.radius[i]);
     }
     ctx.fill();
     ctx.globalAlpha = 1;
   }
 
-  // Position-history dots of the player (track 0) and each blade, oldest first.
-  function history(fx, player, color, bladeColor) {
-    for (let t = 0; t <= player.stats.orbit; t++) {
-      ctx.fillStyle = t === 0 ? color : bladeColor;
-      const r0 = t === 0 ? player.radius : BLADE_RADIUS;
-      for (let age = TRAIL_N - 1; age >= 1; age--) {
-        if (!fx.sample(t, age, sp)) continue;
-        const f = 1 - age / TRAIL_N;
-        ctx.globalAlpha = TRAIL_ALPHA * f;
-        ctx.beginPath();
-        ctx.arc(sp.x, sp.y, r0 * (0.4 + 0.6 * f), 0, TAU);
-        ctx.fill();
-      }
-    }
+  // The tail of the player (track 0) or blade k (track 1 + k) at x, y.
+  function trackTail(fx, t, x, y, r, color) {
+    fx.trackTail(t, x, y, r, tv);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    tailPath(x, y, r);
+    ctx.fill();
     ctx.globalAlpha = 1;
   }
 
@@ -141,18 +137,17 @@ export function createCanvasRenderer(canvas, view) {
     circles(world, KIND.ENEMY_PROJECTILE, -1, '#ff7b72');
     if (fx) tails(world, KIND.PROJECTILE, -1, '#58a6ff', fx);
     circles(world, KIND.PROJECTILE, -1, '#58a6ff');
-    if (fx) {
-      particles(fx);
-      history(fx, player, '#3fb950', '#c9d1d9');
-    }
+    if (fx) particles(fx);
 
-    ctx.fillStyle = '#c9d1d9';
     for (let k = 0; k < player.stats.orbit; k++) {
       bladePos(player, game.time, k, bp);
+      if (fx) trackTail(fx, 1 + k, bp.x, bp.y, BLADE_RADIUS, '#c9d1d9');
+      ctx.fillStyle = '#c9d1d9';
       ctx.beginPath();
       ctx.arc(bp.x, bp.y, BLADE_RADIUS, 0, TAU);
       ctx.fill();
     }
+    if (fx) trackTail(fx, 0, player.x, player.y, player.radius, '#3fb950');
     ctx.globalAlpha = player.invuln > 0 && Math.floor(game.time * 20) % 2 ? 0.4 : 1;
     ctx.fillStyle = '#3fb950';
     ctx.beginPath();

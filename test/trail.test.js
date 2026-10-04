@@ -110,26 +110,32 @@ test('a gem is trailed through its real path, and holds the tail across frames w
   assert.deepEqual(pack(game).row(0), before);
 });
 
-test('player history samples at TRAIL_DT, newest first, capped at TRAIL_N', () => {
+test('the player trails through its real path, and a blade through its orbit', () => {
   const { fx, player, game } = rig();
-  const p = { x: 0, y: 0 };
-  assert.equal(fx.sample(0, 0, p), false);
-  for (let k = 0; k < TRAIL_N + 5; k++) {
-    player.x = k;
+  player.stats.orbit = 1;
+  const t = { mx: 0, my: 0, ex: 0, ey: 0 };
+  fx.trackTail(0, player.x, player.y, 12, t);
+  assert.deepEqual([t.mx, t.my, t.ex, t.ey], [0, 0, 0, 0]); // no history yet
+  for (let k = 0; k < TRAIL_N + 3; k++) {
+    player.x += 3;
+    game.time = k * TRAIL_DT;
     fx.observe(game);
     fx.update(TRAIL_DT);
   }
-  assert.equal(fx.sample(0, 0, p), true);
-  assert.equal(p.x, TRAIL_N + 4);
-  assert.equal(fx.sample(0, 1, p), true);
-  assert.equal(p.x, TRAIL_N + 3);
-  assert.equal(fx.sample(0, TRAIL_N, p), false); // older than the ring
+  fx.trackTail(0, player.x, player.y, 12, t);
+  assert.ok(t.ex < -(TRAIL_END * 3) && Math.abs(t.ey) < 1e-9 && t.mx < 0 && t.mx > t.ex, `${t.mx},${t.ex}`);
+  fx.observe(game); // takes the pending sample
+  fx.trackTail(0, player.x, player.y, 12, t);
+  const r = pack(game);
+  const row = r.row(r.n - 1); // the player packs last, with its tail
+  assert.ok(Math.abs(row[7] - t.ex) < 1e-4 && row[7] < 0);
   fx.observe(game); // no clock advance (paused): no new sample
-  fx.sample(0, 0, p);
-  assert.equal(p.x, TRAIL_N + 4);
+  assert.deepEqual(pack(game).row(r.n - 1), row);
+  fx.trackTail(1, 0, 0, 8, t); // blade 0 has its own track
+  assert.ok(t.ex !== 0 || t.ey !== 0);
 });
 
-test('blade tracks follow the orbit count and are cleared when a blade is gone; dots pack under the blades and player', () => {
+test('blade tracks follow the orbit count and are cleared when a blade is gone; blades and player pack with no dots', () => {
   const { fx, player, game } = rig();
   player.stats.orbit = 2;
   for (let k = 0; k < 4; k++) {
@@ -140,9 +146,7 @@ test('blade tracks follow the orbit count and are cleared when a blade is gone; 
   assert.equal(fx.trail.count[1], 4);
   assert.equal(fx.trail.count[2], 4);
   assert.equal(fx.trail.count[3], 0);
-  const { n } = pack(game);
-  // 3 tracks x 3 dots (ages 1..3), 2 blades, 1 player
-  assert.equal(n, 9 + 2 + 1);
+  assert.equal(pack(game).n, 2 + 1); // 2 blades, 1 player
   player.stats.orbit = 1;
   game.time += TRAIL_DT;
   fx.observe(game);

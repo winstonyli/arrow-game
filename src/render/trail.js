@@ -1,14 +1,12 @@
-// Movement trails, presentation-only. Two kinds, both reading sim state without writing it:
+// Movement trails, presentation-only. Two kinds of mover, both reading sim state without writing it:
 //  - a tapered tail behind every enemy, arrow and gem, bent through where the mover actually was: fx.js keeps
 //    a short per-slot position history and `bentTail` turns two samples of it into the tail;
-//  - a short sampled position history for the player and each orbit blade (kept by fx.js), drawn as fading
-//    dots, because those follow curves a straight tail would get wrong.
+//  - the player and each orbit blade get the same tail from a ring of samples kept by fx.js.
 export const TRAIL_MAX = 80; // px cap on a tail's length
 export const TRAIL_N = 10; // history samples per mover
 export const TRAIL_MID = 4; // age (in samples) of the tail's bend
 export const TRAIL_END = TRAIL_N - 1; // age of the tail's tip
 export const TRAIL_DT = 1 / 60; // seconds between history samples
-export const TRAIL_ALPHA = 0.3; // dot alpha at the newest history sample
 
 // Writes the tail vector (from the mover back along its path) to `out`. The tail is drawn from the mover's
 // centre, so `r` (its radius) is added, ramping in over the first 10 px of tail, to make the visible part

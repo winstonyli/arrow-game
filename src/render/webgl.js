@@ -3,7 +3,7 @@ import { ENEMY_TYPES } from '../game/enemies.js';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
 import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.js';
-import { TRAIL_MAX, TRAIL_N, TRAIL_ALPHA } from './trail.js';
+import { TRAIL_MAX } from './trail.js';
 import { drawGhost } from './ghost-marker.js';
 
 export const STRIDE = 9; // floats per instance: x, y, radius, palette index, fade, tail bend x, y, tail tip x, y
@@ -39,7 +39,7 @@ function put(out, o, x, y, r, pal, fade, mx, my, ex, ey) {
 }
 
 // Layers, bottom to top (canvas.js uses the same order): gems, enemies, enemy projectiles, player
-// projectiles, fx particles, trail dots of the player and blades, blades, player. The background and grid
+// projectiles, fx particles, blades, player. The background and grid
 // are on a canvas below; the HP bar, vignette and HUD text on one above. Within a layer instances draw in
 // slot order. Entities carry their tail's bend and tip (see trail.js); zero without fx.
 // Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
@@ -81,22 +81,16 @@ export function packInstances(world, player, game, out) {
       const a = Math.min(1, p.life[k] / p.max[k]);
       put(out, n++ * STRIDE, p.x[k], p.y[k], p.r[k], p.pal[k] < 0 ? P_GEM : p.pal[k], p.shape[k] === RING ? -a : a, 0, 0, 0, 0);
     }
-    // Position history of the player (track 0) and blades, oldest first so newer dots land on top.
-    for (let t = 0; t <= player.stats.orbit; t++) {
-      const r0 = t === 0 ? player.radius : BLADE_RADIUS;
-      const pal = t === 0 ? P_PLAYER : P_BLADE;
-      for (let age = TRAIL_N - 1; age >= 1; age--) {
-        if (!fx.sample(t, age, bp)) continue;
-        const f = 1 - age / TRAIL_N;
-        put(out, n++ * STRIDE, bp.x, bp.y, r0 * (0.4 + 0.6 * f), pal, TRAIL_ALPHA * f, 0, 0, 0, 0);
-      }
-    }
   }
   for (let k = 0; k < player.stats.orbit; k++) {
     bladePos(player, game.time, k, bp);
-    put(out, n++ * STRIDE, bp.x, bp.y, BLADE_RADIUS, P_BLADE, SOLID, 0, 0, 0, 0);
+    tv.mx = tv.my = tv.ex = tv.ey = 0;
+    if (fx) fx.trackTail(1 + k, bp.x, bp.y, BLADE_RADIUS, tv);
+    put(out, n++ * STRIDE, bp.x, bp.y, BLADE_RADIUS, P_BLADE, SOLID, tv.mx, tv.my, tv.ex, tv.ey);
   }
-  put(out, n++ * STRIDE, player.x, player.y, player.radius, player.invuln > 0 && Math.floor(game.time * 20) % 2 ? P_PLAYER_BLINK : P_PLAYER, SOLID, 0, 0, 0, 0);
+  tv.mx = tv.my = tv.ex = tv.ey = 0;
+  if (fx) fx.trackTail(0, player.x, player.y, player.radius, tv);
+  put(out, n++ * STRIDE, player.x, player.y, player.radius, player.invuln > 0 && Math.floor(game.time * 20) % 2 ? P_PLAYER_BLINK : P_PLAYER, SOLID, tv.mx, tv.my, tv.ex, tv.ey);
   return n;
 }
 
@@ -234,7 +228,7 @@ export function createWebGLRenderer(canvas, hudCanvas, bgCanvas, view) {
   function render(game, hud) {
     const { world, player, camera, bounds, fx } = game;
     if (!data) {
-      data = new Float32Array((world.capacity + 1 + POOL + MAX_BLADES + (1 + MAX_BLADES) * TRAIL_N) * STRIDE);
+      data = new Float32Array((world.capacity + 1 + POOL + MAX_BLADES) * STRIDE);
       gl.bufferData(gl.ARRAY_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
     }
     cam.x = camera.x + (fx ? fx.sx : 0);

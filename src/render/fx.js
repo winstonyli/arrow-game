@@ -35,7 +35,7 @@ export function createFx(capacity, rng = Math.random) {
   const histGen = new Int32Array(capacity).fill(-1);
   const born = new Int32Array(capacity); // sample number of the slot's first sample
   let seq = 0; // number of samples taken so far
-  // Position history of the player (track 0) and each orbit blade (track 1 + k): a ring of TRAIL_N samples.
+  // Position history of the player (track 0) and each orbit blade (track 1 + k): a ring of TRAIL_N samples, turned into the same bent tail as the slots'.
   const TRACKS = 1 + MAX_BLADES;
   const trail = { x: new Float32Array(TRACKS * TRAIL_N), y: new Float32Array(TRACKS * TRAIL_N), count: new Uint8Array(TRACKS), head: new Uint8Array(TRACKS) };
   let lastSample = -Infinity;
@@ -101,15 +101,6 @@ export function createFx(capacity, rng = Math.random) {
 
     flashing: (i) => flashUntil[i] > fx.clock,
 
-    // Sample `age` steps back (0 = newest) of history track `t`; false if there is no such sample yet.
-    sample(t, age, out) {
-      if (age >= trail.count[t]) return false;
-      const k = t * TRAIL_N + ((trail.head[t] - age + TRAIL_N) % TRAIL_N);
-      out.x = trail.x[k];
-      out.y = trail.y[k];
-      return true;
-    },
-
     // Writes slot i's tail (see bentTail) to `out`; zero until it has two samples, and for a slot whose
     // current occupant has none yet, so a recycled slot never inherits a ghost.
     tail(world, i, out) {
@@ -126,6 +117,25 @@ export function createFx(capacity, rng = Math.random) {
         bentTail(histX[m] - world.x[i], histY[m] - world.y[i], ex, ey, out, world.radius[i]);
       } else {
         bentTail(ex / 2, ey / 2, ex, ey, out, world.radius[i]); // too young for a bend: a straight tail
+      }
+    },
+
+    // Same as tail() for the player (track 0) or blade k (track 1 + k), which are not slots: x, y is its current
+    // centre and r its radius.
+    trackTail(t, x, y, r, out) {
+      const avail = trail.count[t] - 1;
+      if (avail < 1) {
+        out.mx = out.my = out.ex = out.ey = 0;
+        return;
+      }
+      const e = t * TRAIL_N + ((trail.head[t] - Math.min(TRAIL_END, avail) + TRAIL_N) % TRAIL_N);
+      const ex = trail.x[e] - x;
+      const ey = trail.y[e] - y;
+      if (avail > TRAIL_MID) {
+        const m = t * TRAIL_N + ((trail.head[t] - TRAIL_MID + TRAIL_N) % TRAIL_N);
+        bentTail(trail.x[m] - x, trail.y[m] - y, ex, ey, out, r);
+      } else {
+        bentTail(ex / 2, ey / 2, ex, ey, out, r);
       }
     },
 
