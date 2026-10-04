@@ -26,7 +26,9 @@ const P_GEM = P_PLAYER_BLINK + 1;
 const P_FLASH = P_GEM + 1;
 const P_BLADE = P_FLASH + 1;
 const P_WEAPON = P_BLADE + 1;
-const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9', '#ffa657'];
+const P_SLOW = P_WEAPON + 1;
+const P_BURN = P_SLOW + 1;
+const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9', '#ffa657', '#79c0ff', '#ff9a3c'];
 const RING_LINES = 3; // concentric one-pixel rings make the shockwave's visible width
 const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
 const BOLT_DOT_R = 2.5;
@@ -76,7 +78,11 @@ export function packInstances(world: World, player: Player, game: Pick<RenderGam
         k === KIND.ENEMY
           ? fx && fx.flashing(i)
             ? P_FLASH
-            : world.type[i]
+            : world.burnT[i] > 0
+              ? P_BURN
+              : world.slowT[i] > 0
+                ? P_SLOW
+                : world.type[i]
           : k === KIND.PROJECTILE
             ? P_PROJECTILE
             : k === KIND.GEM

@@ -96,6 +96,29 @@ test('a flashing enemy packs the flash palette entry', () => {
   assert.equal(out[3], T + 5); // P_FLASH: after enemy projectile, projectile, player, blink, gem
 });
 
+test('slowed and burning enemies pack the ice and fire palette entries, burning winning and a flash beating both', () => {
+  const w = new World(10);
+  const a = spawnEnemy(w, ENEMY.CHASER, 100, 100);
+  const out = new Float32Array(20 * STRIDE);
+  const T = ENEMY_TYPES.length;
+  const P_WEAPON = T + 7; // enemy projectile, projectile, player, blink, gem, flash, blade, weapon
+  const pack = (fx?: ReturnType<typeof createFx>) => {
+    packInstances(w, player(), G(fx ? { fx } : {}), out);
+    return out[3];
+  };
+  assert.equal(pack(), ENEMY.CHASER);
+  w.slowT[a] = 1;
+  assert.equal(pack(), P_WEAPON + 1); // P_SLOW
+  w.burnT[a] = 1;
+  assert.equal(pack(), P_WEAPON + 2); // P_BURN
+  const fx = createFx(10, () => 0.5);
+  const sim = { world: w, player: { hp: 100, x: 0, y: 0, stats: { orbit: 0 } }, time: 0 } as Game; // cast: observe reads only these
+  fx.observe(sim);
+  w.hp[a] -= 1;
+  fx.observe(sim);
+  assert.equal(pack(fx), T + 5); // flash wins
+});
+
 test('particles pack before the player with alpha / negative ring fade', () => {
   const w = new World(10);
   const fx = createFx(10, () => 0.5);
