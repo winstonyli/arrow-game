@@ -11,6 +11,9 @@ Browser archer roguelite (Archero / arrow.io style). Plain JS, typed-array simul
 Plan 1 (core + rooms mode) implemented; playable at `npm start`. Gameplay feel not yet tuned.
 Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Plan 3 (arena mode + camera) implemented; play it at `/?mode=arena` (rooms stays the default at `/`).
 
+## Branches
+`dev` is where work lands: feature branches (`feat/*`, `fix/*`) merge into `dev`. `main` only moves by fast-forward from `dev` when cutting a release, so it is always a tested release point. Merging is the owner's decision; run `node --test` on the merged result first. There is no remote.
+
 ## UI
 `/` opens a title screen (Arena or Rooms); `/?mode=arena` and `/?mode=rooms` skip it, as does `?stress=N` (those never auto-pause, so benchmarks run unfocused). Esc or P pauses (also on tab blur when started from the title); M mutes; 1-3 or a click picks a skill. Personal bests are kept in `localStorage` (`arrow-best-arena`, `arrow-best-rooms`). `?debug` shows the entity and frame-time line at the bottom.
 
