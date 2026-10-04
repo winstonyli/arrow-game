@@ -5,20 +5,20 @@ Browser archer roguelite (Archero / arrow.io style). Strict TypeScript bundled b
 - Install: `bun install` (dev dependencies only: `typescript`, `vite`, `@types/bun`)
 - Run: `bun run dev` then open http://localhost:8000 (Vite dev server, port 8000, fails rather than drifting if the port is taken)
 - Build: `bun run build` writes the bundle to `dist/`; `bun run preview` serves it on http://localhost:8000
-- Test: `bun test`; `node --test test/*.test.ts` runs the same 263 tests on Node/V8 (type stripping) as a cross-engine check of the golden hashes
+- Test: `bun test`; `node --test test/*.test.ts` runs the same 285 tests on Node/V8 (type stripping) as a cross-engine check of the golden hashes
 - Typecheck: `bun run typecheck` (`tsc --noEmit`; `strict`, explicit `.ts` import specifiers, erasable syntax only)
 - Benchmarks: `bun run bench` (sim), `bun run soak` (arena soak), `bun run bench:render` (Chrome); `node scripts/<name>.ts` runs the same scripts on V8 (checked for `bench-sim`, `soak-arena`, `gem-timing`)
 - Design: `docs/superpowers/specs/2026-10-02-arrow-game-design.md`
 - Plan: `docs/superpowers/plans/2026-10-02-arrow-game-core-and-rooms.md`
 
 ## Build
-`bun run build` (Vite 8.3.2) bundles 43 modules into `dist/` in ~0.2 s. Sizes on 2026-10-04 (`du -sh dist`: 109K on disk, 95,381 bytes of files):
+`bun run build` (Vite 8.3.2) bundles 51 modules into `dist/` in ~0.2 s. Sizes on 2026-10-04 (`du -sh dist`: 117K on disk, 103,537 bytes of files):
 
 | file | bytes | gzip |
 |---|---|---|
-| `index.html` | 520 | 310 |
-| `assets/index-*.js` (the whole game, minified) | 59,672 | 23,639 |
-| `assets/index-*.css` | 8,565 | 2,224 |
+| `index.html` | 539 | 331 |
+| `assets/index-*.js` (the whole game, minified) | 67,694 | 26,673 |
+| `assets/index-*.css` | 8,680 | 2,234 |
 | `assets/share-tech-mono-latin-400-normal-*.woff2` | 13,500 | - |
 | `assets/orbitron-latin-500-normal-*.woff2` | 6,596 | - |
 | `assets/orbitron-latin-700-normal-*.woff2` | 6,528 | - |
@@ -85,7 +85,7 @@ Trails (`src/render/trail.ts`, tunables there): enemies, arrows, enemy shots and
 Gems are captured when they enter the pickup radius and stay captured. A captured gem is a damped orbit around the player, simulated in the player's frame of reference (`src/game/gems.ts`; the player's travelled velocity is `player.vx/vy`): a spring-like pull, drag on the velocity relative to the player, and a sideways push that fades out over the first 0.5 s so it swings around and spirals in (about 0.8 s). Because it works in the player's frame, a moving player drags its gems along and cannot outrun them. The gem's real velocity feeds its trail. It is sim-side, part of `SIM_VERSION` 2, and uses no RNG or trig. `bun scripts/gem-timing.ts` prints the time to collect a gem from the edge of the pickup radius, for balance checks.
 
 ## Weapons
-Arena only (`SIM_VERSION` 3). Weapons are levelled (5 levels) and held in up to `MAX_WEAPONS` (5) slots, the bow included; Rooms keeps its original offer pool. The framework is `src/game/weapons.ts` (`WeaponDef`, the `WEAPONS` list, `weaponSystem`, per-run state on `game.wstate`); each weapon's level table lives in `src/game/weapons/<id>.ts`. `skills.ts` turns each def into an arena-only skill: the first pick takes it (level 1), later picks level it, and it leaves the offer at max level or when every slot is taken. Offer cards show `NEW` or the level step (`Lv n -> n+1`). Power Shot and Rapid Fire apply to every weapon (`damageMult`, `cooldownMult`); Multishot, Piercing, Ricochet and Homing are bow-only. Numbers per level 1 to 5, as in the code:
+Arena only (`SIM_VERSION` 4). Weapons are levelled (5 levels) and held in up to `MAX_WEAPONS` (5) slots, the bow included; Rooms keeps its original offer pool. The framework is `src/game/weapons.ts` (`WeaponDef`, the `WEAPONS` list, `weaponSystem`, per-run state on `game.wstate`); each weapon's level table lives in `src/game/weapons/<id>.ts`. `skills.ts` turns each def into an arena-only skill: the first pick takes it (level 1), later picks level it, and it leaves the offer at max level or when every slot is taken. Offer cards show `NEW` or the level step (`Lv n -> n+1`). Power Shot and Rapid Fire apply to every weapon (`damageMult`, `cooldownMult`); Multishot, Piercing, Ricochet and Homing are bow-only. Numbers per level 1 to 5, as in the code:
 
 | Weapon | Behaviour | Level table |
 |---|---|---|
@@ -94,11 +94,23 @@ Arena only (`SIM_VERSION` 3). Weapons are levelled (5 levels) and held in up to 
 | Chain Lightning (`chain.ts`) | zaps the nearest enemy within 300 px, jumps up to `jumps` times to the nearest unhit enemy within 150 px, x0.8 damage per jump | jumps 2, 3, 4, 5, 6; damage 15, 20, 26, 33, 42; interval 1.6, 1.4, 1.25, 1.1, 1.0 s |
 | Boomerang (`boomerang.ts`) | launches at the nearest enemy in range, flies out and back at 450 px/s (radius 10), damages everything it overlaps; relaunch 1 s after a catch, first launches staggered 0.35 s | count 1, 1, 2, 2, 3; range 300, 330, 360, 390, 420; dps 40, 50, 60, 75, 90 |
 
+### Modifiers
+Arena only, levelled 1 to 5 (`MOD_MAX`), offered and taken like weapons but they use no weapon slot. Every enemy hit goes through `hitEnemy` in `src/game/hit.ts`, which applies them; the numbers live in `src/game/modifiers.ts`.
+
+| Modifier | Effect per level | Applies to |
+|---|---|---|
+| Critical Hits (`crit`) | +10% chance to deal double damage (x2) | arrows, Shockwave, Chain Lightning |
+| Knockback (`knockback`) | pushes a surviving enemy back 10 px, along the hit direction | arrows, Chain Lightning |
+| Vampiric (`vamp`) | each kill heals 1 HP (capped at max HP) | every kill |
+| Explosive Kills (`explode`) | a kill explodes: radius 40 + 10 px x level, damage 10 x level x `damageMult` to every enemy that overlaps it (centre within radius + its own radius); a gold ring marks the radius | every kill except one caused by an explosion |
+
+Boomerang and Orbit Blade hits get neither Crit nor Knockback (they still trigger Vampiric and Explosive). Explosions do not chain, never crit and never knock back. Knockback is along the hit direction, not away from the player, so a ricocheting arrow can push an enemy toward the player (up to 10 px x level); contact damage is still limited only by invulnerability frames, and clamping to the arena is the one guard. A kill only queues its blast; `explosionSystem` drains the queue once per tick, after the weapons, from a fixed 64-slot buffer (`BLAST_CAP`, the overflow is dropped). `test/modifiers-determinism.test.ts` runs a maxed build (all four weapons and modifiers at level 5) for 60 s and pins three state hashes, so Bun and Node must agree.
+
 Adding a weapon: write a def with a level table and an `update` (or `onLevel` if it caches a stat), register it in `WEAPONS`, add an icon, a state field in `WeaponState` and a `stateHash` line for that state (levels are hashed from `WEAPONS` automatically), then regenerate the goldens (`SIM_VERSION` bump).
 
-Known gaps (found in review, none blocking): only Shockwave is in a golden, so Chain lightning, Boomerang and Orbit Blade have no Bun-vs-Node hash fixture; `damageMult`, `cooldownMult` and `bladeDps` are not hashed (like the other stats); `Grid.nearest` assumes an enemy grid; with 6 or more Swift Feet the player outruns a returning boomerang (450 px/s) and it relaunches late; Chain lightning's WebGL dots skip each segment's endpoint (Canvas2D draws the full line); per-level range/dps and return-pass damage for Boomerang, and a stale-target test for Shockwave, are untested; the smart soak bot's `PRIORITY` has no weapon ids (it takes unlisted weapons first) and the soak numbers above predate weapons.
+Known gaps (found in review, none blocking): the goldens exercise little of the new content (the arena golden picks only Ricochet and Orbit Blade, the rooms golden bow skills), so Shockwave, Chain Lightning, Boomerang and the four modifiers are covered by the maxed-build determinism test (all four weapons and all four modifiers, three hashes checked on both Bun and Node) rather than by a golden; `damageMult`, `cooldownMult` and `bladeDps` are not hashed (like the other stats); `Grid.nearest` assumes an enemy grid; with 6 or more Swift Feet the player outruns a returning boomerang (450 px/s) and it relaunches late; Chain lightning's WebGL dots skip each segment's endpoint (Canvas2D draws the full line); per-level range/dps and return-pass damage for Boomerang, and a stale-target test for Shockwave, are untested; the smart soak bot's `PRIORITY` has no weapon ids (it takes unlisted weapons first) and the soak numbers above predate weapons.
 
-Deferred: the remaining weapons (Flame trail, Mines, Meteor, Beam, Daggers, Drone); an upgrade-variety round (on-hit modifiers and status effects); the 5-slot cap is enforced and tested but unreachable until a fifth weapon exists (four entries now); Shockwave has no knockback. Checked in a visible browser pane on 2026-10-04 (WebGL and `?renderer=canvas2d`, weapons forced through the console): effects, NEW / level-step cards and the HUD level strip draw and the console stays clean. Not done: render-bench with weapons idle, held-key play, a natural long run.
+Deferred: the remaining weapons (Flame trail, Mines, Meteor, Beam, Daggers, Drone); an upgrade-variety round (status effects, per-weapon branches); the 5-slot cap is enforced and tested but unreachable until a fifth weapon exists (four entries now); Shockwave has no knockback. Checked in a visible browser pane on 2026-10-04 (WebGL and `?renderer=canvas2d`, weapons forced through the console): effects, NEW / level-step cards and the HUD level strip draw and the console stays clean. Not done: render-bench with weapons idle, held-key play, a natural long run.
 
 ## Sound
 `src/audio/sfx.ts` synthesizes every effect with WebAudio (no asset files): shot, hit, kill (heavier for bruisers and bosses), gem pickup (pitch climbs a pentatonic scale while pickups keep coming, restarts after 0.5 s), level-up arpeggio, damage, boss spawn, game over. Presentation-only like fx: `game.sfx` is optional, the sim only calls `sfx.kill` (via `onKill`) and `sfx.boss`; `sfx.observe(game)` derives the rest from state changes once per frame. Per-sound throttles (`MIN_GAP`), a 24-voice cap and a compressor keep a crowd from turning to noise. Audio starts on the first key press or touch (browser autoplay rules); **M** mutes (remembered in localStorage, shown in the HUD). There is no sound in stress mode. Levels were checked offline (every sound peaks between 0.06 and 0.45, no NaN), but nobody has judged how it sounds yet; all gains and pitches are first guesses in that file.

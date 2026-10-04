@@ -1,6 +1,8 @@
 import { MAX_WEAPONS, WEAPONS } from './weapons.ts';
 import type { WeaponDef } from './weapons.ts';
 import type { PlayerStats } from './player.ts';
+import { MOD_MAX, MODS } from './modifiers.ts';
+import type { ModDef } from './modifiers.ts';
 
 export interface Skill {
   id: string;
@@ -8,7 +10,7 @@ export interface Skill {
   desc: string;
   arena?: boolean; // offered only in the arena
   available?: (s: PlayerStats) => boolean; // false when already owned or maxed
-  tag?: (s: PlayerStats) => string; // short label for the offer card: NEW or the level step (weapons only)
+  tag?: (s: PlayerStats) => string; // short label for the offer card: NEW or the level step (weapons and modifiers)
   apply: (s: PlayerStats) => void;
 }
 
@@ -43,7 +45,19 @@ function weaponSkill(w: WeaponDef): Skill {
   };
 }
 
-export const SKILLS: Skill[] = [...PASSIVES, ...WEAPONS.map(weaponSkill)];
+function modifierSkill(m: ModDef): Skill {
+  return {
+    arena: true,
+    id: m.id,
+    name: m.name,
+    desc: m.desc,
+    available: (s) => s[m.key] < MOD_MAX,
+    tag: (s) => (s[m.key] === 0 ? 'NEW' : `Lv ${s[m.key]} → ${s[m.key] + 1}`),
+    apply: (s) => { s[m.key] = Math.min(MOD_MAX, s[m.key] + 1); },
+  };
+}
+
+export const SKILLS: Skill[] = [...PASSIVES, ...WEAPONS.map(weaponSkill), ...MODS.map(modifierSkill)];
 
 export const SKILLS_BY_ID = Object.fromEntries(SKILLS.map((s) => [s.id, s]));
 
@@ -53,7 +67,7 @@ export function applySkill(stats: PlayerStats, id: string): void {
   skill.apply(stats);
 }
 
-// The card label for an offered id: 'NEW' or 'Lv 2 → 3' for a weapon, '' for a passive.
+// The card label for an offered id: 'NEW' or 'Lv 2 → 3' for a weapon or modifier, '' for a passive.
 export function offerTag(stats: PlayerStats, id: string): string {
   return SKILLS_BY_ID[id]?.tag?.(stats) ?? '';
 }

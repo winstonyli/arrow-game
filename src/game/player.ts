@@ -28,6 +28,10 @@ export function baseStats() {
     damageMult: 1, // all weapons (Power Shot)
     cooldownMult: 1, // all weapons: multiplies every interval (Rapid Fire divides it)
     bladeDps: BLADE_DPS, // per blade, set by the Orbit Blade level
+    crit: 0, // modifier levels (0..5): chance, push, blast and heal per level, see game/modifiers.ts
+    knockback: 0,
+    explode: 0,
+    vamp: 0,
   };
 }
 

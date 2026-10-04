@@ -54,7 +54,7 @@ function timedTick(g: Game, t: Record<string, number[]>): void {
   lap('grid');
   autoFire(player, world, grid, DT);
   lap('fire');
-  g.kills += collisionSystem(world, grid, player);
+  g.kills += collisionSystem(world, grid, player, g.onKill, g.hits.arrow); // the game's hitEnemy path, as tick() runs it
   lap('collide');
   g.mode.update(g, DT);
   lap('mode');
