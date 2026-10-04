@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createWebGLRenderer, packInstances, STRIDE } from '../src/render/webgl.ts';
 import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.ts';
-import { createFx } from '../src/render/fx.ts';
+import { createFx, POOL } from '../src/render/fx.ts';
 import type { Game } from '../src/game/game.ts';
 import type { Player, PlayerStats } from '../src/game/player.ts';
 import type { RenderGame } from '../src/render/canvas.ts';
@@ -147,6 +147,21 @@ test('createWebGLRenderer throws at construction when a 2D context is unavailabl
 });
 
 const TT = ENEMY_TYPES.length;
+
+test('crit and push particles pack the white and grey palette ids', () => {
+  const pals = (fx: ReturnType<typeof createFx>) => {
+    const out = new Float32Array((POOL + 2) * STRIDE);
+    const n = packInstances(new World(2), player(), G({ fx }), out) - 1; // minus the player
+    assert.ok(n > 0);
+    return new Set(Array.from({ length: n }, (_, k) => out[k * STRIDE + 3]));
+  };
+  const a = createFx(POOL);
+  a.crit(10, 10);
+  assert.deepEqual(pals(a), new Set([TT + 5])); // P_FLASH
+  const b = createFx(POOL);
+  b.push(10, 10, 1, 0);
+  assert.deepEqual(pals(b), new Set([TT + 6])); // P_BLADE
+});
 
 test('packInstances draws an active shockwave as three rings, none when idle', () => {
   const w = new World(2);

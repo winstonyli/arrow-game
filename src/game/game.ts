@@ -34,6 +34,8 @@ export type ModeName = 'arena' | 'rooms';
 export interface GameFx {
   kill(x: number, y: number, r: number, pal: number): void;
   burst(x: number, y: number): void;
+  crit(x: number, y: number): void;
+  push(x: number, y: number, dx: number, dy: number): void;
   shake(a: number): void;
   sample(game: Game): void;
 }

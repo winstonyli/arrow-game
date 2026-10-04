@@ -1,7 +1,7 @@
 import { KIND } from '../core/world.ts';
 import { ENEMY_TYPES } from '../game/enemies.ts';
 import { drawWorldGrid } from './grid-lines.ts';
-import { POOL, RING } from './fx.ts';
+import { POOL, RING, PAL_WHITE, PAL_DUST } from './fx.ts';
 import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.ts';
 import { CHAIN_LIFE } from '../game/weapons/chain.ts';
 import { BOOM_RADIUS, MAX_BOOMS } from '../game/weapons/boomerang.ts';
@@ -92,7 +92,7 @@ export function packInstances(world: World, player: Player, game: Pick<RenderGam
     for (let k = 0; k < POOL; k++) {
       if (p.life[k] <= 0) continue;
       const a = Math.min(1, p.life[k] / p.max[k]);
-      put(out, n++ * STRIDE, p.x[k], p.y[k], p.r[k], p.pal[k] < 0 ? P_GEM : p.pal[k], p.shape[k] === RING ? -a : a, 0, 0, 0, 0);
+      put(out, n++ * STRIDE, p.x[k], p.y[k], p.r[k], p.pal[k] >= 0 ? p.pal[k] : p.pal[k] === PAL_WHITE ? P_FLASH : p.pal[k] === PAL_DUST ? P_BLADE : P_GEM, p.shape[k] === RING ? -a : a, 0, 0, 0, 0);
     }
   }
   for (let k = 0; k < player.stats.orbit; k++) {

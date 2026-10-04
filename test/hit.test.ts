@@ -12,7 +12,7 @@ import { BLAST_CAP } from '../src/game/modifiers.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
-import type { Game } from '../src/game/game.ts';
+import type { Game, GameFx } from '../src/game/game.ts';
 
 const arenaGame = () => createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
 const settle = (g: Game) => g.grid.rebuild(g.world, KIND.ENEMY);
@@ -231,7 +231,7 @@ test('no explosion without the modifier', () => {
 test('each blast shows one ring at least as wide as its damage radius', () => {
   const g = arenaGame();
   const rings: number[][] = [];
-  g.fx = { kill: (x, y, r, pal) => rings.push([x, y, r, pal]), burst: () => {}, shake: () => {}, sample: () => {} };
+  g.fx = { kill: (x, y, r, pal) => rings.push([x, y, r, pal]), burst: () => {}, shake: () => {}, sample: () => {}, crit: () => {}, push: () => {} };
   g.player.stats.explode = 3; // radius 70
   hitEnemy(g, at(g, 100), 1e6, 0, 0, 0);
   hitEnemy(g, at(g, 300), 1e6, 0, 0, 0);
@@ -296,4 +296,61 @@ test('the explosive modifier is a levelled arena skill', () => {
   applySkill(s, 'explode');
   assert.equal(s.explode, 1);
   assert.ok(!pickChoices(seeded(3), 50, null, false).includes('explode'));
+});
+
+// A recording fx: which cue calls a hit made, in order.
+function cueFx(g: Game): string[][] {
+  const calls: string[][] = [];
+  const rec = (name: string) => (...a: number[]) => void calls.push([name, ...a.map(String)]);
+  const fx: GameFx = { kill: () => {}, burst: () => {}, shake: () => {}, sample: () => {}, crit: rec('crit'), push: rec('push') };
+  g.fx = fx;
+  return calls;
+}
+
+test('a landed crit calls fx.crit once at the enemy; a missed roll, an unflagged hit and level 0 call nothing', () => {
+  const g = arenaGame();
+  const calls = cueFx(g);
+  const j = at(g, 100);
+  const pos = [String(g.world.x[j]), String(g.world.y[j])];
+  hitEnemy(g, j, 1, HIT_CRIT, 0, 0); // level 0
+  g.player.stats.crit = 5;
+  g.rng = () => 0.99; // roll misses
+  hitEnemy(g, j, 1, HIT_CRIT, 0, 0);
+  g.rng = () => 0; // would land, but the flag is missing
+  hitEnemy(g, j, 1, 0, 0, 0);
+  assert.deepEqual(calls, []);
+  hitEnemy(g, j, 1, HIT_CRIT, 0, 0);
+  assert.deepEqual(calls, [['crit', ...pos]]);
+});
+
+test('a knockback that moves a survivor calls fx.push once with the old position and the push vector', () => {
+  const g = arenaGame();
+  const calls = cueFx(g);
+  g.player.stats.knockback = 2;
+  const j = at(g, 100);
+  const x = g.world.x[j];
+  const y = g.world.y[j];
+  hitEnemy(g, j, 1, HIT_KNOCK, 3, 4);
+  assert.equal(calls.length, 1);
+  const [name, ox, oy, dx, dy] = calls[0];
+  assert.equal(name, 'push');
+  assert.equal(Number(ox), x);
+  assert.equal(Number(oy), y);
+  assert.ok(Math.abs(Number(dx) - 12) < 1e-3 && Math.abs(Number(dy) - 16) < 1e-3);
+});
+
+test('knockback cues nothing for a kill, an unflagged hit, a zero direction, level 0, or a wall-pinned enemy', () => {
+  const g = arenaGame();
+  const calls = cueFx(g);
+  const j = at(g, 100);
+  hitEnemy(g, j, 1, HIT_KNOCK, 1, 0); // level 0
+  g.player.stats.knockback = 3;
+  hitEnemy(g, j, 1, 0, 1, 0);
+  hitEnemy(g, j, 1, HIT_KNOCK, 0, 0);
+  const killed = at(g, 200);
+  hitEnemy(g, killed, 1e6, HIT_KNOCK, 1, 0);
+  const w = at(g, 300);
+  g.world.x[w] = g.bounds.w - g.world.radius[w]; // against the right wall
+  hitEnemy(g, w, 1, HIT_KNOCK, 1, 0);
+  assert.deepEqual(calls, []);
 });
