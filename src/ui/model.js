@@ -87,4 +87,6 @@ const IMPORT_ERRORS = {
   invalid: 'Replay data is invalid',
   mismatch: 'Replay does not reproduce on this version',
 };
-export const importError = (code) => IMPORT_ERRORS[code] ?? 'Could not import that code';
+// Pasted share codes often arrive wrapped or indented (chat apps, email): a code never contains whitespace, so drop it all.
+export const pastedCode = (text) => String(text ?? '').replace(/\s+/g, '');
+export const importError =(code) => IMPORT_ERRORS[code] ?? 'Could not import that code';

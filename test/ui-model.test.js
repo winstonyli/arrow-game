@@ -6,7 +6,9 @@ import { createRooms } from '../src/modes/rooms.js';
 import { seeded } from '../src/core/math.js';
 import { KIND } from '../src/core/world.js';
 import { SKILLS } from '../src/game/skills.js';
-import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError } from '../src/ui/model.js';
+import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError, pastedCode } from '../src/ui/model.js';
+import { toCode, fromCode, ReplayError } from '../src/replay/codec.js';
+import { fakeReplay } from '../scripts/lib/fake-replay.js';
 import { icon } from '../src/ui/icons.js';
 
 const arena = () => createGame({ capacity: 2000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
@@ -132,4 +134,17 @@ test('importError maps codes to messages with a fallback', () => {
   assert.match(importError('version'), /different game version/);
   assert.match(importError('bad-code'), /not a replay code/);
   assert.match(importError(undefined), /Could not import/);
+});
+
+test('pastedCode drops all whitespace, so wrapped or indented codes still import', async () => {
+  const r = fakeReplay({ picks: [[2, 'power']] });
+  const code = await toCode(r);
+  const wrapped = `  ${code.slice(0, 7)}
+${code.slice(7, 15)}
+	${code.slice(15)} 
+`;
+  await assert.rejects(fromCode(wrapped), (e) => e instanceof ReplayError && e.code === 'bad-code'); // why the import strips
+  assert.equal(pastedCode(wrapped), code);
+  assert.deepEqual(await fromCode(pastedCode(wrapped)), r);
+  assert.equal(pastedCode(undefined), '');
 });

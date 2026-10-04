@@ -88,6 +88,7 @@ export function createUi(root, on) {
     bests.arena,
     button('Rooms', '', () => on.onPlay('rooms')),
     bests.rooms,
+    button('Challenges', 'g', () => on.onChallenges()),
     h('div', 'mu', 'WASD or arrows to move. Aim is automatic.'),
   );
   title.append(titlePanel);
@@ -108,6 +109,58 @@ export function createUi(root, on) {
   const over = h('div', 'overlay');
   const overPanel = h('div', 'panel');
   over.append(overPanel);
+
+  const challenges = h('div', 'overlay');
+  const chPanel = h('div', 'panel wide');
+  const seedField = h('input', 'field');
+  seedField.type = 'text';
+  seedField.maxLength = 40;
+  seedField.placeholder = 'Seed (any text or number)';
+  seedField.setAttribute('aria-label', 'Seed');
+  const importField = h('input', 'field');
+  importField.type = 'text';
+  importField.placeholder = 'Paste a replay code';
+  importField.setAttribute('aria-label', 'Replay code');
+  const list = h('div', 'list');
+  const status = h('div', 'status');
+  const row = (...kids) => {
+    const r = h('div', 'row');
+    r.append(...kids);
+    return r;
+  };
+  chPanel.append(
+    h('h2', 'glow-text', 'Challenges'),
+    row(button('Daily Arena', 'primary', () => on.onDaily('arena')), button('Daily Rooms', 'primary b', () => on.onDaily('rooms'))),
+    row(seedField, button('Arena', 'g', () => on.onSeed('arena', seedField.value)), button('Rooms', 'g', () => on.onSeed('rooms', seedField.value))),
+    h('div', 'mu', 'Your best runs (race them as a ghost)'),
+    list,
+    row(importField, button('Import', 'g', () => on.onImport(importField.value))),
+    status,
+    button('Back', 'b', () => on.onBack()),
+  );
+  challenges.append(chPanel);
+
+  function setChallenges(rows) {
+    list.replaceChildren(
+      ...(rows.length
+        ? rows.map((r) => {
+            const e = h('div', `entry${r.stale ? ' stale' : ''}`);
+            const info = h('div', 'info');
+            info.append(h('b'), h('span'));
+            info.firstChild.textContent = r.title;
+            info.lastChild.textContent = r.stale ? `${r.line} · old version` : r.line;
+            e.append(info);
+            if (!r.stale) {
+              e.append(button('Watch', 'g', () => on.onWatchEntry(r.mode, r.seed)), button('Race', '', () => on.onRace(r.mode, r.seed)), codeButton('Copy', 'b', () => on.onCopyEntry(r.mode, r.seed)));
+            }
+            e.append(button('✕', '', () => on.onDelete(r.mode, r.seed)));
+            e.lastChild.setAttribute('aria-label', 'Delete');
+            return e;
+          })
+        : [h('div', 'mu', 'No runs yet. Finish a run and it shows up here.')]),
+    );
+  }
+  const setStatus = (t) => setText(status, t);
 
   const picker = h('div', 'overlay picker');
   const pickHead = h('h2', 'glow-text');
@@ -130,7 +183,7 @@ export function createUi(root, on) {
   }
   setWatch(watchState);
 
-  root.append(hud, title, pause, over, picker, watchbar);
+  root.append(hud, title, pause, over, challenges, picker, watchbar);
 
   // State ----------------------------------------------------------------
   let screen = 'none';
@@ -138,18 +191,20 @@ export function createUi(root, on) {
 
   function show(name) {
     screen = name;
-    hud.hidden = name === 'none' || name === 'title' || name === 'over';
+    hud.hidden = name === 'none' || name === 'title' || name === 'over' || name === 'challenges';
     hud.dataset.watch = String(name === 'watch');
     watchbar.hidden = name !== 'watch';
     title.hidden = name !== 'title';
     pause.hidden = name !== 'pause';
     over.hidden = name !== 'over';
+    challenges.hidden = name !== 'challenges';
     // Overlays and the picker own the keyboard: take the HUD (pause button) out of the tab order.
     hud.inert = name !== 'play' || !!offer;
     if (name === 'title') focusFirst(title);
     else if (name === 'pause') {
       focusFirst(pause);
     } else if (name === 'over') focusFirst(over);
+    else if (name === 'challenges') focusFirst(challenges);
     else document.activeElement?.blur();
   }
 
@@ -242,5 +297,5 @@ export function createUi(root, on) {
     bests.rooms.textContent = `Rooms: ${b.rooms}`;
   }
 
-  return { show, update, setOffer, showOver, setBests, setWatch };
+  return { show, update, setOffer, showOver, setBests, setWatch, setChallenges, setStatus };
 }

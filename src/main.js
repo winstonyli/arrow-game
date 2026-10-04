@@ -6,15 +6,16 @@ import { createWebGLRenderer } from './render/webgl.js';
 import { createFx } from './render/fx.js';
 import { createSfx } from './audio/sfx.js';
 import { createUi } from './ui/ui.js';
-import { hudModel, overModel, resultOf, bestLine } from './ui/model.js';
+import { hudModel, overModel, resultOf, bestLine, challengeRows, importError, pastedCode } from './ui/model.js';
 import { loadBest, submit } from './game/records.js';
 import { createStress } from './modes/stress.js';
 import { ENEMY } from './game/enemies.js';
 import { createSession } from './replay/session.js';
 import { createStore } from './replay/store.js';
-import { randomSeed, customSeed } from './replay/seeds.js';
-import { createPlayback } from './replay/playback.js';
-import { toCode, ReplayError } from './replay/codec.js';
+import { randomSeed, customSeed, dailySeed, dailyLabel } from './replay/seeds.js';
+import { createPlayback, verify } from './replay/playback.js';
+import { toCode, fromCode, ReplayError } from './replay/codec.js';
+import { createGhostBuilder, ghostAt } from './replay/ghost.js';
 import { engineTag } from './replay/recorder.js';
 import { SIM_VERSION } from './replay/version.js';
 
@@ -54,12 +55,14 @@ const stressN = Number(params.get('stress')) || 0;
 const debug = params.has('debug');
 const direct = !!stressN || params.has('mode'); // benchmarks and verify scripts: no title, no auto-pause
 let kind = params.get('mode') === 'arena' ? 'arena' : 'rooms';
-let screen = 'title'; // title | play | pause | over | watch | none (stress: no UI, the sim always runs)
+let screen = 'title'; // title | play | pause | over | watch | challenges | none (stress: no UI, the sim always runs)
 let session = null; // non-stress runs: quantizes input, ticks, records (replay.js); null in stress mode
 let seed = 0;
 let challenge = null; // { seed, label } for a seeded run, null for a random one
 let lastReplay = null; // the run that just ended (kept for Watch replay / Copy code until the next run starts)
 let watch = null; // { pb, speed, done, note } while a replay is being watched
+let ghostBuild = null; // a seeded run races the stored best for its (mode, seed): builds its track a slice per frame
+const ghostOut = {};
 const storage = (() => {
   try {
     return localStorage;
@@ -86,14 +89,14 @@ if (!stressN) {
     addEventListener('keydown', unlock);
     addEventListener('pointerdown', unlock);
     addEventListener('keydown', (e) => {
-      if (e.code === 'KeyM' && !e.repeat) sfx.toggleMute();
+      if (e.code === 'KeyM' && !e.repeat && !(e.target instanceof HTMLInputElement)) sfx.toggleMute(); // not while typing a seed or code
     });
   } catch (e) {
     console.warn('Audio unavailable:', e.message);
   }
 }
 
-function newGame({ seed: s, label } = {}) {
+function newGame({ seed: s } = {}) {
   seed = s ?? randomSeed();
   if (stressN) {
     session = null;
@@ -111,9 +114,12 @@ function setScreen(next) {
 }
 function play(k, opts) {
   kind = k;
-  challenge = opts ?? null;
+  challenge = opts ?? null; // its label names the stored run (finish)
   lastReplay = null;
   newGame(challenge ?? {});
+  ghostBuild = null;
+  const best = challenge ? store.get(kind, seed) : null; // a seeded run races your stored best
+  if (best) ghostBuild = createGhostBuilder(best);
   setScreen('play');
 }
 function pause() {
@@ -128,6 +134,7 @@ function refreshBests() {
 function quit() {
   challenge = null;
   watch = null;
+  ghostBuild = null;
   newGame();
   setScreen('title');
   refreshBests();
@@ -138,6 +145,27 @@ function finish() {
   if (lastReplay && !direct) store.submit(lastReplay, challenge?.label ?? '');
   ui.showOver({ ...overModel(game, kind, rec), canReplay: !!lastReplay });
   setScreen('over');
+}
+function refreshChallenges() {
+  ui.setChallenges(challengeRows(store.list()));
+  ui.setStatus('');
+}
+function openChallenges() {
+  refreshChallenges();
+  setScreen('challenges');
+}
+async function importCode(text) {
+  try {
+    const replay = await fromCode(pastedCode(text));
+    if (replay.sim !== SIM_VERSION) throw new ReplayError('version');
+    ui.setStatus('Checking replay...');
+    await new Promise((r) => setTimeout(r)); // let the status paint before the blocking re-simulation
+    if (!verify(replay)) throw new ReplayError('mismatch');
+    store.submit(replay, 'Imported');
+    startWatch(replay);
+  } catch (e) {
+    ui.setStatus(importError(e?.code));
+  }
 }
 function setWatchUi(note = '') {
   ui.setWatch({ speed: watch.speed, done: watch.done, note });
@@ -185,6 +213,29 @@ const ui = createUi(document.getElementById('ui'), {
     watch.speed = watch.speed === 1 ? 4 : 1;
     return watch.speed;
   },
+  onChallenges: openChallenges,
+  onBack: () => setScreen('title'),
+  onDaily: (mode) => play(mode, { seed: dailySeed(mode), label: dailyLabel() }),
+  onSeed: (mode, text) => {
+    const s = customSeed(text);
+    if (s === null) ui.setStatus('Enter a seed first');
+    else play(mode, { seed: s, label: text.trim() });
+  },
+  onWatchEntry: (mode, s) => {
+    const r = store.get(mode, s);
+    if (r) startWatch(r);
+    else ui.setStatus('That replay is not available');
+  },
+  onRace: (mode, s) => play(mode, { seed: s, label: store.list().find((e) => e.mode === mode && e.seed === s)?.label ?? '' }),
+  onCopyEntry: async (mode, s) => {
+    const r = store.get(mode, s);
+    return r ? toCode(r) : null;
+  },
+  onDelete: (mode, s) => {
+    store.remove(mode, s);
+    refreshChallenges();
+  },
+  onImport: importCode,
 });
 
 addEventListener('keydown', (e) => {
@@ -192,6 +243,7 @@ addEventListener('keydown', (e) => {
   if (screen === 'play') pause();
   else if (screen === 'pause') resume();
   else if (screen === 'watch' && e.code === 'Escape') quit();
+  else if (screen === 'challenges' && e.code === 'Escape') setScreen('title');
 });
 if (!direct) {
   addEventListener('blur', pause);
@@ -241,6 +293,16 @@ startLoop(
     const frameDt = lastFrame ? Math.min(0.05, (t0 - lastFrame) / 1000) : 0;
     lastFrame = t0;
     syncUI();
+    if (ghostBuild && screen === 'play') {
+      try {
+        ghostBuild.work(6);
+        game.ghost = ghostAt(ghostBuild.track, game.ticks, ghostOut);
+      } catch (e) {
+        console.warn('ghost unavailable:', e.message);
+        ghostBuild = null;
+        game.ghost = null;
+      }
+    }
     if (game.fx) {
       game.fx.observe(game);
       game.fx.update((screen === 'play' || screen === 'none' || screen === 'watch') && !game.offer && !game.over ? frameDt : 0); // freeze effects while paused
