@@ -1,5 +1,5 @@
 import { createInput } from './input/input.js';
-import { createGame, tick, VIEW, CAPACITY } from './game/game.js';
+import { createGame, tick, VIEW, CAPACITY } from './game/game.ts';
 import { createStepper, startLoop } from './core/loop.ts';
 import { createCanvasRenderer } from './render/canvas.js';
 import { createWebGLRenderer } from './render/webgl.js';
@@ -7,9 +7,9 @@ import { createFx } from './render/fx.js';
 import { createSfx } from './audio/sfx.js';
 import { createUi } from './ui/ui.js';
 import { hudModel, overModel, resultOf, bestLine, challengeRows, importError, pastedCode, importLabel, raceLabel } from './ui/model.js';
-import { loadBest, submit } from './game/records.js';
-import { createStress } from './modes/stress.js';
-import { ENEMY } from './game/enemies.js';
+import { loadBest, submit } from './game/records.ts';
+import { createStress } from './modes/stress.ts';
+import { ENEMY } from './game/enemies.ts';
 import { createSession } from './replay/session.js';
 import { createStore, better } from './replay/store.js';
 import { randomSeed, customSeed, dailySeed, dailyLabel } from './replay/seeds.js';
@@ -30,7 +30,7 @@ const frames = new Float32Array(600); // ring of recent rAF intervals
 let frameCount = 0;
 let lastFrame = 0;
 
-// ?stress=N[&scenario=converge]: N total entities, half enemies and half projectiles (see modes/stress.js).
+// ?stress=N[&scenario=converge]: N total entities, half enemies and half projectiles (see modes/stress.ts).
 const params = new URLSearchParams(location.search);
 
 // ?renderer=canvas2d forces the fallback; otherwise WebGL2 when available.

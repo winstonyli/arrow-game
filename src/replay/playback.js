@@ -1,5 +1,5 @@
-import { newRun } from '../game/run.js';
-import { tick, choose } from '../game/game.js';
+import { newRun } from '../game/run.ts';
+import { tick, choose } from '../game/game.ts';
 import { dequantize } from './quantize.js';
 import { stateHash } from './hash.js';
 import { ReplayError } from './codec.js';

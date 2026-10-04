@@ -1,5 +1,11 @@
 import { KIND } from '../core/world.ts';
+import type { World } from '../core/world.ts';
+import type { Grid } from '../core/grid.ts';
 import { clamp } from '../core/math.ts';
+import type { Vec, Size } from '../core/math.ts';
+
+export type PlayerStats = ReturnType<typeof baseStats>;
+export type Player = ReturnType<typeof createPlayer>;
 
 export function baseStats() {
   return {
@@ -20,11 +26,11 @@ export function baseStats() {
   };
 }
 
-export function createPlayer(x, y) {
+export function createPlayer(x: number, y: number) {
   return { x, y, radius: 12, hp: 100, maxHp: 100, invuln: 0, cd: 0, moving: false, vx: 0, vy: 0, stats: baseStats() };
 }
 
-export function movePlayer(p, input, dt, bounds) {
+export function movePlayer(p: Player, input: Vec, dt: number, bounds: Size): void {
   const mag = Math.hypot(input.x, input.y);
   p.moving = mag > 0.01;
   p.invuln = Math.max(0, p.invuln - dt);
@@ -39,7 +45,7 @@ export function movePlayer(p, input, dt, bounds) {
   p.y = y;
 }
 
-export function fireVolley(world, p, angle) {
+export function fireVolley(world: World, p: Player, angle: number): number {
   const s = p.stats;
   let n = 0;
   for (let k = 0; k < s.projectileCount; k++) {
@@ -64,7 +70,7 @@ export function fireVolley(world, p, angle) {
   return n;
 }
 
-export function autoFire(p, world, grid, dt) {
+export function autoFire(p: Player, world: World, grid: Grid, dt: number): number {
   p.cd = Math.max(0, p.cd - dt);
   const rate = p.moving ? p.stats.moveFireRate : 1;
   if (rate <= 0 || p.cd > 0) return 0;

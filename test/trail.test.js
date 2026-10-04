@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
-import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.js';
-import { spawnGem } from '../src/game/gems.js';
+import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.ts';
+import { spawnGem } from '../src/game/gems.ts';
 import { createFx } from '../src/render/fx.js';
 import { bentTail, TRAIL_PER_R, TRAIL_MAX, TRAIL_N, TRAIL_MID, TRAIL_END } from '../src/render/trail.js';
 import { packInstances, STRIDE } from '../src/render/webgl.js';
-import { createGame, tick } from '../src/game/game.js';
-import { createArena } from '../src/modes/arena.js';
+import { createGame, tick } from '../src/game/game.ts';
+import { createArena } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
 
 const out = { mx: 0, my: 0, ex: 0, ey: 0 };

@@ -1,11 +1,20 @@
 import { KIND } from '../core/world.ts';
-import { ENEMY, spawnEnemy } from '../game/enemies.js';
+import { ENEMY, spawnEnemy } from '../game/enemies.ts';
+import type { Game } from '../game/game.ts';
 
 // Steady-state load for benchmarks: holds `enemies` enemies and `projectiles` player projectiles
 // alive by topping both up each tick. DUMMY enemies are static and spread evenly; CHASER enemies
 // converge on the player, which is the worst case for the spatial grid.
-export function createStress({ enemies, projectiles, enemyType = ENEMY.DUMMY }) {
-  function topUp(game) {
+export function createStress({
+  enemies,
+  projectiles,
+  enemyType = ENEMY.DUMMY,
+}: {
+  enemies: number;
+  projectiles: number;
+  enemyType?: number;
+}) {
+  function topUp(game: Game) {
     const { world, bounds, rng } = game;
     for (let n = enemies - world.kindCount[KIND.ENEMY]; n > 0; n--) {
       if (spawnEnemy(world, enemyType, rng() * bounds.w, rng() * bounds.h) < 0) break;
@@ -23,7 +32,7 @@ export function createStress({ enemies, projectiles, enemyType = ENEMY.DUMMY }) 
 
   return {
     room: 0,
-    start(game) {
+    start(game: Game) {
       game.player.hp = game.player.maxHp = 1e9; // the player must outlive the run
       game.player.stats.attackInterval = 1e9; // projectiles come from topUp, not autoFire
       topUp(game);

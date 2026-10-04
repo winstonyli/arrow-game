@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadBest, submit } from '../src/game/records.js';
+import { loadBest, submit } from '../src/game/records.ts';
 
 const mem = () => {
   const m = new Map();

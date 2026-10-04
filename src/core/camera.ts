@@ -1,12 +1,8 @@
 import { clamp } from './math.ts';
+import type { Vec, Size } from './math.ts';
 
 // Centres the camera (view's top-left, in world coordinates) on `target`, clamped to the world.
-export function followCamera(
-  camera: { x: number; y: number },
-  target: { x: number; y: number },
-  bounds: { w: number; h: number },
-  view: { w: number; h: number },
-): void {
+export function followCamera(camera: Vec, target: Vec, bounds: Size, view: Size): void {
   camera.x = clamp(target.x - view.w / 2, 0, Math.max(0, bounds.w - view.w));
   camera.y = clamp(target.y - view.h / 2, 0, Math.max(0, bounds.h - view.h));
 }

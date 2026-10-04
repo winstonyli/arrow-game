@@ -4,12 +4,12 @@
 //   sparse:   static targets, arena scaled so density stays at 1 entity per 2500 px^2
 //   converge: chasers pile onto the player in the 900x600 arena (worst case for the grid)
 // N is the total entity count: half enemies, half player projectiles.
-import { createGame, tick, BOUNDS } from '../src/game/game.js';
-import { createStress } from '../src/modes/stress.js';
+import { createGame, tick, BOUNDS } from '../src/game/game.ts';
+import { createStress } from '../src/modes/stress.ts';
 import { seeded } from '../src/core/math.ts';
 import { KIND } from '../src/core/world.ts';
-import { ENEMY, enemyAISystem } from '../src/game/enemies.js';
-import { movePlayer, autoFire } from '../src/game/player.js';
+import { ENEMY, enemyAISystem } from '../src/game/enemies.ts';
+import { movePlayer, autoFire } from '../src/game/player.ts';
 import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.ts';
 
 const arg = (name, dflt) => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];

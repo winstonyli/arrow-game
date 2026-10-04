@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, tick } from '../src/game/game.js';
-import { createArena, ARENA_BOUNDS, spawnRate, xpFor, spawnPoint, BOSS_EVERY, BASE_RATE, RATE_PER_SEC } from '../src/modes/arena.js';
+import { createGame, tick } from '../src/game/game.ts';
+import { createArena, ARENA_BOUNDS, spawnRate, xpFor, spawnPoint, BOSS_EVERY, BASE_RATE, RATE_PER_SEC } from '../src/modes/arena.ts';
 import { KIND } from '../src/core/world.ts';
-import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../src/game/enemies.js';
+import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../src/game/enemies.ts';
 import { seeded } from '../src/core/math.ts';
 
 const make = (seed = 1) =>

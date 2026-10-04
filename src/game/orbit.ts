@@ -1,4 +1,8 @@
 import { KIND } from '../core/world.ts';
+import type { World } from '../core/world.ts';
+import type { Grid } from '../core/grid.ts';
+import type { Vec } from '../core/math.ts';
+import type { Player } from './player.ts';
 
 export const BLADE_ORBIT = 60; // px from the player's centre
 export const BLADE_RADIUS = 8;
@@ -7,7 +11,7 @@ export const MAX_BLADES = 8; // the renderers' buffers assume this cap
 export const BLADE_DPS = 30; // per blade, to each enemy it overlaps
 
 // Writes blade k's centre to `out`. Shared by the sim and the renderers so they cannot disagree.
-export function bladePos(player, time, k, out) {
+export function bladePos(player: Player, time: number, k: number, out: Vec): void {
   const a = time * BLADE_SPEED + (k / player.stats.orbit) * Math.PI * 2;
   out.x = player.x + Math.cos(a) * BLADE_ORBIT;
   out.y = player.y + Math.sin(a) * BLADE_ORBIT;
@@ -17,7 +21,14 @@ const pos = { x: 0, y: 0 };
 
 // Blades have no entity: each tick every overlapped enemy takes BLADE_DPS * dt. grid must be rebuilt
 // for KIND.ENEMY this tick. onKill(enemyIndex) runs before a killed enemy is despawned. Returns kills.
-export function orbitSystem(world, grid, player, time, dt, onKill) {
+export function orbitSystem(
+  world: World,
+  grid: Grid,
+  player: Player,
+  time: number,
+  dt: number,
+  onKill?: ((enemyIndex: number) => void) | null,
+): number {
   let kills = 0;
   for (let k = 0; k < player.stats.orbit; k++) {
     bladePos(player, time, k, pos);

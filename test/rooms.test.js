@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, tick, choose } from '../src/game/game.js';
-import { createRooms } from '../src/modes/rooms.js';
+import { createGame, tick, choose } from '../src/game/game.ts';
+import { createRooms } from '../src/modes/rooms.ts';
 import { KIND } from '../src/core/world.ts';
-import { ENEMY } from '../src/game/enemies.js';
-import { baseStats } from '../src/game/player.js';
-import { applySkill } from '../src/game/skills.js';
+import { ENEMY } from '../src/game/enemies.ts';
+import { baseStats } from '../src/game/player.ts';
+import { applySkill } from '../src/game/skills.ts';
 
 function seeded(seed) {
   let a = seed >>> 0;

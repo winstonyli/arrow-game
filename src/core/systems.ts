@@ -2,6 +2,8 @@ import { KIND } from './world.ts';
 import type { World } from './world.ts';
 import type { Grid } from './grid.ts';
 import { clamp } from './math.ts';
+import type { Size } from './math.ts';
+import type { Player } from '../game/player.ts';
 
 export function moveSystem(world: World, dt: number): void {
   for (let i = 0; i < world.high; i++) {
@@ -43,12 +45,7 @@ function steer(world: World, grid: Grid, i: number, dt: number): void {
 }
 
 // `grid` (optional): enables steering of projectiles flagged homing (world.type = 1).
-export function projectileSystem(
-  world: World,
-  dt: number,
-  bounds: { w: number; h: number },
-  grid: Grid | null = null,
-): void {
+export function projectileSystem(world: World, dt: number, bounds: Size, grid: Grid | null = null): void {
   for (let i = 0; i < world.high; i++) {
     const k = world.kind[i];
     if (k !== KIND.PROJECTILE && k !== KIND.ENEMY_PROJECTILE) continue;
@@ -82,16 +79,7 @@ export function projectileSystem(
   }
 }
 
-// Minimal structural view of game/player's Player that the collision system touches (Task 3 unifies).
-export interface CollisionPlayer {
-  x: number;
-  y: number;
-  radius: number;
-  hp: number;
-  invuln: number;
-}
-
-function hurt(player: CollisionPlayer, dmg: number): void {
+function hurt(player: Player, dmg: number): void {
   if (player.invuln > 0) return;
   player.hp -= dmg;
   player.invuln = 0.5;
@@ -101,7 +89,7 @@ function hurt(player: CollisionPlayer, dmg: number): void {
 export function collisionSystem(
   world: World,
   grid: Grid,
-  player: CollisionPlayer,
+  player: Player,
   onKill?: ((enemyIndex: number) => void) | null,
 ): number {
   let kills = 0;

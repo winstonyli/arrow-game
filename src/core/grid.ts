@@ -1,4 +1,4 @@
-import type { World } from './world.ts';
+import type { World, Kind } from './world.ts';
 
 // Uniform grid, rebuilt every tick by counting sort (no allocation).
 export class Grid {
@@ -35,7 +35,7 @@ export class Grid {
     return r < 0 ? 0 : r >= this.rows ? this.rows - 1 : r;
   }
 
-  rebuild(world: World, wantKind: number): void {
+  rebuild(world: World, wantKind: Kind): void {
     const { start, cursor, items, cell, cols } = this;
     start.fill(0);
     let maxR = 0;

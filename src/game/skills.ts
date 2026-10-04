@@ -1,6 +1,16 @@
-import { MAX_BLADES } from './orbit.js';
+import { MAX_BLADES } from './orbit.ts';
+import type { PlayerStats } from './player.ts';
 
-export const SKILLS = [
+export interface Skill {
+  id: string;
+  name: string;
+  desc: string;
+  arena?: boolean; // offered only in the arena
+  available?: (s: PlayerStats) => boolean; // false when already owned or maxed
+  apply: (s: PlayerStats) => void;
+}
+
+export const SKILLS: Skill[] = [
   { id: 'multishot', name: 'Multishot', desc: '+1 arrow per volley', apply: (s) => { s.projectileCount += 1; } },
   { id: 'rapid', name: 'Rapid Fire', desc: '+30% attack speed', apply: (s) => { s.attackInterval /= 1.3; } },
   { id: 'power', name: 'Power Shot', desc: '+40% damage', apply: (s) => { s.damage *= 1.4; } },
@@ -15,7 +25,7 @@ export const SKILLS = [
 
 export const SKILLS_BY_ID = Object.fromEntries(SKILLS.map((s) => [s.id, s]));
 
-export function applySkill(stats, id) {
+export function applySkill(stats: PlayerStats, id: string): void {
   const skill = SKILLS_BY_ID[id];
   if (!skill) throw new Error(`unknown skill: ${id}`);
   skill.apply(stats);
@@ -23,7 +33,7 @@ export function applySkill(stats, id) {
 
 // rng: () => number in [0, 1). Partial Fisher-Yates over the skills that can be offered: `arena` skills only when
 // `arena` is true (rooms keeps the original pool), and none that `available(stats)` rules out (already owned or maxed).
-export function pickChoices(rng, n = 3, stats = null, arena = false) {
+export function pickChoices(rng: () => number, n = 3, stats: PlayerStats | null = null, arena = false): string[] {
   const ids = SKILLS.filter((k) => (arena || !k.arena) && (!stats || !k.available || k.available(stats))).map((k) => k.id);
   const m = Math.min(n, ids.length);
   for (let i = 0; i < m; i++) {

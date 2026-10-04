@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
-import { createPlayer, movePlayer } from '../src/game/player.js';
+import { createPlayer, movePlayer } from '../src/game/player.ts';
 import { moveSystem } from '../src/core/systems.ts';
-import { spawnGem, gemSystem, GEM_LIFE } from '../src/game/gems.js';
+import { spawnGem, gemSystem, GEM_LIFE } from '../src/game/gems.ts';
 
 const setup = () => ({ world: new World(20), player: createPlayer(450, 500) });
 const dt = 1 / 60;

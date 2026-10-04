@@ -1,18 +1,19 @@
 import { KIND } from '../core/world.ts';
-import { ENEMY, spawnEnemy } from '../game/enemies.js';
-import { pickChoices } from '../game/skills.js';
+import { ENEMY, spawnEnemy } from '../game/enemies.ts';
+import { pickChoices } from '../game/skills.ts';
+import type { Game } from '../game/game.ts';
 
-export function createRooms({ bossEvery = 10 } = {}) {
+export function createRooms({ bossEvery = 10 }: { bossEvery?: number } = {}) {
   return {
     bossEvery,
     room: 0,
 
-    start(game) {
+    start(game: Game) {
       this.room = 0;
       this.nextRoom(game);
     },
 
-    nextRoom(game) {
+    nextRoom(game: Game) {
       this.room++;
       const { world, bounds, player, rng } = game;
       world.clearKind(KIND.PROJECTILE);
@@ -30,11 +31,11 @@ export function createRooms({ bossEvery = 10 } = {}) {
       }
     },
 
-    update(game) {
+    update(game: Game) {
       if (!game.offer && game.world.kindCount[KIND.ENEMY] === 0) game.offer = pickChoices(game.rng, 3);
     },
 
-    onChosen(game) {
+    onChosen(game: Game) {
       game.player.hp = Math.min(game.player.maxHp, game.player.hp + 15);
       this.nextRoom(game);
     },

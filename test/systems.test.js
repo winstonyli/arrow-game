@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
 import { Grid } from '../src/core/grid.ts';
-import { createPlayer } from '../src/game/player.js';
-import { ENEMY, spawnEnemy } from '../src/game/enemies.js';
+import { createPlayer } from '../src/game/player.ts';
+import { ENEMY, spawnEnemy } from '../src/game/enemies.ts';
 import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.ts';
 
 const bounds = { w: 900, h: 600 };

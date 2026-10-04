@@ -1,5 +1,5 @@
 import { KIND } from '../core/world.ts';
-import { clock, xpFor } from '../modes/arena.js';
+import { clock, xpFor } from '../modes/arena.ts';
 
 export const BOSS_BANNER_S = 2.5;
 

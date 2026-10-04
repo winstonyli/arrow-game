@@ -1,4 +1,6 @@
 import { KIND } from '../core/world.ts';
+import type { World } from '../core/world.ts';
+import type { Player } from './player.ts';
 
 export const GEM_RADIUS = 5;
 export const GEM_LIFE = 60; // seconds before an uncollected gem despawns
@@ -12,7 +14,7 @@ const SWING = 10;// 1/s: sideways acceleration, as a multiple of PULL * distance
 const SWING_TIME = 0.5; // s: the sideways push builds momentum without a jolt, then stops
 const MAX_REL = 600; // px/s cap on the speed relative to the player, a safety net
 
-export function spawnGem(world, x, y, value) {
+export function spawnGem(world: World, x: number, y: number, value: number): number {
   const i = world.spawn(KIND.GEM, x, y, 0, 0, GEM_RADIUS, 0);
   if (i < 0) return -1;
   world.damage[i] = value;
@@ -24,7 +26,7 @@ export function spawnGem(world, x, y, value) {
 // far fewer than enemies, so it needs no grid. A gem inside the pickup radius is captured (world.cd holds
 // the seconds since capture, 0 = free) and stays captured. This only sets the gem's velocity; moveSystem
 // moves it. Every gem is kicked the same way round, so a pile of them reads as a vortex. No RNG, no trig.
-export function gemSystem(world, player, dt) {
+export function gemSystem(world: World, player: Player, dt: number): number {
   const reach = player.stats.pickupRadius;
   let xp = 0;
   for (let i = 0; i < world.high; i++) {

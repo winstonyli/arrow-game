@@ -2,7 +2,7 @@
 // this; it only calls kill/burst/shake from hooks. main.js calls observe(game) then update(frameDt) once
 // per frame; the renderers read the state.
 import { KIND } from '../core/world.ts';
-import { bladePos, MAX_BLADES } from '../game/orbit.js';
+import { bladePos, MAX_BLADES } from '../game/orbit.ts';
 import { TRAIL_N, TRAIL_MID, TRAIL_END, bentTail } from './trail.js';
 
 export const FLASH_TIME = 0.08; // seconds an enemy stays white after a hit

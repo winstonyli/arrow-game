@@ -6,8 +6,8 @@
 // --bot=smart is the same plus: skill priority (damage/rate/multishot before speed), gems pulled in even with enemies near, and a sideways component so it circles instead of pinning itself on a wall.
 // It reports when the bot dies, which is the survival-time yardstick for balance changes.
 // Usage: node scripts/soak-arena.js [--minutes=10] [--bot=still|kite|smart] [--seed=1]
-import { createGame, tick, choose } from '../src/game/game.js';
-import { createArena, ARENA_BOUNDS } from '../src/modes/arena.js';
+import { createGame, tick, choose } from '../src/game/game.ts';
+import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
 import { KIND } from '../src/core/world.ts';
 

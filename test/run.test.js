@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newRun } from '../src/game/run.js';
-import { tick } from '../src/game/game.js';
+import { newRun } from '../src/game/run.ts';
+import { tick } from '../src/game/game.ts';
 import { stateHash } from '../src/replay/hash.js';
-import { ARENA_BOUNDS } from '../src/modes/arena.js';
+import { ARENA_BOUNDS } from '../src/modes/arena.ts';
 
 const spin = (g, n) => {
   for (let i = 0; i < n; i++) tick(g, 1 / 60);

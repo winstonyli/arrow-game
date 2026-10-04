@@ -1,5 +1,5 @@
 import { icon } from './icons.js';
-import { SKILLS_BY_ID } from '../game/skills.js';
+import { SKILLS_BY_ID } from '../game/skills.ts';
 
 const h = (tag, cls, html = '') => {
   const e = document.createElement(tag);

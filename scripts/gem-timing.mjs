@@ -1,8 +1,8 @@
 // Seconds for a gem from 85% of the pickup radius (a moving player leaves the very edge before capture) to be collected, for a still and a moving player.
 import { World } from '../src/core/world.ts';
 import { moveSystem } from '../src/core/systems.ts';
-import { createPlayer } from '../src/game/player.js';
-import { spawnGem, gemSystem } from '../src/game/gems.js';
+import { createPlayer } from '../src/game/player.ts';
+import { spawnGem, gemSystem } from '../src/game/gems.ts';
 
 const dt = 1 / 60;
 function collect(speed, angle = 0) {

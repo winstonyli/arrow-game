@@ -1,8 +1,8 @@
 import { KIND } from '../core/world.ts';
-import { ENEMY_TYPES } from '../game/enemies.js';
+import { ENEMY_TYPES } from '../game/enemies.ts';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';
-import { bladePos, BLADE_RADIUS } from '../game/orbit.js';
+import { bladePos, BLADE_RADIUS } from '../game/orbit.ts';
 import { drawGhost } from './ghost-marker.js';
 
 const TAU = Math.PI * 2;

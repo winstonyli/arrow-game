@@ -1,3 +1,7 @@
+// A point or vector (positions, the camera, input) and an extent (world bounds, the view).
+export type Vec = { x: number; y: number };
+export type Size = { w: number; h: number };
+
 export const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
 // Deterministic PRNG (mulberry32) returning floats in [0, 1).

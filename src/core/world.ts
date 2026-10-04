@@ -51,7 +51,7 @@ export class World {
   }
 
   spawn(
-    kind: number,
+    kind: Kind,
     x: number,
     y: number,
     vx: number,
@@ -91,7 +91,7 @@ export class World {
     this.free[this.freeCount++] = i;
   }
 
-  clearKind(kind: number): void {
+  clearKind(kind: Kind): void {
     for (let i = 0; i < this.high; i++) if (this.kind[i] === kind) this.despawn(i);
   }
 }

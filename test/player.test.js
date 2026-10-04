@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
 import { Grid } from '../src/core/grid.ts';
-import { createPlayer, movePlayer, autoFire } from '../src/game/player.js';
+import { createPlayer, movePlayer, autoFire } from '../src/game/player.ts';
 
 const bounds = { w: 900, h: 600 };
 

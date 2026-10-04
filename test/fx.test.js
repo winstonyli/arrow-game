@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
-import { spawnEnemy, ENEMY } from '../src/game/enemies.js';
+import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
 import { createFx, FLASH_TIME, POOL, RING, DOT, PAL_GEM } from '../src/render/fx.js';
-import { createGame, tick, choose } from '../src/game/game.js';
-import { createRooms } from '../src/modes/rooms.js';
-import { createArena, BOSS_EVERY } from '../src/modes/arena.js';
+import { createGame, tick, choose } from '../src/game/game.ts';
+import { createRooms } from '../src/modes/rooms.ts';
+import { createArena, BOSS_EVERY } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
 
 const mk = () => {

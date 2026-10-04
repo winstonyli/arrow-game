@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, tick } from '../src/game/game.js';
-import { createStress } from '../src/modes/stress.js';
+import { createGame, tick } from '../src/game/game.ts';
+import { createStress } from '../src/modes/stress.ts';
 import { seeded } from '../src/core/math.ts';
 import { KIND } from '../src/core/world.ts';
-import { ENEMY } from '../src/game/enemies.js';
+import { ENEMY } from '../src/game/enemies.ts';
 
 const make = (opts) =>
   createGame({ capacity: 5000, mode: createStress({ enemies: 200, projectiles: 300, ...opts }), rng: seeded(1), input: { x: 0, y: 0 } });

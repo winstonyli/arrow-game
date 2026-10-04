@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, tick, choose } from '../src/game/game.js';
-import { createArena, ARENA_BOUNDS } from '../src/modes/arena.js';
+import { createGame, tick, choose } from '../src/game/game.ts';
+import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { createFx } from '../src/render/fx.js';
 import { createStepper } from '../src/core/loop.ts';
 import { seeded } from '../src/core/math.ts';
-import { createRooms } from '../src/modes/rooms.js';
+import { createRooms } from '../src/modes/rooms.ts';
 import { stateHash } from '../src/replay/hash.js';
 
 // Same seed and input script must give the same state, whatever the frame times or presentation attached.

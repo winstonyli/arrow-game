@@ -1,8 +1,10 @@
 import { KIND } from '../core/world.ts';
-import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../game/enemies.js';
-import { spawnGem } from '../game/gems.js';
-import { pickChoices } from '../game/skills.js';
+import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../game/enemies.ts';
+import { spawnGem } from '../game/gems.ts';
+import { pickChoices } from '../game/skills.ts';
 import { clamp } from '../core/math.ts';
+import type { Vec } from '../core/math.ts';
+import type { Game } from '../game/game.ts';
 
 export const ARENA_BOUNDS = { w: 3000, h: 2000 };
 
@@ -29,16 +31,16 @@ const WALL_PAD = 20;
 const VIEW_PAD = 40; // spawn centres stay this far outside the view so a big enemy is not partly on screen
 const TRIES = 32;
 
-export const xpFor = (level) => 5 + 5 * level;
-export const spawnRate = (t) => BASE_RATE + RATE_PER_SEC * t;
+export const xpFor = (level: number): number => 5 + 5 * level;
+export const spawnRate = (t: number): number => BASE_RATE + RATE_PER_SEC * t;
 
-export const clock = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+export const clock = (t: number): string => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
 // Writes a spawn position to `out` and returns true. The point is on a ring just outside the view
 // around the player and inside the world; points that miss are rejected, not clamped, so a player
 // near a wall never gets a spawn in view. Returns false if no point fits (the director retries
 // next tick).
-export function spawnPoint(game, out) {
+export function spawnPoint(game: Game, out: Vec): boolean {
   const { player, bounds, camera, view, rng } = game;
   const ring = Math.hypot(view.w, view.h) / 2 + SPAWN_MARGIN;
   for (let k = 0; k < TRIES; k++) {
@@ -56,7 +58,7 @@ export function spawnPoint(game, out) {
 }
 
 // The mix entry a spawn at time `t` uses, or null for a chaser. Rolls rng once if any entry is unlocked.
-export function pickMix(t, rng) {
+export function pickMix(t: number, rng: () => number) {
   let open = false;
   for (const m of MIX) if (t >= m.after) open = true;
   if (!open) return null;
@@ -75,7 +77,7 @@ export function createArena() {
     debt: 0, // fractional enemies owed by the director
     nextBoss: BOSS_EVERY,
 
-    start(game) {
+    start(game: Game) {
       this.debt = 0;
       this.nextBoss = BOSS_EVERY;
       game.player.stats.moveFireRate = 0.5; // kiting: half fire rate while moving
@@ -84,7 +86,7 @@ export function createArena() {
       game.player.y = game.bounds.h / 2;
     },
 
-    update(game, dt) {
+    update(game: Game, dt: number) {
       const { world, rng } = game;
       this.debt += spawnRate(game.time) * dt;
       while (this.debt >= 1) {
@@ -120,7 +122,7 @@ export function createArena() {
 
     onChosen() {},
 
-    onKill(game, j) {
+    onKill(game: Game, j: number) {
       const { world } = game;
       if (world.type[j] === ENEMY.SPLITTER) {
         for (let k = 0; k < SPLIT_COUNT && world.kindCount[KIND.ENEMY] < ENEMY_CAP; k++) {
@@ -135,7 +137,7 @@ export function createArena() {
       }
     },
 
-    hud: (game) => `Lv ${game.level}  XP ${Math.floor(game.xp)}/${xpFor(game.level)}  ${clock(game.time)}`,
-    summary: (game) => `level ${game.level}, survived ${clock(game.time)}`,
+    hud: (game: Game) => `Lv ${game.level}  XP ${Math.floor(game.xp)}/${xpFor(game.level)}  ${clock(game.time)}`,
+    summary: (game: Game) => `level ${game.level}, survived ${clock(game.time)}`,
   };
 }

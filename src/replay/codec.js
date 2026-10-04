@@ -1,4 +1,4 @@
-import { SKILLS_BY_ID } from '../game/skills.js';
+import { SKILLS_BY_ID } from '../game/skills.ts';
 
 export const REPLAY_VERSION = 1;
 export const MAX_TICKS = 60 * 60 * 60; // one hour of play

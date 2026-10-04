@@ -1,8 +1,27 @@
 import { KIND } from '../core/world.ts';
+import type { World } from '../core/world.ts';
+import type { Vec, Size } from '../core/math.ts';
 
 export const ENEMY = { CHASER: 0, SHOOTER: 1, BOSS: 2, DUMMY: 3, SWARMER: 4, BRUISER: 5, SPLITTER: 6 };
 
-export const ENEMY_TYPES = [
+export interface EnemyType {
+  name: string;
+  xp: number;
+  radius: number;
+  hp: number;
+  speed: number;
+  contact: number;
+  keepDist: number;
+  fireInterval: number;
+  fireRange: number;
+  projSpeed: number;
+  projDamage: number;
+  projCount: number;
+  ring: boolean;
+  color: string;
+}
+
+export const ENEMY_TYPES: EnemyType[] = [
   { name: 'chaser', xp: 1, radius: 10, hp: 20, speed: 90, contact: 10, keepDist: 0, fireInterval: 0, fireRange: 0, projSpeed: 0, projDamage: 0, projCount: 0, ring: false, color: '#e5534b' },
   { name: 'shooter', xp: 2, radius: 11, hp: 30, speed: 70, contact: 5, keepDist: 240, fireInterval: 2, fireRange: 420, projSpeed: 220, projDamage: 8, projCount: 1, ring: false, color: '#d29922' },
   { name: 'boss', xp: 20, radius: 36, hp: 600, speed: 45, contact: 20, keepDist: 160, fireInterval: 1.6, fireRange: 600, projSpeed: 200, projDamage: 10, projCount: 12, ring: true, color: '#a371f7' },
@@ -13,7 +32,7 @@ export const ENEMY_TYPES = [
   { name: 'splitter', xp: 3, radius: 13, hp: 40, speed: 75, contact: 8, keepDist: 0, fireInterval: 0, fireRange: 0, projSpeed: 0, projDamage: 0, projCount: 0, ring: false, color: '#db61a2' },
 ];
 
-export function spawnEnemy(world, type, x, y) {
+export function spawnEnemy(world: World, type: number, x: number, y: number): number {
   const t = ENEMY_TYPES[type];
   const i = world.spawn(KIND.ENEMY, x, y, 0, 0, t.radius, t.hp);
   if (i < 0) return -1;
@@ -23,7 +42,7 @@ export function spawnEnemy(world, type, x, y) {
   return i;
 }
 
-function enemyFire(world, i, t, aim) {
+function enemyFire(world: World, i: number, t: EnemyType, aim: number): void {
   for (let k = 0; k < t.projCount; k++) {
     const a = t.ring ? aim + (k / t.projCount) * Math.PI * 2 : aim;
     const p = world.spawn(
@@ -42,7 +61,9 @@ function enemyFire(world, i, t, aim) {
 }
 
 // `camera` (optional, with `view`): when given, enemies only fire while inside the view.
-export function enemyAISystem(world, player, dt, camera = null, view = null) {
+export function enemyAISystem(world: World, player: Vec, dt: number): void;
+export function enemyAISystem(world: World, player: Vec, dt: number, camera: Vec | null, view: Size): void;
+export function enemyAISystem(world: World, player: Vec, dt: number, camera: Vec | null = null, view: Size | null = null): void {
   for (let i = 0; i < world.high; i++) {
     if (world.kind[i] !== KIND.ENEMY) continue;
     const t = ENEMY_TYPES[world.type[i]];
@@ -58,7 +79,7 @@ export function enemyAISystem(world, player, dt, camera = null, view = null) {
     }
     if (t.fireInterval > 0) {
       world.cd[i] -= dt;
-      const seen = !camera || (world.x[i] >= camera.x && world.x[i] <= camera.x + view.w && world.y[i] >= camera.y && world.y[i] <= camera.y + view.h);
+      const seen = !camera || (world.x[i] >= camera.x && world.x[i] <= camera.x + view!.w && world.y[i] >= camera.y && world.y[i] <= camera.y + view!.h); // the overloads pair a camera with a view
       if (world.cd[i] <= 0 && d <= t.fireRange && seen) {
         world.cd[i] = t.fireInterval;
         enemyFire(world, i, t, Math.atan2(dy, dx));

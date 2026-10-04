@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, choose } from '../src/game/game.js';
-import { createArena, ARENA_BOUNDS, xpFor, clock } from '../src/modes/arena.js';
-import { createRooms } from '../src/modes/rooms.js';
+import { createGame, choose } from '../src/game/game.ts';
+import { createArena, ARENA_BOUNDS, xpFor, clock } from '../src/modes/arena.ts';
+import { createRooms } from '../src/modes/rooms.ts';
 import { seeded } from '../src/core/math.ts';
 import { KIND } from '../src/core/world.ts';
-import { SKILLS } from '../src/game/skills.js';
+import { SKILLS } from '../src/game/skills.ts';
 import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, importError, pastedCode, importLabel, raceLabel } from '../src/ui/model.js';
 import { toCode, fromCode, ReplayError } from '../src/replay/codec.js';
 import { fakeReplay } from '../scripts/lib/fake-replay.js';
