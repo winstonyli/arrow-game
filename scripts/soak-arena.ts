@@ -21,10 +21,11 @@ const TICKS_PER_MIN = 3600;
 const g = createGame({ capacity: 50000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(Number(arg('seed', 1))), input: { x: 0, y: 0 } });
 if (bot === 'still') g.player.hp = g.player.maxHp = 1e9;
 
-// Flee enemies within FLEE px (1/d weighting), push off walls, and with nothing near, chase the nearest gem.
-const PRIORITY = ['multishot', 'rapid', 'power', 'shockwave', 'chain', 'blade', 'boomerang', 'homing', 'pierce', 'regen', 'ricochet', 'magnet', 'swift'];
+// Smart bot skill priority, first wins: weapons, then the six modifiers, then the other upgrades. Unlisted ids sort first (indexOf -1), so list every id.
+const PRIORITY = ['multishot', 'rapid', 'power', 'shockwave', 'chain', 'blade', 'boomerang', 'flame', 'crit', 'explode', 'vamp', 'frost', 'ignite', 'knockback', 'homing', 'pierce', 'regen', 'ricochet', 'magnet', 'swift'];
 const pick = (offer: string[]): string => (bot === 'smart' ? [...offer].sort((a, b) => PRIORITY.indexOf(a) - PRIORITY.indexOf(b))[0] : offer[0]);
 
+// Flee enemies within FLEE px (1/d weighting), push off walls, and with nothing near, chase the nearest gem.
 function steer(g: Game): void {
   const { world, player, bounds } = g;
   const FLEE = 260;
