@@ -189,3 +189,30 @@ test('get rejects a blob whose own sim differs from the index entry', () => {
   st.m.set('arrow-replay-arena-1', JSON.stringify(arena(1, 10, 0, { sim: SIM_VERSION - 1 })));
   assert.equal(s.get('arena', 1), null);
 });
+
+test('cap eviction drops random-seed (unlabelled) runs before labelled ones, even when older', () => {
+  const s = createStore(memory(), { cap: 3 });
+  s.submit(arena(1, 10), 'Daily Arena'); // oldest, labelled
+  s.submit(arena(2, 10)); // random
+  s.submit(arena(3, 10), 'hello'); // custom
+  s.submit(arena(4, 10)); // random: evicts seed 2, not the older labelled seed 1
+  assert.deepEqual(s.list().map((e) => e.seed).sort(), [1, 3, 4]);
+  s.submit(arena(5, 10)); // evicts the older random (4)
+  assert.deepEqual(s.list().map((e) => e.seed).sort(), [1, 3, 5]);
+});
+
+test('with only labelled entries the oldest labelled one is evicted', () => {
+  const s = createStore(memory(), { cap: 2 });
+  s.submit(arena(1, 10), 'a');
+  s.submit(arena(2, 10), 'b');
+  s.submit(arena(3, 10), 'c');
+  assert.deepEqual(s.list().map((e) => e.seed).sort(), [2, 3]);
+});
+
+test('a new labelled run is kept when only random runs fill the store', () => {
+  const s = createStore(memory(), { cap: 2 });
+  s.submit(arena(1, 10));
+  s.submit(arena(2, 10));
+  s.submit(arena(3, 10), 'Daily');
+  assert.deepEqual(s.list().map((e) => e.seed).sort(), [2, 3]);
+});

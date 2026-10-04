@@ -20,7 +20,7 @@ Parked: a volume slider and settings screen, a real icon set (the glyphs are sim
 
 ## Replays and challenges
 
-Every run is recorded as its seed plus quantized per-tick inputs and skill picks (`src/replay/`), so it can be re-simulated exactly. The best run per mode and seed is kept in `localStorage` (cap 40, oldest dropped).
+Every run is recorded as its seed plus quantized per-tick inputs and skill picks (`src/replay/`), so it can be re-simulated exactly. The best run per mode and seed is kept in `localStorage` (cap 40; random-seed runs are dropped first, then the oldest).
 
 - **Challenges** (title screen): Daily Arena / Daily Rooms (seed derived from the local date), or any text or number as a seed. A run on a seed you have a best for races it as a translucent ghost with a live comparison line.
 - **Watch replay**: from the game over screen or the Challenges list; 1x or 4x, Esc to exit.

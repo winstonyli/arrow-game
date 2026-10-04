@@ -35,8 +35,12 @@ export function createStore(/** @type {any} */ storage, { cap = CAP } = {}) {
     }
   };
   const readIndex = () => tryIndex() ?? [];
-  const oldestOf = (/** @type {any[]} */ list, /** @type {any} */ except) =>
-    list.filter((e) => e !== except).reduce((a, e) => (a && a.savedAt < e.savedAt ? a : e), null);
+  /** Eviction victim: the oldest unlabelled (random-seed) entry, else the oldest overall, so daily and custom-seed bests outlive random runs. */
+  const oldestOf = (/** @type {any[]} */ list, /** @type {any} */ except) => {
+    const rest = list.filter((e) => e !== except);
+    const pool = rest.some((e) => !e.label) ? rest.filter((e) => !e.label) : rest;
+    return pool.reduce((a, e) => (a && a.savedAt < e.savedAt ? a : e), null);
+  };
   const drop = (/** @type {any} */ e) => {
     try {
       storage.removeItem(keyOf(e.mode, e.seed));

@@ -17,7 +17,7 @@ import { createPlayback, verify } from './replay/playback.js';
 import { toCode, fromCode, ReplayError } from './replay/codec.js';
 import { createGhostBuilder, ghostAt } from './replay/ghost.js';
 import { engineTag } from './replay/recorder.js';
-import { SIM_VERSION } from './replay/version.js';
+import { SIM_VERSION, TICK_HZ } from './replay/version.js';
 
 const input = createInput();
 
@@ -299,7 +299,7 @@ window.arrowGame = {
 };
 
 startLoop(
-  createStepper(),
+  createStepper(TICK_HZ),
   (dt) => {
     const t0 = performance.now();
     if (screen === 'watch') stepWatch();
