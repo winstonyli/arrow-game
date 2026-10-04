@@ -4,10 +4,9 @@
 //  - the player and each orbit blade get the same tail from a ring of samples kept by fx.js.
 export const TRAIL_MAX = 80; // px cap on a tail's length
 export const TRAIL_PER_R = 8; // a mover's tail is also capped at this many of its radii, so small movers get short tails
-export const TRAIL_N = 10; // history samples per mover
+export const TRAIL_N = 10; // history samples per mover, one per sim tick (fx.sample)
 export const TRAIL_MID = 4; // age (in samples) of the tail's bend
 export const TRAIL_END = TRAIL_N - 1; // age of the tail's tip
-export const TRAIL_DT = 1 / 60; // seconds between history samples
 
 // Turns the offsets from a mover's centre to its history samples at TRAIL_MID and TRAIL_END (mx, my, ex, ey)
 // into the tail's bend and tip, written to `out` (mx, my, ex, ey). The tail is drawn from the mover's centre, so

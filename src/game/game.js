@@ -66,6 +66,7 @@ export function tick(game, dt) {
   game.time += dt;
   game.ticks++;
   followCamera(game.camera, player, bounds, game.view);
+  game.fx?.sample(game);
 }
 
 export function choose(game, skillId) {

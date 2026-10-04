@@ -4,18 +4,20 @@ import { World, KIND } from '../src/core/world.js';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.js';
 import { spawnGem } from '../src/game/gems.js';
 import { createFx } from '../src/render/fx.js';
-import { bentTail, TRAIL_PER_R, TRAIL_MAX, TRAIL_N, TRAIL_DT, TRAIL_MID, TRAIL_END } from '../src/render/trail.js';
+import { bentTail, TRAIL_PER_R, TRAIL_MAX, TRAIL_N, TRAIL_MID, TRAIL_END } from '../src/render/trail.js';
 import { packInstances, STRIDE } from '../src/render/webgl.js';
+import { createGame, tick } from '../src/game/game.js';
+import { createArena } from '../src/modes/arena.js';
+import { seeded } from '../src/core/math.js';
 
 const out = { mx: 0, my: 0, ex: 0, ey: 0 };
 const len = (x, y) => Math.hypot(x, y);
-// Moves the mover by (dx, dy) per sample for `n` samples (each: move, observe, advance the clock one sample).
+// Moves the mover by (dx, dy) per sample for `n` samples (each: move, then one sim-tick sample).
 const run = (game, i, n, dx, dy) => {
   for (let k = 0; k < n; k++) {
     game.world.x[i] += dx;
     game.world.y[i] += dy;
-    game.fx.observe(game);
-    game.fx.update(TRAIL_DT);
+    game.fx.sample(game);
   }
 };
 const rig = () => {
@@ -90,7 +92,7 @@ test('a young mover has a straight tail from its first samples; a stationary one
   const { world, game } = rig();
   const e = spawnEnemy(world, ENEMY.CHASER, 300, 300);
   const s = spawnEnemy(world, ENEMY.CHASER, 500, 500);
-  game.fx.observe(game); // first sample: nothing to trail from
+  game.fx.sample(game); // first sample: nothing to trail from
   assert.deepEqual(pack(game).row(0).slice(5), [0, 0, 0, 0]);
   run(game, e, 2, 4, 0);
   const r = pack(game).row(0);
@@ -114,10 +116,9 @@ test('a gem is trailed through its real path, and holds the tail across frames w
   const { world, game } = rig();
   const g = spawnGem(world, 500, 500, 1);
   run(game, g, TRAIL_N + 2, 0, 1.5);
-  game.fx.observe(game); // takes the pending sample
   const before = pack(game).row(0);
   assert.ok(before[8] < 0 && Math.abs(before[7]) < 1e-6);
-  game.fx.observe(game); // a frame with no time passing: unchanged
+  game.fx.observe(game); // a render frame with no sim tick: unchanged
   assert.deepEqual(pack(game).row(0), before);
 });
 
@@ -129,18 +130,15 @@ test('the player trails through its real path, and a blade through its orbit', (
   assert.deepEqual([t.mx, t.my, t.ex, t.ey], [0, 0, 0, 0]); // no history yet
   for (let k = 0; k < TRAIL_N + 3; k++) {
     player.x += 3;
-    game.time = k * TRAIL_DT;
-    fx.observe(game);
-    fx.update(TRAIL_DT);
+    game.time = k / 60;
+    fx.sample(game);
   }
   fx.trackTail(0, player.x, player.y, 12, t);
   assert.ok(t.ex < -(TRAIL_END * 3) && Math.abs(t.ey) < 1e-9 && t.mx < 0 && t.mx > t.ex, `${t.mx},${t.ex}`);
-  fx.observe(game); // takes the pending sample
-  fx.trackTail(0, player.x, player.y, 12, t);
   const r = pack(game);
   const row = r.row(r.n - 1); // the player packs last, with its tail
   assert.ok(Math.abs(row[7] - t.ex) < 1e-4 && row[7] < 0);
-  fx.observe(game); // no clock advance (paused): no new sample
+  fx.observe(game); // a render frame with no sim tick: no new sample
   assert.deepEqual(pack(game).row(r.n - 1), row);
   fx.trackTail(1, 0, 0, 8, t); // blade 0 has its own track
   assert.ok(t.ex !== 0 || t.ey !== 0);
@@ -150,17 +148,31 @@ test('blade tracks follow the orbit count and are cleared when a blade is gone; 
   const { fx, player, game } = rig();
   player.stats.orbit = 2;
   for (let k = 0; k < 4; k++) {
-    game.time = k * TRAIL_DT;
-    fx.observe(game);
-    fx.update(TRAIL_DT);
+    game.time = k / 60;
+    fx.sample(game);
   }
   assert.equal(fx.trail.count[1], 4);
   assert.equal(fx.trail.count[2], 4);
   assert.equal(fx.trail.count[3], 0);
   assert.equal(pack(game).n, 2 + 1); // 2 blades, 1 player
   player.stats.orbit = 1;
-  game.time += TRAIL_DT;
-  fx.observe(game);
-  fx.update(TRAIL_DT);
+  game.time += 1 / 60;
+  fx.sample(game);
   assert.equal(fx.trail.count[2], 0);
+});
+
+test('history is sampled once per sim tick, not per render frame', () => {
+  const fx = createFx(5000, seeded(1));
+  const game = createGame({ capacity: 5000, bounds: { w: 3000, h: 2000 }, mode: createArena(), rng: seeded(2), input: { x: 0, y: 0 }, fx });
+  for (let k = 0; k < 3; k++) tick(game, 1 / 60);
+  assert.equal(fx.trail.count[0], 3);
+  for (let k = 0; k < 5; k++) {
+    fx.observe(game); // render frames with no sim tick in between
+    fx.update(1 / 144);
+  }
+  assert.equal(fx.trail.count[0], 3);
+  tick(game, 1 / 60);
+  tick(game, 1 / 60); // two ticks in one render frame still sample twice
+  fx.observe(game);
+  assert.equal(fx.trail.count[0], 5);
 });

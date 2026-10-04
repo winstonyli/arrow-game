@@ -3,7 +3,7 @@
 // per frame; the renderers read the state.
 import { KIND } from '../core/world.js';
 import { bladePos, MAX_BLADES } from '../game/orbit.js';
-import { TRAIL_N, TRAIL_DT, TRAIL_MID, TRAIL_END, bentTail } from './trail.js';
+import { TRAIL_N, TRAIL_MID, TRAIL_END, bentTail } from './trail.js';
 
 export const FLASH_TIME = 0.08; // seconds an enemy stays white after a hit
 export const POOL = 512;
@@ -38,7 +38,6 @@ export function createFx(capacity, rng = Math.random) {
   // Position history of the player (track 0) and each orbit blade (track 1 + k): a ring of TRAIL_N samples, turned into the same bent tail as the slots'.
   const TRACKS = 1 + MAX_BLADES;
   const trail = { x: new Float32Array(TRACKS * TRAIL_N), y: new Float32Array(TRACKS * TRAIL_N), count: new Uint8Array(TRACKS), head: new Uint8Array(TRACKS) };
-  let lastSample = -Infinity;
   const bp = { x: 0, y: 0 };
 
   function record(t, x, y) {
@@ -175,19 +174,22 @@ export function createFx(capacity, rng = Math.random) {
         fx.shake(0.35);
       }
       lastPlayerHp = player.hp;
-      if (fx.clock - lastSample >= TRAIL_DT - 1e-6) { // epsilon: summed frame dts land a hair under TRAIL_DT
-        lastSample = fx.clock;
-        sampleMovers(world);
-        record(0, player.x, player.y);
-        const orbit = player.stats.orbit;
-        for (let k = 0; k < MAX_BLADES; k++) {
-          if (k >= orbit) {
-            trail.count[1 + k] = 0;
-            continue;
-          }
-          bladePos(player, game.time, k, bp);
-          record(1 + k, bp.x, bp.y);
+    },
+
+    // Records one position sample of every mover. game.js calls it once per sim tick, so history is spaced by
+    // sim time and tail length does not depend on the frame rate or on paused frames.
+    sample(game) {
+      const { world, player } = game;
+      sampleMovers(world);
+      record(0, player.x, player.y);
+      const orbit = player.stats.orbit;
+      for (let k = 0; k < MAX_BLADES; k++) {
+        if (k >= orbit) {
+          trail.count[1 + k] = 0;
+          continue;
         }
+        bladePos(player, game.time, k, bp);
+        record(1 + k, bp.x, bp.y);
       }
     },
 
