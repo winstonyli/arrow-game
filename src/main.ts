@@ -10,6 +10,7 @@ import { hudModel, overModel, resultOf, bestLine, challengeRows, importError, pa
 import { loadBest, submit } from './game/records.ts';
 import { createStress } from './modes/stress.ts';
 import { ENEMY } from './game/enemies.ts';
+import { offerTag } from './game/skills.ts';
 import { createSession } from './replay/session.ts';
 import { createStore, better } from './replay/store.ts';
 import { randomSeed, customSeed, dailySeed, dailyLabel } from './replay/seeds.ts';
@@ -310,7 +311,7 @@ function syncUI() {
   const offer = screen === 'watch' ? null : game.offer; // the viewer never shows the picker
   if (offer !== shownOffer) {
     shownOffer = offer;
-    ui.setOffer(offer, kind === 'rooms' ? 'Room cleared' : `Level ${game.level}`);
+    ui.setOffer(offer, kind === 'rooms' ? 'Room cleared' : `Level ${game.level}`, offer ? offer.map((id) => offerTag(game.player.stats, id)) : []);
   }
   if (screen === 'play' || screen === 'pause' || screen === 'watch') ui.update(hudModel(game, kind), sfx?.muted);
 }

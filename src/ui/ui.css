@@ -70,6 +70,7 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 .card svg { width: calc(var(--u) * 30); height: calc(var(--u) * 30); color: var(--b); filter: drop-shadow(0 0 calc(var(--u) * 6) currentColor); }
 .card:hover svg, .card:focus-visible svg { color: var(--a); }
 .card .name { font: 700 calc(var(--u) * 12) var(--display); letter-spacing: calc(var(--u) * 1); text-transform: uppercase; }
+.card .tag { color: var(--a); font-size: calc(var(--u) * 11); letter-spacing: calc(var(--u) * 1); text-transform: uppercase; }
 .card .desc { color: var(--muted); font-size: calc(var(--u) * 12); }
 .tip { color: var(--muted); }
 

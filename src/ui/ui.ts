@@ -277,7 +277,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     else (document.activeElement as HTMLElement | null)?.blur(); // DOM boundary: activeElement is typed Element, which has no blur
   }
 
-  function setOffer(ids: string[] | null, header = '') {
+  function setOffer(ids: string[] | null, header = '', tags: string[] = []) {
     offer = ids;
     picker.hidden = !ids;
     hud.inert = screen !== 'play' || !!ids;
@@ -289,7 +289,8 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     cards.replaceChildren(
       ...ids.map((id, i) => {
         const s = SKILLS_BY_ID[id];
-        const c = h('button', 'card', `<span class="key">[${i + 1}]</span>${icon(id)}<span class="name">${s.name}</span><span class="desc">${s.desc}</span>`);
+        const tag = tags[i] ? `<span class="tag">${tags[i]}</span>` : '';
+        const c = h('button', 'card', `<span class="key">[${i + 1}]</span>${icon(id)}<span class="name">${s.name}</span>${tag}<span class="desc">${s.desc}</span>`);
         c.type = 'button';
         c.onclick = () => on.onPick(id);
         return c;

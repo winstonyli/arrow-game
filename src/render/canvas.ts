@@ -3,6 +3,8 @@ import { ENEMY_TYPES } from '../game/enemies.ts';
 import { drawWorldGrid } from './grid-lines.ts';
 import { POOL, RING } from './fx.ts';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.ts';
+import { CHAIN_LIFE } from '../game/weapons/chain.ts';
+import { BOOM_RADIUS } from '../game/weapons/boomerang.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
 import type { Size } from '../core/math.ts';
@@ -134,7 +136,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     drawWorldGrid(ctx, cam, view, bounds);
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
-    // Same layer order as webgl.ts: gems, enemies (then their flash), enemy projectiles, arrows, particles, blades, player.
+    // Same layer order as webgl.ts: gems, enemies (then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs), player.
     if (fx) tails(world, KIND.GEM, -1, GEM_COLOR, fx);
     circles(world, KIND.GEM, -1, GEM_COLOR);
     for (let t = 0; t < ENEMY_TYPES.length; t++) {
@@ -154,6 +156,32 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       ctx.fillStyle = '#c9d1d9';
       ctx.beginPath();
       ctx.arc(bp.x, bp.y, BLADE_RADIUS, 0, TAU);
+      ctx.fill();
+    }
+    const ws = game.wstate;
+    if (ws.shock.on) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.2 + 0.8 * (1 - ws.shock.r / ws.shock.max);
+      ctx.beginPath();
+      ctx.arc(ws.shock.x, ws.shock.y, ws.shock.r, 0, TAU);
+      ctx.stroke();
+    }
+    if (ws.chain.life > 0) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = Math.min(1, ws.chain.life / CHAIN_LIFE);
+      ctx.beginPath();
+      ctx.moveTo(ws.chain.px[0], ws.chain.py[0]);
+      for (let p = 1; p < ws.chain.n; p++) ctx.lineTo(ws.chain.px[p], ws.chain.py[p]);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffa657';
+    for (const b of ws.boom.b) {
+      if (b.phase === 0) continue;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, BOOM_RADIUS, 0, TAU);
       ctx.fill();
     }
     if (fx) trackTail(fx, 0, player.x, player.y, player.radius, '#3fb950');

@@ -3,6 +3,8 @@ import { ENEMY_TYPES } from '../game/enemies.ts';
 import { drawWorldGrid } from './grid-lines.ts';
 import { POOL, RING } from './fx.ts';
 import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.ts';
+import { CHAIN_LIFE } from '../game/weapons/chain.ts';
+import { BOOM_RADIUS, MAX_BOOMS } from '../game/weapons/boomerang.ts';
 import { TRAIL_MAX } from './trail.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World } from '../core/world.ts';
@@ -23,7 +25,14 @@ const P_PLAYER_BLINK = P_PLAYER + 1;
 const P_GEM = P_PLAYER_BLINK + 1;
 const P_FLASH = P_GEM + 1;
 const P_BLADE = P_FLASH + 1;
-const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9'];
+const P_WEAPON = P_BLADE + 1;
+const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9', '#ffa657'];
+const RING_LINES = 3; // concentric one-pixel rings make the shockwave's visible width
+const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
+const BOLT_DOT_R = 2.5;
+const MAX_BOLT_DOTS = 160; // a full-length level-5 zap is about 120 dots
+// Instances the buffer reserves for weapon visuals: the rings, the zap's dots, the boomerangs.
+export const WEAPON_INSTANCES = RING_LINES + MAX_BOLT_DOTS + MAX_BOOMS;
 const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));
 
 const LAYERS = [KIND.GEM, KIND.ENEMY, KIND.ENEMY_PROJECTILE, KIND.PROJECTILE];
@@ -47,7 +56,7 @@ function put(out: Float32Array, o: number, x: number, y: number, r: number, pal:
 // are on a canvas below; the HP bar, vignette and HUD text on one above. Within a layer instances draw in
 // slot order. Entities carry their tail's bend and tip (see trail.ts); zero without fx.
 // Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
-export function packInstances(world: World, player: Player, game: Pick<RenderGame, 'camera' | 'view' | 'fx' | 'time'>, out: Float32Array): number {
+export function packInstances(world: World, player: Player, game: Pick<RenderGame, 'camera' | 'view' | 'fx' | 'time'> & Partial<Pick<RenderGame, 'wstate'>>, out: Float32Array): number {
   const { camera, view, fx } = game;
   const pad = fx ? SHAKE_PAD + TRAIL_MAX : 0;
   const x0 = camera.x - pad;
@@ -91,6 +100,28 @@ export function packInstances(world: World, player: Player, game: Pick<RenderGam
     tv.mx = tv.my = tv.ex = tv.ey = 0;
     if (fx) fx.trackTail(1 + k, bp.x, bp.y, BLADE_RADIUS, tv);
     put(out, n++ * STRIDE, bp.x, bp.y, BLADE_RADIUS, P_BLADE, SOLID, tv.mx, tv.my, tv.ex, tv.ey);
+  }
+  const ws = game.wstate;
+  if (ws) {
+    const sh = ws.shock;
+    if (sh.on) {
+      const a = 0.2 + 0.8 * (1 - sh.r / sh.max); // fades as it spreads
+      for (let k = 0; k < RING_LINES; k++) put(out, n++ * STRIDE, sh.x, sh.y, Math.max(1, sh.r - k * 1.5), P_FLASH, -a, 0, 0, 0, 0);
+    }
+    const ch = ws.chain;
+    if (ch.life > 0) {
+      const a = Math.min(1, ch.life / CHAIN_LIFE);
+      let dots = 0;
+      for (let p = 0; p + 1 < ch.n && dots < MAX_BOLT_DOTS; p++) {
+        const dx = ch.px[p + 1] - ch.px[p];
+        const dy = ch.py[p + 1] - ch.py[p];
+        const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / BOLT_DOT_GAP));
+        for (let s = 0; s < steps && dots < MAX_BOLT_DOTS; s++, dots++) {
+          put(out, n++ * STRIDE, ch.px[p] + (dx * s) / steps, ch.py[p] + (dy * s) / steps, BOLT_DOT_R, P_FLASH, a, 0, 0, 0, 0);
+        }
+      }
+    }
+    for (const b of ws.boom.b) if (b.phase !== 0) put(out, n++ * STRIDE, b.x, b.y, BOOM_RADIUS, P_WEAPON, SOLID, 0, 0, 0, 0);
   }
   tv.mx = tv.my = tv.ex = tv.ey = 0;
   if (fx) fx.trackTail(0, player.x, player.y, player.radius, tv);
@@ -245,7 +276,7 @@ export function createWebGLRenderer(canvas: HTMLCanvasElement, hudCanvas: HTMLCa
   function render(game: RenderGame, hud: string[]): void {
     const { world, player, camera, bounds, fx } = game;
     if (!data) {
-      data = new Float32Array((world.capacity + 1 + POOL + MAX_BLADES) * STRIDE);
+      data = new Float32Array((world.capacity + 1 + POOL + MAX_BLADES + WEAPON_INSTANCES) * STRIDE);
       gl.bufferData(gl.ARRAY_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
     }
     cam.x = camera.x + (fx ? fx.sx : 0);

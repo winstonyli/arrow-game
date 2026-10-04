@@ -7,9 +7,13 @@ import { createFx } from '../src/render/fx.ts';
 import type { Game } from '../src/game/game.ts';
 import type { Player, PlayerStats } from '../src/game/player.ts';
 import type { RenderGame } from '../src/render/canvas.ts';
+import { createWeaponState } from '../src/game/weapons.ts';
+import { CHAIN_LIFE } from '../src/game/weapons/chain.ts';
+import { BOOM_RADIUS } from '../src/game/weapons/boomerang.ts';
+import { WEAPON_INSTANCES } from '../src/render/webgl.ts';
 
 type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit'> };
-type PackGame = Pick<RenderGame, 'time' | 'camera' | 'view' | 'fx'>;
+type PackGame = Pick<RenderGame, 'time' | 'camera' | 'view' | 'fx'> & Partial<Pick<RenderGame, 'wstate'>>;
 
 // Casts: packInstances reads only these player fields, and `fx` may be left out of a game (it reads undefined).
 const player = (over: Partial<PlayerStub> = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0 }, ...over }) as Player;
@@ -140,4 +144,48 @@ test('createWebGLRenderer throws at construction when a 2D context is unavailabl
   assert.throws(() => createWebGLRenderer(gl, canvas({ '2d': {} }), canvas({}), view), /2D canvas context unavailable/); // bg missing
   assert.throws(() => createWebGLRenderer(gl, canvas({}), canvas({ '2d': {} }), view), /2D canvas context unavailable/); // hud missing
   assert.throws(() => createWebGLRenderer(canvas({}), canvas({ '2d': {} }), canvas({ '2d': {} }), view), /WebGL2 unavailable/); // order unchanged
+});
+
+const TT = ENEMY_TYPES.length;
+
+test('packInstances draws an active shockwave as three rings, none when idle', () => {
+  const w = new World(2);
+  const ws = createWeaponState();
+  const out = new Float32Array((2 + WEAPON_INSTANCES) * STRIDE);
+  assert.equal(packInstances(w, player(), G({ wstate: ws }), out), 1); // just the player
+  ws.shock.on = true;
+  ws.shock.x = 100;
+  ws.shock.y = 120;
+  ws.shock.r = 50;
+  ws.shock.max = 150;
+  assert.equal(packInstances(w, player(), G({ wstate: ws }), out), 4);
+  assert.deepEqual(Array.from(out.subarray(0, 4)), [100, 120, 50, TT + 5]); // white ring palette (P_FLASH)
+  assert.ok(out[4] < 0 && out[4] >= -1); // ring fade
+});
+
+test('packInstances draws a chain-lightning zap as fading dots along its path, and caps them', () => {
+  const w = new World(2);
+  const ws = createWeaponState();
+  ws.chain.life = CHAIN_LIFE / 2;
+  ws.chain.n = 2;
+  ws.chain.px.set([0, 100]);
+  ws.chain.py.set([0, 0]);
+  const out = new Float32Array((2 + WEAPON_INSTANCES) * STRIDE);
+  const n = packInstances(w, player(), G({ wstate: ws }), out);
+  assert.ok(n > 5 && n <= 1 + WEAPON_INSTANCES);
+  assert.ok(Math.abs(out[4] - 0.5) < 1e-6); // dot alpha = life / CHAIN_LIFE
+  ws.chain.px.set([0, 5000]); // a path far longer than the cap
+  assert.ok(packInstances(w, player(), G({ wstate: ws }), out) <= 1 + WEAPON_INSTANCES);
+});
+
+test('packInstances draws a flying boomerang as a solid circle and skips an idle one', () => {
+  const w = new World(2);
+  const ws = createWeaponState();
+  const out = new Float32Array((2 + WEAPON_INSTANCES) * STRIDE);
+  assert.equal(packInstances(w, player(), G({ wstate: ws }), out), 1);
+  ws.boom.b[0].phase = 1;
+  ws.boom.b[0].x = 40;
+  ws.boom.b[0].y = 50;
+  assert.equal(packInstances(w, player(), G({ wstate: ws }), out), 2);
+  assert.deepEqual(Array.from(out.subarray(0, 5)), [40, 50, BOOM_RADIUS, TT + 7, 2]); // P_WEAPON, solid
 });
