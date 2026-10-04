@@ -1,5 +1,5 @@
 // Presentation-only effects: hit flash, particles, screen shake, damage vignette. The sim never reads
-// this; it only calls kill/burst/shake from hooks. main.js calls observe(game) then update(frameDt) once
+// this; it only calls kill/burst/shake from hooks. main.ts calls observe(game) then update(frameDt) once
 // per frame; the renderers read the state.
 import { KIND } from '../core/world.ts';
 import { bladePos, MAX_BLADES } from '../game/orbit.ts';

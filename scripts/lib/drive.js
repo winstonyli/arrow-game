@@ -10,7 +10,7 @@ export const scriptedDir = (tick) => {
   return { x: d[0] / m, y: d[1] / m };
 };
 
-// Plays like main.js does (through a session): picks the first offered skill, stops at maxTicks or death.
+// Plays like main.ts does (through a session): picks the first offered skill, stops at maxTicks or death.
 export function driveLive({ mode, seed, maxTicks, dirAt = scriptedDir }) {
   const s = createSession({ mode, seed });
   while (s.game.ticks < maxTicks && !s.game.over) {

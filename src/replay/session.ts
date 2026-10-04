@@ -5,7 +5,7 @@ import { quantize, dequantize } from './quantize.ts';
 import { TICK_DT } from './version.ts';
 import type { GameFx, GameSfx, ModeName } from '../game/game.ts';
 
-/** The one live path: quantize input, tick, record. main.js and the test driver both go through it. */
+/** The one live path: quantize input, tick, record. main.ts and the test driver both go through it. */
 export function createSession<F extends GameFx = GameFx>({ mode, seed, fx, sfx }: { mode: ModeName; seed: number; fx?: F; sfx?: GameSfx }) {
   const input = { x: 0, y: 0 }; // what the sim sees: the dequantized bytes
   const game = newRun({ mode, seed, input, fx, sfx });

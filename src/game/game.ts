@@ -63,7 +63,7 @@ export interface Game<M extends Mode = Mode, F extends GameFx = GameFx> {
   bossAt: number;
   onKill?: (enemyIndex: number) => void; // assigned right after construction (undefined when nothing listens)
   enemyFireOnScreen?: boolean; // set by the arena's start
-  ghost?: GhostState | null; // set by main.js each frame for the renderers and HUD; the sim never reads it
+  ghost?: GhostState | null; // set by main.ts each frame for the renderers and HUD; the sim never reads it
 }
 
 export interface GameOptions<M extends Mode, F extends GameFx> {

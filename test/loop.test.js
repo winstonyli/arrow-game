@@ -20,6 +20,6 @@ test('caps steps after a long stall and drops the backlog', () => {
   assert.equal(s.advance(0), 0);
 });
 
-test('the live loop steps at the replay tick rate (main.js uses createStepper())', () => {
+test('the live loop steps at the replay tick rate (main.ts uses createStepper())', () => {
   assert.equal(createStepper().dt, TICK_DT); // replays are recorded per TICK_DT; changing the loop rate must bump SIM_VERSION
 });

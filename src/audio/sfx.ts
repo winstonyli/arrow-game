@@ -1,5 +1,5 @@
 // Synthesized sound effects (WebAudio, no asset files). Presentation-only like fx: the sim never reads
-// this; hooks call kill/boss, and main.js calls observe(game) once per frame to derive the rest (shots,
+// this; hooks call kill/boss, and main.ts calls observe(game) once per frame to derive the rest (shots,
 // hits, pickups, level-ups, damage, game over) from state changes.
 // createSfx(ctx) takes an AudioContext (or a test fake). Nothing plays until ctx.state is 'running', which
 // browsers allow only after a user gesture: call resume() from the first key press or touch.
