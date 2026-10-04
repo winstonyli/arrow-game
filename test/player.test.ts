@@ -9,13 +9,13 @@ const bounds = { w: 900, h: 600 };
 function scene() {
   return { world: new World(200), grid: new Grid(900, 600, 64, 200), player: createPlayer(450, 300) };
 }
-function addEnemy(world, grid, x, y) {
+function addEnemy(world: World, grid: Grid, x: number, y: number) {
   const i = world.spawn(KIND.ENEMY, x, y, 0, 0, 10, 10);
   grid.rebuild(world, KIND.ENEMY);
   return i;
 }
-function projectiles(world) {
-  const out = [];
+function projectiles(world: World) {
+  const out: number[] = [];
   for (let i = 0; i < world.high; i++) if (world.kind[i] === KIND.PROJECTILE) out.push(i);
   return out;
 }

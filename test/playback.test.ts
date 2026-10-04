@@ -7,6 +7,7 @@ import { stateHash } from '../src/replay/hash.ts';
 import { createRecorder } from '../src/replay/recorder.ts';
 import { createSession } from '../src/replay/session.ts';
 import { SIM_VERSION } from '../src/replay/version.ts';
+import type { Game } from '../src/game/game.ts';
 
 for (const mode of ['arena', 'rooms']) {
   test(`a recorded ${mode} run replays to the identical state`, () => {
@@ -39,7 +40,7 @@ test('input is run-length encoded', () => {
   rec.input(127, -127);
   rec.input(127, -127);
   rec.input(0, 0);
-  const r = rec.finish({ time: 1, kills: 0, level: 1, mode: { } });
+  const r = rec.finish({ time: 1, kills: 0, level: 1, mode: { } } as Game); // cast: finish reads only the result fields
   assert.deepEqual(r.inputs, [[3, 0, 0], [2, 127, -127], [1, 0, 0]]);
   assert.equal(r.ticks, 6);
 });

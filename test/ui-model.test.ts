@@ -10,9 +10,12 @@ import { hudModel, resultOf, overModel, bestLine, BOSS_BANNER_S, challengeRows, 
 import { toCode, fromCode, ReplayError } from '../src/replay/codec.ts';
 import { fakeReplay } from '../scripts/lib/fake-replay.js';
 import { icon } from '../src/ui/icons.ts';
+import type { Game } from '../src/game/game.ts';
+import type { GhostState } from '../src/replay/ghost.ts';
+import type { RoomsHud, ChallengeEntry } from '../src/ui/model.ts';
 
 const arena = () => createGame({ capacity: 2000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
-const rooms = (o) => createGame({ capacity: 1000, mode: createRooms(o), rng: seeded(1), input: { x: 0, y: 0 } });
+const rooms = (o?: { bossEvery?: number }) => createGame({ capacity: 1000, mode: createRooms(o), rng: seeded(1), input: { x: 0, y: 0 } });
 
 test('clock formats m:ss', () => {
   assert.equal(clock(0), '0:00');
@@ -59,12 +62,12 @@ test('boss banner window', () => {
 
 test('rooms hud model', () => {
   const g = rooms({ bossEvery: 1 });
-  const m = hudModel(g, 'rooms');
+  const m = hudModel(g, 'rooms') as RoomsHud; // cast: the kind is asserted on the next line
   assert.equal(m.kind, 'rooms');
   assert.equal(m.room, 1);
   assert.equal(m.bossRoom, true);
   assert.equal(m.enemies, g.world.kindCount[KIND.ENEMY]);
-  assert.equal(hudModel(rooms(), 'rooms').bossRoom, false);
+  assert.equal((hudModel(rooms(), 'rooms') as RoomsHud).bossRoom, false);
 });
 
 test('result and over model for arena', () => {
@@ -104,12 +107,13 @@ test('every skill and HUD glyph has an icon', () => {
 });
 
 test('hudModel shows the ghost comparison (arena) and omits it without a ghost', () => {
-  const g = Object.assign(arena(), { kills: 10, level: 3, ghost: { x: 0, y: 0, alive: true, level: 4, kills: 7, room: 0 } });
+  // Cast: the ghost line reads no `fade`. Typed as Game so `ghost` stays optional (deleted below).
+  const g: Game = Object.assign(arena(), { kills: 10, level: 3, ghost: { x: 0, y: 0, alive: true, level: 4, kills: 7, room: 0 } as GhostState });
   assert.deepEqual(hudModel(g, 'arena').ghost, { text: 'Ghost Lv 4 · 7 kills (+3)', ahead: true });
   g.kills = 5;
   assert.deepEqual(hudModel(g, 'arena').ghost, { text: 'Ghost Lv 4 · 7 kills (-2)', ahead: false });
-  g.ghost.alive = false;
-  assert.equal(hudModel(g, 'arena').ghost.text, 'Ghost (out) Lv 4 · 7 kills (-2)');
+  g.ghost!.alive = false;
+  assert.equal(hudModel(g, 'arena').ghost!.text, 'Ghost (out) Lv 4 · 7 kills (-2)');
   delete g.ghost;
   assert.equal(hudModel(g, 'arena').ghost, undefined);
 });
@@ -117,15 +121,17 @@ test('hudModel shows the ghost comparison (arena) and omits it without a ghost',
 test('hudModel ghost line in rooms compares rooms', () => {
   const g = rooms();
   g.mode.room = 5;
-  g.ghost = { x: 0, y: 0, alive: true, level: 1, kills: 0, room: 4 };
+  g.ghost = { x: 0, y: 0, alive: true, level: 1, kills: 0, room: 4 } as GhostState; // cast: the ghost line reads no `fade`
   assert.deepEqual(hudModel(g, 'rooms').ghost, { text: 'Ghost room 4 (+1)', ahead: true });
 });
 
 test('challengeRows summarize stored replays', () => {
-  const rows = challengeRows([
+  // The entries also carry `level`, as store entries do (a typed variable, so it is not an excess property).
+  const entries: (ChallengeEntry & { level: number })[] = [
     { mode: 'arena', seed: 7, label: 'Daily 2026-10-03', time: 125, kills: 40, level: 5, room: 0, stale: false },
     { mode: 'rooms', seed: 9, label: '', time: 50, kills: 12, level: 1, room: 6, stale: true },
-  ]);
+  ];
+  const rows = challengeRows(entries);
   assert.deepEqual(rows[0], { mode: 'arena', seed: 7, title: 'Arena · Daily 2026-10-03', line: '2:05 · 40 kills', stale: false });
   assert.deepEqual(rows[1], { mode: 'rooms', seed: 9, title: 'Rooms · Seed 9', line: 'Room 6 · 12 kills', stale: true });
 });

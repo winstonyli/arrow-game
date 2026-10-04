@@ -4,6 +4,7 @@ import { World, KIND } from '../src/core/world.ts';
 import { createPlayer, movePlayer } from '../src/game/player.ts';
 import { moveSystem } from '../src/core/systems.ts';
 import { spawnGem, gemSystem, GEM_LIFE } from '../src/game/gems.ts';
+import type { Player } from '../src/game/player.ts';
 
 const setup = () => ({ world: new World(20), player: createPlayer(450, 500) });
 const dt = 1 / 60;
@@ -49,15 +50,15 @@ test('an uncollected gem expires', () => {
 });
 
 // One tick of the real order: the player moves (and has a velocity), then moveSystem, then gemSystem.
-const tick = (world, player, vx = 0) => {
+const tick = (world: World, player: Player, vx = 0) => {
   player.vx = vx;
   player.x += vx * dt;
   moveSystem(world, dt);
   return gemSystem(world, player, dt);
 };
-const dist = (world, player, g) => Math.hypot(world.x[g] - player.x, world.y[g] - player.y);
-const angle = (world, player, g) => Math.atan2(world.y[g] - player.y, world.x[g] - player.x);
-const wrap = (x) => Math.atan2(Math.sin(x), Math.cos(x));
+const dist = (world: World, player: Player, g: number) => Math.hypot(world.x[g] - player.x, world.y[g] - player.y);
+const angle = (world: World, player: Player, g: number) => Math.atan2(world.y[g] - player.y, world.x[g] - player.x);
+const wrap = (x: number) => Math.atan2(Math.sin(x), Math.cos(x));
 
 test('a captured gem eases in: speed builds up from the capture instant', () => {
   const { world, player } = setup();

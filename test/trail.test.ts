@@ -9,11 +9,16 @@ import { packInstances, STRIDE } from '../src/render/webgl.ts';
 import { createGame, tick } from '../src/game/game.ts';
 import { createArena } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
+import type { Fx } from '../src/render/fx.ts';
+import type { RenderGame } from '../src/render/canvas.ts';
+
+// A render game whose fx is always present (rig attaches one).
+type FxGame = RenderGame & { fx: Fx };
 
 const out = { mx: 0, my: 0, ex: 0, ey: 0 };
-const len = (x, y) => Math.hypot(x, y);
+const len = (x: number, y: number) => Math.hypot(x, y);
 // Moves the mover by (dx, dy) per sample for `n` samples (each: move, then one sim-tick sample).
-const run = (game, i, n, dx, dy) => {
+const run = (game: FxGame, i: number, n: number, dx: number, dy: number) => {
   for (let k = 0; k < n; k++) {
     game.world.x[i] += dx;
     game.world.y[i] += dy;
@@ -24,13 +29,14 @@ const rig = () => {
   const world = new World(50);
   const fx = createFx(50, () => 0.5);
   const player = { x: 100, y: 100, radius: 12, invuln: 0, hp: 100, maxHp: 100, stats: { orbit: 0 } };
-  const game = { world, player, fx, time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 } };
+  // Cast: a stub game with only the fields fx sampling and packInstances read (player is a stub too).
+  const game = { world, player, fx, time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 } } as FxGame;
   return { world, fx, player, game };
 };
-const pack = (game) => {
+const pack = (game: RenderGame) => {
   const buf = new Float32Array(200 * STRIDE);
   const n = packInstances(game.world, game.player, game, buf);
-  return { buf, n, row: (k) => Array.from(buf.subarray(k * STRIDE, (k + 1) * STRIDE)) };
+  return { buf, n, row: (k: number) => Array.from(buf.subarray(k * STRIDE, (k + 1) * STRIDE)) };
 };
 
 test('bentTail keeps the shape, caps the tip at TRAIL_MAX, and is zero for a mover that has not moved', () => {

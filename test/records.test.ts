@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { loadBest, submit } from '../src/game/records.ts';
 
 const mem = () => {
-  const m = new Map();
-  return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) };
+  const m = new Map<string, string>();
+  return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => m.set(k, v) };
 };
 
 test('first result is a new best and is stored', () => {

@@ -6,7 +6,7 @@ import { seeded } from '../src/core/math.ts';
 import { KIND } from '../src/core/world.ts';
 import { ENEMY } from '../src/game/enemies.ts';
 
-const make = (opts) =>
+const make = (opts?: { enemyType?: number }) =>
   createGame({ capacity: 5000, mode: createStress({ enemies: 200, projectiles: 300, ...opts }), rng: seeded(1), input: { x: 0, y: 0 } });
 
 test('stress mode spawns the requested populations', () => {

@@ -4,14 +4,15 @@ import { newRun } from '../src/game/run.ts';
 import { tick } from '../src/game/game.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import { ARENA_BOUNDS } from '../src/modes/arena.ts';
+import type { Game } from '../src/game/game.ts';
 
-const spin = (g, n) => {
+const spin = (g: Game, n: number) => {
   for (let i = 0; i < n; i++) tick(g, 1 / 60);
   return stateHash(g);
 };
 
 test('newRun with the same seed gives the same state; a different seed diverges', () => {
-  const mk = (seed) => newRun({ mode: 'rooms', seed, input: { x: 0, y: 0 } });
+  const mk = (seed: number) => newRun({ mode: 'rooms', seed, input: { x: 0, y: 0 } });
   assert.equal(spin(mk(5), 120), spin(mk(5), 120));
   assert.notEqual(spin(mk(5), 120), spin(mk(6), 120));
 });

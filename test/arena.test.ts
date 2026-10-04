@@ -5,12 +5,13 @@ import { createArena, ARENA_BOUNDS, spawnRate, xpFor, spawnPoint, BOSS_EVERY, BA
 import { KIND } from '../src/core/world.ts';
 import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../src/game/enemies.ts';
 import { seeded } from '../src/core/math.ts';
+import type { Game } from '../src/game/game.ts';
 
 const make = (seed = 1) =>
   createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(seed), input: { x: 0, y: 0 } });
 const dt = 1 / 60;
-function enemies(g) {
-  const out = [];
+function enemies(g: Game) {
+  const out: number[] = [];
   for (let i = 0; i < g.world.high; i++) if (g.world.kind[i] === KIND.ENEMY) out.push(i);
   return out;
 }
@@ -94,7 +95,7 @@ test('enough XP levels up and offers three skills; the surplus carries over', ()
   g.mode.update(g, dt);
   assert.equal(g.level, 2);
   assert.equal(g.xp, 3);
-  assert.equal(g.offer.length, 3);
+  assert.equal(g.offer!.length, 3);
 });
 
 test('onKill drops a gem worth the enemy type XP at its position', () => {

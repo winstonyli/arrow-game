@@ -1,6 +1,8 @@
 import { SIM_VERSION } from '../../src/replay/version.ts';
 
 // A small valid replay for tests. `over` overrides top-level fields; `over.result` merges into the result.
+// Type-only JSDoc (no runtime effect) until Task 10 converts this file: `over` is loose on purpose (tests build invalid replays).
+/** @param {{ [field: string]: unknown, result?: Partial<import('../../src/replay/codec.ts').ReplayResult> }} [over] @returns {import('../../src/replay/codec.ts').Replay} */
 export function fakeReplay(over = {}) {
   const { result, ...rest } = over;
   return {

@@ -6,8 +6,8 @@ import { Grid } from '../src/core/grid.ts';
 function setup() {
   return { world: new World(100), grid: new Grid(640, 640, 64, 100) };
 }
-const enemy = (w, x, y) => w.spawn(KIND.ENEMY, x, y, 0, 0, 10, 10);
-const sorted = (grid, n) => Array.from(grid.out.subarray(0, n)).sort((p, q) => p - q);
+const enemy = (w: World, x: number, y: number) => w.spawn(KIND.ENEMY, x, y, 0, 0, 10, 10);
+const sorted = (grid: Grid, n: number) => Array.from(grid.out.subarray(0, n)).sort((p, q) => p - q);
 
 test('nearest returns the closest enemy within range', () => {
   const { world, grid } = setup();

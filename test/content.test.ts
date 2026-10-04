@@ -10,11 +10,12 @@ import { SKILLS, applySkill } from '../src/game/skills.ts';
 import { createGame, tick } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS, pickMix, MIX } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
+import type { Game } from '../src/game/game.ts';
 
 const BOUNDS = { w: 900, h: 600 };
 const rig = () => ({ world: new World(200), grid: new Grid(900, 600, 64, 200), player: createPlayer(450, 300) });
 const arena = () => createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: () => 0.01, input: { x: 0, y: 0 } });
-const count = (g, type) => {
+const count = (g: Game, type: number) => {
   let n = 0;
   for (let i = 0; i < g.world.high; i++) if (g.world.kind[i] === KIND.ENEMY && g.world.type[i] === type) n++;
   return n;
@@ -29,11 +30,11 @@ test('pickMix: nothing before the first unlock (and no rng call), then entries i
   const never = () => (calls++, 0);
   assert.equal(pickMix(10, never), null);
   assert.equal(calls, 0);
-  assert.equal(pickMix(40, () => 0).type, ENEMY.SWARMER); // shooters not unlocked yet
-  assert.equal(pickMix(70, () => 0).type, ENEMY.SHOOTER);
-  assert.equal(pickMix(70, () => 0.31).type, ENEMY.SWARMER); // 0.31 - 0.3 < 0.15
-  assert.equal(pickMix(200, () => 0.3 + 0.15 + 0.01).type, ENEMY.BRUISER);
-  assert.equal(pickMix(200, () => 0.3 + 0.15 + 0.08 + 0.01).type, ENEMY.SPLITTER);
+  assert.equal(pickMix(40, () => 0)!.type, ENEMY.SWARMER); // shooters not unlocked yet
+  assert.equal(pickMix(70, () => 0)!.type, ENEMY.SHOOTER);
+  assert.equal(pickMix(70, () => 0.31)!.type, ENEMY.SWARMER); // 0.31 - 0.3 < 0.15
+  assert.equal(pickMix(200, () => 0.3 + 0.15 + 0.01)!.type, ENEMY.BRUISER);
+  assert.equal(pickMix(200, () => 0.3 + 0.15 + 0.08 + 0.01)!.type, ENEMY.SPLITTER);
   assert.equal(pickMix(200, () => 0.999), null); // chaser
   assert.ok(MIX.reduce((s, m) => s + m.share, 0) < 1);
 });
@@ -111,7 +112,7 @@ test('orbit blades sit on the ring, spaced evenly, and damage overlapped enemies
   assert.ok(Math.abs(a.x + b.x - 2 * player.x) < 1e-9); // opposite sides
   const e = spawnEnemy(world, ENEMY.BRUISER, a.x, a.y);
   grid.rebuild(world, KIND.ENEMY);
-  const kills = [];
+  const kills: number[] = [];
   assert.equal(orbitSystem(world, grid, player, 0, 0.1, (j) => kills.push(j)), 0);
   assert.ok(Math.abs(world.hp[e] - (ENEMY_TYPES[ENEMY.BRUISER].hp - BLADE_DPS * 0.1)) < 1e-4);
   world.hp[e] = 1;

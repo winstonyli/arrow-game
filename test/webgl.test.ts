@@ -4,9 +4,16 @@ import { packInstances, STRIDE } from '../src/render/webgl.ts';
 import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.ts';
 import { createFx } from '../src/render/fx.ts';
+import type { Game } from '../src/game/game.ts';
+import type { Player, PlayerStats } from '../src/game/player.ts';
+import type { RenderGame } from '../src/render/canvas.ts';
 
-const player = (over = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0 }, ...over });
-const G = (o = {}) => ({ time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 }, ...o });
+type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit'> };
+type PackGame = Pick<RenderGame, 'time' | 'camera' | 'view' | 'fx'>;
+
+// Casts: packInstances reads only these player fields, and `fx` may be left out of a game (it reads undefined).
+const player = (over: Partial<PlayerStub> = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0 }, ...over }) as Player;
+const G = (o: Partial<PackGame> = {}) => ({ time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 }, ...o }) as PackGame;
 
 test('packInstances writes live entities by layer, player last, skipping free slots', () => {
   const w = new World(10);
@@ -18,7 +25,7 @@ test('packInstances writes live entities by layer, player last, skipping free sl
   const out = new Float32Array(11 * STRIDE);
   const n = packInstances(w, player(), G(), out);
   assert.equal(n, 4); // shooter, projectile, enemy projectile, player
-  const row = (k) => Array.from(out.subarray(k * STRIDE, (k + 1) * STRIDE));
+  const row = (k: number) => Array.from(out.subarray(k * STRIDE, (k + 1) * STRIDE));
   const T = ENEMY_TYPES.length;
   assert.deepEqual(row(0), [1, 2, ENEMY_TYPES[ENEMY.SHOOTER].radius, ENEMY.SHOOTER, 2, 0, 0, 0, 0]);
   assert.deepEqual(row(1), [9, 10, 5, T, 2, 0, 0, 0, 0]); // enemy projectile, then the player's arrow
@@ -72,7 +79,7 @@ test('a flashing enemy packs the flash palette entry', () => {
   const w = new World(10);
   const a = spawnEnemy(w, ENEMY.CHASER, 100, 100);
   const fx = createFx(10, () => 0.5);
-  const sim = { world: w, player: { hp: 100, x: 0, y: 0, stats: { orbit: 0 } }, time: 0 };
+  const sim = { world: w, player: { hp: 100, x: 0, y: 0, stats: { orbit: 0 } }, time: 0 } as Game; // cast: observe reads only these
   const game = G({ fx });
   const out = new Float32Array(20 * STRIDE);
   const T = ENEMY_TYPES.length;
@@ -92,7 +99,7 @@ test('particles pack before the player with alpha / negative ring fade', () => {
   const out = new Float32Array(20 * STRIDE);
   const n = packInstances(w, player(), G({ fx }), out);
   assert.equal(n, 7); // 6 particles + player
-  const fade = (k) => out[k * STRIDE + 4];
+  const fade = (k: number) => out[k * STRIDE + 4];
   assert.ok(fade(0) < 0 && fade(0) >= -1); // the ring is emitted first
   for (let k = 1; k < 6; k++) assert.ok(fade(k) > 0 && fade(k) <= 1);
   assert.equal(fade(6), 2); // player is last and solid
@@ -119,7 +126,7 @@ test('layers draw gems, enemies, enemy projectiles, arrows, then particles, blad
   const n = packInstances(w, pl, G({ fx }), out);
   assert.equal(n, 4 + 5 + 1 + 1); // entities, particles, one blade, player
   const T = ENEMY_TYPES.length;
-  const pal = (k) => out[k * STRIDE + 3];
+  const pal = (k: number) => out[k * STRIDE + 3];
   assert.deepEqual([0, 1, 2, 3].map(pal), [T + 4, ENEMY.CHASER, T, T + 1]); // gem, enemy, enemy arrow, arrow
   assert.equal(pal(9), T + 6); // blade
   assert.equal(pal(10), T + 2); // player

@@ -3,15 +3,17 @@ import assert from 'node:assert/strict';
 import { createStore, better } from '../src/replay/store.ts';
 import { fakeReplay } from '../scripts/lib/fake-replay.js';
 import { SIM_VERSION } from '../src/replay/version.ts';
+import type { StorageLike } from '../src/replay/store.ts';
+import type { ReplayResult } from '../src/replay/codec.ts';
 
 // A Web Storage stand-in; `quota` limits the total characters stored.
 function memory(quota = Infinity) {
-  const m = new Map();
+  const m = new Map<string, string>();
   const size = () => [...m].reduce((n, [k, v]) => n + k.length + v.length, 0);
   return {
     m,
-    getItem: (k) => (m.has(k) ? m.get(k) : null),
-    setItem(k, v) {
+    getItem: (k: string) => (m.has(k) ? m.get(k)! : null),
+    setItem(k: string, v: string) {
       const prev = m.get(k);
       m.set(k, String(v));
       if (size() > quota) {
@@ -19,18 +21,21 @@ function memory(quota = Infinity) {
         throw new Error('QuotaExceededError');
       }
     },
-    removeItem: (k) => m.delete(k),
+    removeItem: (k: string) => m.delete(k),
   };
 }
-const arena = (seed, time, kills = 0, extra = {}) => fakeReplay({ mode: 'arena', seed, result: { time, kills }, savedAt: seed, ...extra });
-const rooms = (seed, room, time = 10) => fakeReplay({ mode: 'rooms', seed, result: { room, time }, savedAt: seed });
+const arena = (seed: number, time: number, kills = 0, extra = {}) => fakeReplay({ mode: 'arena', seed, result: { time, kills }, savedAt: seed, ...extra });
+const rooms = (seed: number, room: number, time = 10) => fakeReplay({ mode: 'rooms', seed, result: { room, time }, savedAt: seed });
+
+// Cast: better reads only the fields its mode ranks by, so these cases pass partial results.
+const rank = better as (mode: string, a: Partial<ReplayResult>, b: Partial<ReplayResult>) => boolean;
 
 test('better ranks arena by time then kills, rooms by room then time', () => {
-  assert.ok(better('arena', { time: 10, kills: 0 }, { time: 9, kills: 99 }));
-  assert.ok(better('arena', { time: 10, kills: 5 }, { time: 10, kills: 4 }));
-  assert.ok(!better('arena', { time: 10, kills: 4 }, { time: 10, kills: 4 }));
-  assert.ok(better('rooms', { room: 4, time: 1 }, { room: 3, time: 99 }));
-  assert.ok(better('rooms', { room: 4, time: 9 }, { room: 4, time: 8 }));
+  assert.ok(rank('arena', { time: 10, kills: 0 }, { time: 9, kills: 99 }));
+  assert.ok(rank('arena', { time: 10, kills: 5 }, { time: 10, kills: 4 }));
+  assert.ok(!rank('arena', { time: 10, kills: 4 }, { time: 10, kills: 4 }));
+  assert.ok(rank('rooms', { room: 4, time: 1 }, { room: 3, time: 99 }));
+  assert.ok(rank('rooms', { room: 4, time: 9 }, { room: 4, time: 8 }));
 });
 
 test('submit keeps only the best per (mode, seed)', () => {
@@ -39,7 +44,7 @@ test('submit keeps only the best per (mode, seed)', () => {
   assert.deepEqual(s.submit(arena(1, 20)), { saved: false, isBest: false });
   assert.deepEqual(s.submit(arena(1, 40)), { saved: true, isBest: true });
   assert.equal(s.list().length, 1);
-  assert.equal(s.get('arena', 1).result.time, 40);
+  assert.equal(s.get('arena', 1)!.result.time, 40);
   assert.equal(s.list()[0].label, ''); // the better run replaced the entry, label included
 });
 
@@ -97,7 +102,7 @@ test('remove deletes the entry and the data', () => {
 
 test('missing, throwing and corrupt storage never throw', () => {
   for (const st of [null, undefined, { getItem() { throw new Error('no'); }, setItem() { throw new Error('no'); }, removeItem() { throw new Error('no'); } }]) {
-    const s = createStore(st);
+    const s = createStore(st as StorageLike | null); // cast: `undefined` (no storage at all) is passed on purpose
     assert.deepEqual(s.list(), []);
     assert.equal(s.get('arena', 1), null);
     assert.equal(s.submit(arena(1, 10)).saved, false);
@@ -119,7 +124,7 @@ test('get returns null when the stored replay is corrupt', () => {
 });
 
 // Invariant: every listed entry has data (unless stale) and every data key is listed.
-function consistent(st, s) {
+function consistent(st: ReturnType<typeof memory>, s: ReturnType<typeof createStore>) {
   const listed = new Set(s.list().map((e) => `arrow-replay-${e.mode}-${e.seed}`));
   for (const e of s.list()) if (!e.stale) assert.ok(s.get(e.mode, e.seed), `entry ${e.seed} has no data`);
   for (const k of st.m.keys()) if (k !== 'arrow-replay-index') assert.ok(listed.has(k), `orphan data ${k}`);
@@ -146,7 +151,7 @@ test('a failed improvement keeps the previous best', () => {
   s.submit(arena(1, 10));
   const r = s.submit(arena(1, 20, 0, { savedAt: 99 }));
   consistent(st, s);
-  if (!r.saved) assert.equal(s.get('arena', 1).result.time, 10);
+  if (!r.saved) assert.equal(s.get('arena', 1)!.result.time, 10);
 });
 
 test('when every write of the improvement fails, the previous best is restored and listed', () => {
@@ -162,7 +167,7 @@ test('when every write of the improvement fails, the previous best is restored a
   assert.deepEqual(s.submit(arena(1, 20, 0, { savedAt: 99 })), { saved: false, isBest: false });
   consistent(st, s);
   assert.deepEqual(s.get('arena', 1), before);
-  assert.equal(s.list().find((e) => e.seed === 1).label, 'Daily');
+  assert.equal(s.list().find((e) => e.seed === 1)!.label, 'Daily');
 });
 
 test('when the previous best cannot be rewritten either, nothing dangles', () => {

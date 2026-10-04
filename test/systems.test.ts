@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
 import { Grid } from '../src/core/grid.ts';
 import { createPlayer } from '../src/game/player.ts';
+import type { Player } from '../src/game/player.ts';
 import { ENEMY, spawnEnemy } from '../src/game/enemies.ts';
 import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.ts';
 
@@ -11,7 +12,7 @@ const bounds = { w: 900, h: 600 };
 function scene() {
   return { world: new World(200), grid: new Grid(900, 600, 64, 200), player: createPlayer(450, 500) };
 }
-function shot(world, x, y, { damage = 10, pierce = 0, bounce = 0, vx = 0, vy = 0, life = 5 } = {}) {
+function shot(world: World, x: number, y: number, { damage = 10, pierce = 0, bounce = 0, vx = 0, vy = 0, life = 5 } = {}) {
   const i = world.spawn(KIND.PROJECTILE, x, y, vx, vy, 4, 0);
   world.damage[i] = damage;
   world.life[i] = life;
@@ -19,7 +20,7 @@ function shot(world, x, y, { damage = 10, pierce = 0, bounce = 0, vx = 0, vy = 0
   world.bounce[i] = bounce;
   return i;
 }
-function collide({ world, grid, player }) {
+function collide({ world, grid, player }: { world: World; grid: Grid; player: Player }) {
   grid.rebuild(world, KIND.ENEMY);
   return collisionSystem(world, grid, player);
 }
@@ -136,7 +137,7 @@ test('a piercing projectile hits a new enemy that reuses the slot of the one it 
 test('onKill is called once, before the enemy is despawned, only for lethal hits', () => {
   const sc = scene();
   const e = spawnEnemy(sc.world, ENEMY.CHASER, 100, 100);
-  const seen = [];
+  const seen: [number, number][] = [];
   const run = () => {
     sc.grid.rebuild(sc.world, KIND.ENEMY);
     return collisionSystem(sc.world, sc.grid, sc.player, (j) => seen.push([j, sc.world.kind[j]]));

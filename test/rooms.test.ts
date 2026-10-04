@@ -6,8 +6,9 @@ import { KIND } from '../src/core/world.ts';
 import { ENEMY } from '../src/game/enemies.ts';
 import { baseStats } from '../src/game/player.ts';
 import { applySkill } from '../src/game/skills.ts';
+import type { Game, Mode } from '../src/game/game.ts';
 
-function seeded(seed) {
+function seeded(seed: number) {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -18,7 +19,7 @@ function seeded(seed) {
   };
 }
 const make = () => createGame({ capacity: 1000, mode: createRooms(), rng: seeded(1), input: { x: 0, y: 0 } });
-function killAll(game) {
+function killAll(game: Game) {
   const w = game.world;
   for (let i = 0; i < w.high; i++) if (w.kind[i] === KIND.ENEMY) w.despawn(i);
 }
@@ -33,7 +34,7 @@ test('clearing a room offers three skills and pauses the simulation', () => {
   const g = make();
   killAll(g);
   tick(g, 1 / 60);
-  assert.equal(g.offer.length, 3);
+  assert.equal(g.offer!.length, 3);
   g.input.x = 1;
   const px = g.player.x;
   tick(g, 1 / 60);
@@ -45,7 +46,7 @@ test('choosing a skill applies it and starts the next, bigger room', () => {
   g.player.hp = 50;
   killAll(g);
   tick(g, 1 / 60);
-  const pick = g.offer[0];
+  const pick = g.offer![0];
   choose(g, pick);
   assert.equal(g.offer, null);
   assert.equal(g.mode.room, 2);
@@ -84,7 +85,7 @@ test('choose ignores repeats and ids not on offer', () => {
   const g = make();
   killAll(g);
   tick(g, 1 / 60);
-  const id = g.offer[0];
+  const id = g.offer![0];
   choose(g, id);
   choose(g, id);
   assert.equal(g.mode.room, 2);
@@ -117,8 +118,9 @@ test('createGame sets a view and centres the camera inside a larger world', () =
 
 test('rooms hud and summary name the room', () => {
   const g = make();
-  assert.equal(g.mode.hud(g), 'Room 1');
-  assert.equal(g.mode.summary(g), 'reached room 1');
+  const mode: Mode = g.mode; // called through the Mode interface (hud/summary take the game), as the UI does
+  assert.equal(mode.hud!(g), 'Room 1');
+  assert.equal(mode.summary!(g), 'reached room 1');
 });
 
 test('choose tallies owned skills; a new game starts empty', () => {

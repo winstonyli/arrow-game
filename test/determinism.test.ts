@@ -7,14 +7,15 @@ import { createStepper } from '../src/core/loop.ts';
 import { seeded } from '../src/core/math.ts';
 import { createRooms } from '../src/modes/rooms.ts';
 import { stateHash } from '../src/replay/hash.ts';
+import type { Fx } from '../src/render/fx.ts';
 
 // Same seed and input script must give the same state, whatever the frame times or presentation attached.
-function run({ seed, seconds, frameDts = [1 / 60], fx }) {
+function run({ seed, seconds, frameDts = [1 / 60], fx }: { seed: number; seconds: number; frameDts?: number[]; fx?: Fx }) {
   const input = { x: 0, y: 0 };
   const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(seed), input, fx });
   g.player.hp = g.player.maxHp = 1e9;
   const stepper = createStepper();
-  const hashes = [];
+  const hashes: number[] = [];
   let ticks = 0;
   for (let f = 0; ticks < seconds * 60; f++) {
     const n = stepper.advance(frameDts[f % frameDts.length]);

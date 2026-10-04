@@ -4,26 +4,36 @@ import { createSfx, MAX_VOICES, MIN_GAP, STREAK_RESET, PENTATONIC } from '../src
 import { createFx } from '../src/render/fx.ts';
 import { World } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
+import type { Fx } from '../src/render/fx.ts';
+import type { Game, Mode } from '../src/game/game.ts';
+import type { Player } from '../src/game/player.ts';
+
+interface Started { kind: 'osc' | 'noise'; f0?: number }
+// A fake source node: records its start frequency (oscillators); sfx sets onended to free the voice.
+interface FakeNode { f0?: number; onended?: (() => void) | null; connect(): void; start(): void; stop(): void }
+type FakeOsc = FakeNode & { frequency: { setValueAtTime(f: number): void; exponentialRampToValueAtTime(): void } };
 
 // Records what would play. Voices never end on their own; call ctx.endAll() to finish them.
 function fakeCtx() {
+  const started: Started[] = []; // { kind, f0 } per started voice
+  const live: FakeNode[] = [];
   const ctx = {
     state: 'running',
     currentTime: 0,
     sampleRate: 100,
     destination: {},
-    started: [], // { kind, f0 } per started voice
-    live: [],
+    started,
+    live,
     createGain: () => ({ gain: { value: 1, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }),
     createDynamicsCompressor: () => ({ threshold: {}, knee: {}, ratio: {}, attack: {}, release: {}, connect() {} }),
-    createBuffer: (c, n) => ({ getChannelData: () => new Float32Array(n) }),
+    createBuffer: (c: number, n: number) => ({ getChannelData: () => new Float32Array(n) }),
     createBiquadFilter: () => ({ Q: {}, frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }),
     createOscillator() {
-      const node = { frequency: { setValueAtTime: (f) => (node.f0 = f), exponentialRampToValueAtTime() {} }, connect() {}, start: () => { ctx.started.push({ kind: 'osc', f0: node.f0 }); ctx.live.push(node); }, stop() {} };
+      const node: FakeOsc = { frequency: { setValueAtTime: (f) => (node.f0 = f), exponentialRampToValueAtTime() {} }, connect() {}, start: () => { ctx.started.push({ kind: 'osc', f0: node.f0 }); ctx.live.push(node); }, stop() {} };
       return node;
     },
     createBufferSource() {
-      const node = { connect() {}, start: () => { ctx.started.push({ kind: 'noise' }); ctx.live.push(node); }, stop() {} };
+      const node: FakeNode = { connect() {}, start: () => { ctx.started.push({ kind: 'noise' }); ctx.live.push(node); }, stop() {} };
       return node;
     },
     endAll() {
@@ -33,13 +43,15 @@ function fakeCtx() {
       ctx.state = 'running';
     },
   };
-  return ctx;
+  // Cast: the fake implements only the AudioContext members sfx uses, plus test hooks (started, live, endAll).
+  return ctx as typeof ctx & AudioContext;
 }
+type FakeCtx = ReturnType<typeof fakeCtx>;
 const memory = () => {
-  const m = new Map();
-  return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)) };
+  const m = new Map<string, string>();
+  return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => m.set(k, String(v)) };
 };
-const oscs = (ctx) => ctx.started.filter((s) => s.kind === 'osc');
+const oscs = (ctx: FakeCtx) => ctx.started.filter((s) => s.kind === 'osc');
 
 test('nothing plays until the context is running (browser autoplay), then it does', () => {
   const ctx = fakeCtx();
@@ -87,7 +99,7 @@ test('the voice cap stops new sounds until voices end', () => {
 test('pickup pitch climbs the scale while pickups keep coming, and restarts after STREAK_RESET', () => {
   const ctx = fakeCtx();
   const sfx = createSfx(ctx);
-  const firstOf = () => oscs(ctx).slice(-2)[0].f0; // the main tone of the latest pickup
+  const firstOf = () => oscs(ctx).slice(-2)[0].f0!; // the main tone of the latest pickup
   sfx.pickup();
   const f0 = firstOf();
   ctx.currentTime += 0.1;
@@ -107,10 +119,10 @@ test('heavy kills sound different from light ones', () => {
   const ctx = fakeCtx();
   const sfx = createSfx(ctx);
   sfx.kill(10);
-  const light = oscs(ctx)[0].f0;
+  const light = oscs(ctx)[0].f0!;
   ctx.currentTime += 1;
   sfx.kill(36);
-  const heavy = oscs(ctx).at(-1).f0;
+  const heavy = oscs(ctx).at(-1)!.f0!;
   assert.ok(heavy < light / 2);
 });
 
@@ -141,12 +153,13 @@ test('a broken storage does not break mute', () => {
 const stage = () => {
   const world = new World(20);
   const fx = createFx(20, () => 0.5);
-  const player = { x: 0, y: 0, hp: 100, maxHp: 100, cd: 0, stats: { orbit: 0 } };
-  const game = { world, player, fx, time: 0, xp: 0, level: 1, over: false };
+  // Stubs (one cast each): observe reads only these fields; the game's fx is always present.
+  const player = { x: 0, y: 0, hp: 100, maxHp: 100, cd: 0, stats: { orbit: 0 } } as Player;
+  const game = { world, player, fx, time: 0, xp: 0, level: 1, over: false } as Game<Mode, Fx> & { fx: Fx };
   const ctx = fakeCtx();
   return { world, fx, player, game, ctx, sfx: createSfx(ctx) };
 };
-const step = (s) => {
+const step = (s: ReturnType<typeof stage>) => {
   s.ctx.currentTime += 1; // clear throttles so each event can sound
   s.fx.observe(s.game);
   s.sfx.observe(s.game);

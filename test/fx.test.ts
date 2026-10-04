@@ -7,14 +7,18 @@ import { createGame, tick, choose } from '../src/game/game.ts';
 import { createRooms } from '../src/modes/rooms.ts';
 import { createArena, BOSS_EVERY } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
+import type { Fx } from '../src/render/fx.ts';
+import type { Game } from '../src/game/game.ts';
+import type { Player } from '../src/game/player.ts';
 
 const mk = () => {
   const world = new World(20);
   const fx = createFx(20, () => 0.5);
-  const player = { hp: 100, maxHp: 100, x: 0, y: 0, stats: { orbit: 0 } };
-  return { world, fx, player, game: { world, player, time: 0 } };
+  // Stubs: observe and vignette read only these fields, so the full Player/Game are not built (one cast each).
+  const player = { hp: 100, maxHp: 100, x: 0, y: 0, stats: { orbit: 0 } } as Player;
+  return { world, fx, player, game: { world, player, time: 0 } as Game };
 };
-const live = (fx) => {
+const live = (fx: Fx) => {
   let n = 0;
   for (let k = 0; k < POOL; k++) if (fx.p.life[k] > 0) n++;
   return n;
@@ -96,13 +100,13 @@ test('game.onKill drives fx.kill for any mode; arena also bursts gems and shakes
   const fx = createFx(50000, () => 0.5);
   const rooms = createGame({ mode: createRooms(), rng: seeded(1), input: { x: 0, y: 0 }, fx });
   const j = spawnEnemy(rooms.world, ENEMY.CHASER, 100, 100);
-  rooms.onKill(j);
+  rooms.onKill!(j);
   assert.equal(live(fx), 6);
 
   const fx2 = createFx(50000, () => 0.5);
   const arena = createGame({ mode: createArena(), bounds: { w: 3000, h: 2000 }, rng: seeded(1), input: { x: 0, y: 0 }, fx: fx2 });
   const k = spawnEnemy(arena.world, ENEMY.CHASER, 1500, 1000);
-  arena.onKill(k);
+  arena.onKill!(k);
   assert.equal(live(fx2), 11); // ring + 5 dots + 5 gold
   assert.equal(arena.world.kindCount[KIND.GEM], 1);
   arena.time = BOSS_EVERY;
@@ -111,7 +115,7 @@ test('game.onKill drives fx.kill for any mode; arena also bursts gems and shakes
 });
 
 test('fx never changes the simulation: a seeded arena runs identically with and without it', () => {
-  const run = (withFx) => {
+  const run = (withFx: boolean) => {
     const game = createGame({
       capacity: 5000,
       bounds: { w: 3000, h: 2000 },
@@ -125,8 +129,8 @@ test('fx never changes the simulation: a seeded arena runs identically with and 
       if (game.offer) choose(game, game.offer[0]);
       tick(game, 1 / 60);
       if (withFx) {
-        game.fx.observe(game);
-        game.fx.update(1 / 60);
+        game.fx!.observe(game);
+        game.fx!.update(1 / 60);
       }
     }
     let h = 0;

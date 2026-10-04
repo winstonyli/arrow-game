@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validate, toCode, fromCode, ReplayError, MAX_TICKS } from '../src/replay/codec.ts';
+import type { ReplayErrorCode } from '../src/replay/codec.ts';
 import { fakeReplay } from '../scripts/lib/fake-replay.js';
 
-const rejects = (fn, code) =>
+const rejects = (fn: () => Promise<unknown>, code?: ReplayErrorCode) =>
   assert.rejects(fn, (e) => e instanceof ReplayError && (code ? e.code === code : true));
-const throwsCode = (fn, code) =>
+const throwsCode = (fn: () => unknown, code: ReplayErrorCode) =>
   assert.throws(fn, (e) => e instanceof ReplayError && e.code === code);
 
 test('validate accepts a good replay and returns an equal copy', () => {
@@ -68,7 +69,7 @@ test('AG0 (uncompressed) codes decode too', async () => {
 });
 
 // Deterministic pseudo-random replays with `runs` input runs of one tick each (incompressible-ish).
-function noisyReplay(runs, seed = 1) {
+function noisyReplay(runs: number, seed = 1) {
   let x = seed;
   const rnd = () => ((x = (Math.imul(x, 1103515245) + 12345) >>> 0) % 255) - 127;
   return fakeReplay({ ticks: runs, inputs: Array.from({ length: runs }, () => [1, rnd(), rnd()]), result: { time: runs / 60 } });
@@ -81,7 +82,7 @@ test('validate returns a normalized copy: unknown fields and __proto__ dropped',
   assert.deepEqual(v, r);
   assert.equal(Object.hasOwn(v, '__proto__'), false);
   assert.equal(Object.getPrototypeOf(v), Object.prototype);
-  assert.equal({}.polluted, undefined);
+  assert.equal(({} as { polluted?: unknown }).polluted, undefined); // cast: probes Object.prototype for pollution
   assert.notEqual(v.inputs, junk.inputs); // a copy, not the caller's arrays
   assert.deepEqual(Object.keys(v), ['v', 'sim', 'engine', 'mode', 'seed', 'ticks', 'inputs', 'picks', 'result', 'savedAt']);
 });
