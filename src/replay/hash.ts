@@ -25,6 +25,10 @@ export function stateHash(g: Game): number {
     mix(w.gen[i]);
     mix(w.pierce[i]);
     mix(w.bounce[i]);
+    if (w.slowT[i] !== 0 || w.burnT[i] !== 0) { // only while a status runs, so states without one hash as before
+      num(w.slowT[i]);
+      num(w.burnT[i]);
+    }
   }
   for (const k of ['x', 'y', 'hp', 'cd', 'invuln'] as const) num(g.player[k]);
   for (const { id } of WEAPONS) mix(g.player.stats.weapons[id] ?? 0);

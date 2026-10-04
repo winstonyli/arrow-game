@@ -12,6 +12,7 @@ import { BLAST_CAP } from '../src/game/modifiers.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
+import { stateHash } from '../src/replay/hash.ts';
 import type { Game, GameFx } from '../src/game/game.ts';
 
 const arenaGame = () => createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
@@ -353,4 +354,20 @@ test('knockback cues nothing for a kill, an unflagged hit, a zero direction, lev
   g.world.x[w] = g.bounds.w - g.world.radius[w]; // against the right wall
   hitEnemy(g, w, 1, HIT_KNOCK, 1, 0);
   assert.deepEqual(calls, []);
+});
+
+test('stateHash changes when a status timer is set on a live enemy and is restored when it clears', () => {
+  const g = arenaGame();
+  const j = at(g, 100);
+  const base = stateHash(g);
+  g.world.slowT[j] = 1.5;
+  const slowed = stateHash(g);
+  assert.notEqual(slowed, base);
+  g.world.slowT[j] = 0;
+  g.world.burnT[j] = 2;
+  const burning = stateHash(g);
+  assert.notEqual(burning, base);
+  assert.notEqual(burning, slowed);
+  g.world.burnT[j] = 0;
+  assert.equal(stateHash(g), base);
 });
