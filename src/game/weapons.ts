@@ -3,6 +3,8 @@ import { SHOCKWAVE, createShockState } from './weapons/shockwave.ts';
 import type { ShockState } from './weapons/shockwave.ts';
 import { CHAIN, createChainState } from './weapons/chain.ts';
 import type { ChainState } from './weapons/chain.ts';
+import { BOOMERANG, createBoomState } from './weapons/boomerang.ts';
+import type { BoomState } from './weapons/boomerang.ts';
 import type { Game } from './game.ts';
 import type { PlayerStats } from './player.ts';
 
@@ -21,11 +23,11 @@ export interface WeaponDef {
   update?: (game: Game, level: number, dt: number) => number; // runs each tick while owned; returns kills
 }
 
-export const WEAPONS: WeaponDef[] = [BLADE, SHOCKWAVE, CHAIN];
+export const WEAPONS: WeaponDef[] = [BLADE, SHOCKWAVE, CHAIN, BOOMERANG];
 
 // Per-run weapon state, on game.wstate: advanced by weaponSystem, hashed by stateHash, read by the renderers.
-export interface WeaponState { shock: ShockState; chain: ChainState }
-export const createWeaponState = (): WeaponState => ({ shock: createShockState(), chain: createChainState() });
+export interface WeaponState { shock: ShockState; chain: ChainState; boom: BoomState }
+export const createWeaponState = (): WeaponState => ({ shock: createShockState(), chain: createChainState(), boom: createBoomState() });
 
 // Runs every owned weapon that has an update. Orbit blades have none (orbitSystem runs them). Returns kills.
 export function weaponSystem(game: Game, dt: number): number {

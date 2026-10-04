@@ -14,6 +14,7 @@ import { seeded } from '../src/core/math.ts';
 import { ENEMY_TYPES } from '../src/game/enemies.ts';
 import { updateShockwave, SHOCK_LEVELS } from '../src/game/weapons/shockwave.ts';
 import { updateChain, CHAIN_LEVELS, CHAIN_LIFE, CHAIN_FALLOFF } from '../src/game/weapons/chain.ts';
+import { updateBoomerang, BOOM_LEVELS, BOOM_RADIUS } from '../src/game/weapons/boomerang.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import type { Game } from '../src/game/game.ts';
 
@@ -278,4 +279,83 @@ test("chain lightning hits jumps + 1 distinct targets at every level, with that 
     assert.equal(ids.filter((j) => damage(g, j) > 0).length, L.jumps + 1, `level ${lv}`);
     assert.ok(Math.abs(damage(g, ids[0]) - L.damage) < 1e-3, `level ${lv}`);
   }
+});
+
+test('a boomerang flies out toward the nearest enemy, damages it on the way, returns and goes idle', () => {
+  const g = arenaGame();
+  const e = at(g, 200);
+  const phases = new Set<number>();
+  for (let k = 0; k < 400 && !(phases.has(2) && g.wstate.boom.b[0].phase === 0); k++) {
+    settle(g);
+    updateBoomerang(g, 1, 1 / 60);
+    phases.add(g.wstate.boom.b[0].phase);
+  }
+  assert.deepEqual([...phases].sort(), [0, 1, 2]);
+  assert.ok(damage(g, e) > 0);
+  assert.ok(g.wstate.boom.b[0].cd > 0); // relaunch cooldown running
+});
+
+test('boomerang contact damage is its damage rate times dt, scaled by Power Shot', () => {
+  const g = arenaGame();
+  g.player.stats.damageMult = 2;
+  const e = at(g, 300);
+  const b = g.wstate.boom.b[0];
+  b.phase = 1;
+  b.x = g.player.x + 300;
+  b.y = g.player.y;
+  b.dx = 1;
+  b.dy = 0;
+  b.dist = 0;
+  settle(g);
+  updateBoomerang(g, 1, 0.01);
+  assert.ok(Math.abs(damage(g, e) - BOOM_LEVELS[0].dps * 2 * 0.01) < 1e-3);
+});
+
+test('boomerang count follows the level: two are out by one second at level 3', () => {
+  const g = arenaGame();
+  at(g, 150);
+  for (let k = 0; k < 60; k++) {
+    settle(g);
+    updateBoomerang(g, 3, 1 / 60);
+  }
+  assert.equal(g.wstate.boom.b.filter((b) => b.phase !== 0).length, BOOM_LEVELS[2].count);
+});
+
+test('a boomerang does not launch without a target in range, and a kill is counted', () => {
+  const g = arenaGame();
+  settle(g);
+  updateBoomerang(g, 1, 1 / 60);
+  assert.equal(g.wstate.boom.b[0].phase, 0);
+  const e = spawnEnemy(g.world, ENEMY.CHASER, g.player.x + 100, g.player.y);
+  g.world.hp[e] = 1;
+  let kills = 0;
+  for (let k = 0; k < 120; k++) {
+    settle(g);
+    kills += updateBoomerang(g, 1, 1 / 60);
+  }
+  assert.equal(kills, 1);
+  assert.equal(g.world.kind[e], KIND.NONE);
+});
+
+test('boomerang radius is the size the renderers draw', () => {
+  assert.equal(BOOM_RADIUS, 10);
+});
+
+test('a boomerang ignores an enemy despawned after the grid was built', () => {
+  const g = arenaGame();
+  const dead = at(g, 300);
+  settle(g);
+  g.world.hp[dead] = 0; // as after a contact or blade kill earlier in the tick: a stale slot has hp <= 0
+  g.world.despawn(dead);
+  const b = g.wstate.boom.b[0];
+  b.phase = 1;
+  b.x = g.player.x + 300;
+  b.y = g.player.y;
+  b.dx = 1;
+  b.dy = 0;
+  b.dist = 0;
+  let killed = 0;
+  g.onKill = () => killed++;
+  assert.equal(updateBoomerang(g, 1, 0.01), 0);
+  assert.equal(killed, 0);
 });

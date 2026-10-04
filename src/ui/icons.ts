@@ -14,6 +14,7 @@ const PATHS: Record<string, string> = {
   blade: '<circle cx="12" cy="12" r="3"/><path d="M12 3a9 9 0 019 9"/>',
   shockwave: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/>',
   chain: '<path d="M13 2L5 13h6l-2 9 10-13h-6z"/>',
+  boomerang: '<path d="M5 5c9 0 14 5 14 14C10 19 5 14 5 5z"/>',
   heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 10c0 5.5-7 10-7 10z"/>',
   skull: '<path d="M5 12a7 7 0 1114 0v4H5z"/><path d="M9 20v-4M15 20v-4"/><circle cx="9.5" cy="12" r="1"/><circle cx="14.5" cy="12" r="1"/>',
   pause: '<path d="M8 5v14M16 5v14"/>',
