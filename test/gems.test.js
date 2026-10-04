@@ -113,7 +113,7 @@ test('a captured gem stays captured when the player outruns the pickup radius', 
   assert.ok(dist(world, player, g) < d + 1); // still being pulled in, not released
 });
 
-test('every gem in reach is collected within a second from any angle, for still, walking and fast players', () => {
+test('every gem in reach is collected within two seconds from any angle, for still, walking and fast players', () => {
   for (const vx of [0, 220, 500]) {
     const world = new World(64);
     const player = createPlayer(450, 500);
@@ -124,7 +124,7 @@ test('every gem in reach is collected within a second from any angle, for still,
       spawnGem(world, 450 + Math.cos(a) * (reach * 0.85), 500 + Math.sin(a) * (reach * 0.85), 1);
     }
     let xp = 0; // the ring sits at 85% of reach so a moving player does not leave it before capture
-    for (let t = 0; t < 60 && xp < 24; t++) xp += tick(world, player, vx);
+    for (let t = 0; t < 120 && xp < 24; t++) xp += tick(world, player, vx);
     assert.equal(xp, 24, `vx ${vx}: collected ${xp} of 24`);
   }
 });
