@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { packInstances, STRIDE } from '../src/render/webgl.ts';
+import { createWebGLRenderer, packInstances, STRIDE } from '../src/render/webgl.ts';
 import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.ts';
 import { createFx } from '../src/render/fx.ts';
@@ -130,4 +130,14 @@ test('layers draw gems, enemies, enemy projectiles, arrows, then particles, blad
   assert.deepEqual([0, 1, 2, 3].map(pal), [T + 4, ENEMY.CHASER, T, T + 1]); // gem, enemy, enemy arrow, arrow
   assert.equal(pal(9), T + 6); // blade
   assert.equal(pal(10), T + 2); // player
+});
+
+// main.ts falls back to Canvas2D only if construction throws; a null 2D context used to fail on the first frame instead.
+test('createWebGLRenderer throws at construction when a 2D context is unavailable', () => {
+  const canvas = (ctx: Record<string, unknown>) => ({ width: 0, height: 0, getContext: (k: string) => ctx[k] ?? null }) as unknown as HTMLCanvasElement; // fake: only getContext is read before the throw
+  const gl = canvas({ webgl2: {}, '2d': {} });
+  const view = { w: 900, h: 600 };
+  assert.throws(() => createWebGLRenderer(gl, canvas({ '2d': {} }), canvas({}), view), /2D canvas context unavailable/); // bg missing
+  assert.throws(() => createWebGLRenderer(gl, canvas({}), canvas({ '2d': {} }), view), /2D canvas context unavailable/); // hud missing
+  assert.throws(() => createWebGLRenderer(canvas({}), canvas({ '2d': {} }), canvas({ '2d': {} }), view), /WebGL2 unavailable/); // order unchanged
 });

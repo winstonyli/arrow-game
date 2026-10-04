@@ -197,6 +197,13 @@ export function createWebGLRenderer(canvas: HTMLCanvasElement, hudCanvas: HTMLCa
   const glOrNull = canvas.getContext('webgl2', { antialias: false, alpha: true }); // transparent: the background and grid sit on bgCanvas below
   if (!glOrNull) throw new Error('WebGL2 unavailable');
   const gl: WebGL2RenderingContext = glOrNull; // narrowed once, so the hoisted render() below sees it non-null
+  // Checked here, before any GL setup, so main's try/catch can fall back to Canvas2D. A null context used to fail on
+  // the first frame instead, inside the rAF callback, which stopped the loop and froze the game.
+  const bg2dOrNull = bgCanvas.getContext('2d');
+  const hud2dOrNull = hudCanvas.getContext('2d');
+  if (!bg2dOrNull || !hud2dOrNull) throw new Error('2D canvas context unavailable');
+  const bg2d: CanvasRenderingContext2D = bg2dOrNull;
+  const hud2d: CanvasRenderingContext2D = hud2dOrNull;
   const ext = gl.getExtension('WEBGL_debug_renderer_info');
   const adapter: string = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : 'unknown';
 
@@ -228,11 +235,8 @@ export function createWebGLRenderer(canvas: HTMLCanvasElement, hudCanvas: HTMLCa
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.viewport(0, 0, view.w, view.h);
   gl.clearColor(0, 0, 0, 0);
-  // DOM boundary, as in canvas.ts: a null 2D context is not checked here (it fails on first use, as before).
-  const bg2d = bgCanvas.getContext('2d') as CanvasRenderingContext2D;
 
   let data: Float32Array | null = null; // sized on first frame from the world's capacity
-  const hud2d = hudCanvas.getContext('2d') as CanvasRenderingContext2D; // DOM boundary, as bg2d
   const vignette = hud2d.createRadialGradient(view.w / 2, view.h / 2, view.h * 0.35, view.w / 2, view.h / 2, Math.hypot(view.w, view.h) / 2);
   vignette.addColorStop(0, 'rgba(248,81,73,0)');
   vignette.addColorStop(1, 'rgba(248,81,73,0.85)');

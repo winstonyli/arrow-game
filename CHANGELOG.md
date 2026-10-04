@@ -8,9 +8,10 @@ TypeScript, Vite and Bun; no gameplay or sim change (`SIM_VERSION` 2, `REPLAY_VE
 
 - Every file in `src/`, `test/` and `scripts/` is strict TypeScript (`strict`, no `any` escape hatches, erasable syntax only, explicit `.ts` import specifiers); `bun run typecheck` runs `tsc --noEmit`.
 - Vite serves the game (`bun run dev`, port 8000) and bundles it (`bun run build` to `dist/`, `bun run preview`); fonts are bundled from `assets/fonts/`. `scripts/serve.js` and the `start` script are gone.
-- Bun installs (`bun.lock`), runs the tests (`bun test`, 230 pass) and the scripts. The tests keep `node:test` imports, so `node --test test/*.test.ts` still runs them on V8 as a cross-engine check.
+- Bun installs (`bun.lock`), runs the tests (`bun test`, 231 pass) and the scripts. The tests keep `node:test` imports, so `node --test test/*.test.ts` still runs them on V8 as a cross-engine check.
 - `bun run bench:render` (`scripts/render-bench.ts`, was `render-bench.mjs`) measures the `vite build` output through `vite preview` instead of its own static server; it now cleans up its Chrome profile and handles Ctrl+Break / console close.
 - Benchmark tables in the README are labelled by engine: the existing sim and soak numbers are Node/V8; new Bun/JavaScriptCore runs and a new render baseline for the minified bundle are added beside them, not compared with them.
+- Fix: a missing 2D canvas context now makes the WebGL renderer throw at construction, so `main.ts` falls back to Canvas2D. It used to fail on the first frame inside the rAF callback, which stopped the loop and froze the game.
 
 ## v0.1.0
 `SIM_VERSION` 2, `REPLAY_VERSION` 1. First tagged release; unstable (0.x), nothing is promised to stay compatible.
