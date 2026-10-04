@@ -9,7 +9,7 @@ import { createSession } from '../src/replay/session.ts';
 import { SIM_VERSION } from '../src/replay/version.ts';
 import type { Game } from '../src/game/game.ts';
 
-for (const mode of ['arena', 'rooms']) {
+for (const mode of ['arena', 'rooms'] as const) {
   test(`a recorded ${mode} run replays to the identical state`, () => {
     const { game, replay } = driveLive({ mode, seed: 42, maxTicks: 3000 });
     validate(replay);

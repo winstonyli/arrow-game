@@ -10,8 +10,9 @@ import { createGame, tick, choose } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
 import { KIND } from '../src/core/world.ts';
+import type { Game } from '../src/game/game.ts';
 
-const arg = (name, dflt) => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
+const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
 const minutes = Number(arg('minutes', 10));
 const bot = arg('bot', 'still');
 const DT = 1 / 60;
@@ -22,9 +23,9 @@ if (bot === 'still') g.player.hp = g.player.maxHp = 1e9;
 
 // Flee enemies within FLEE px (1/d weighting), push off walls, and with nothing near, chase the nearest gem.
 const PRIORITY = ['multishot', 'rapid', 'power', 'blade', 'homing', 'pierce', 'regen', 'ricochet', 'magnet', 'swift'];
-const pick = (offer) => (bot === 'smart' ? [...offer].sort((a, b) => PRIORITY.indexOf(a) - PRIORITY.indexOf(b))[0] : offer[0]);
+const pick = (offer: string[]): string => (bot === 'smart' ? [...offer].sort((a, b) => PRIORITY.indexOf(a) - PRIORITY.indexOf(b))[0] : offer[0]);
 
-function steer(g) {
+function steer(g: Game): void {
   const { world, player, bounds } = g;
   const FLEE = 260;
   let fx = 0, fy = 0, gx = 0, gy = 0, gd = Infinity;

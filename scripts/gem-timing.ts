@@ -5,7 +5,7 @@ import { createPlayer } from '../src/game/player.ts';
 import { spawnGem, gemSystem } from '../src/game/gems.ts';
 
 const dt = 1 / 60;
-function collect(speed, angle = 0) {
+function collect(speed: number, angle = 0): number {
   const world = new World(8);
   const player = createPlayer(450, 500);
   player.vx = speed;
@@ -18,7 +18,7 @@ function collect(speed, angle = 0) {
   }
   return NaN;
 }
-const around = (speed) => {
+const around = (speed: number): string => {
   const ts = Array.from({ length: 24 }, (_, k) => collect(speed, (k / 24) * Math.PI * 2));
   return `mean ${(ts.reduce((a, b) => a + b, 0) / ts.length).toFixed(3)} s, worst ${Math.max(...ts).toFixed(3)} s`;
 };

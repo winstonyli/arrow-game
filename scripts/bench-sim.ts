@@ -11,8 +11,9 @@ import { KIND } from '../src/core/world.ts';
 import { ENEMY, enemyAISystem } from '../src/game/enemies.ts';
 import { movePlayer, autoFire } from '../src/game/player.ts';
 import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.ts';
+import type { Game } from '../src/game/game.ts';
 
-const arg = (name, dflt) => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
+const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
 const ns = arg('n', '1000,5000,10000,20000').split(',').map(Number);
 const scenarios = arg('scenario', 'dense,sparse,converge').split(',');
 const ticks = Number(arg('ticks', 300));
@@ -21,7 +22,7 @@ const WARMUP = 120;
 const DT = 1 / 60;
 const STAGES = ['ai', 'move', 'proj', 'grid', 'fire', 'collide', 'mode'];
 
-function build(scenario, n) {
+function build(scenario: string, n: number) {
   let bounds = BOUNDS;
   if (scenario === 'sparse') {
     const area = n * 2500;
@@ -34,10 +35,10 @@ function build(scenario, n) {
 
 // Same order as game.js tick(), with a clock around each stage. The cross-check against the
 // real tick() below flags drift if tick() is reordered.
-function timedTick(g, t) {
+function timedTick(g: Game, t: Record<string, number[]>): void {
   const { world, grid, player, bounds } = g;
   let t0 = performance.now();
-  const lap = (k) => {
+  const lap = (k: string) => {
     const t1 = performance.now();
     t[k].push(t1 - t0);
     t0 = t1;
@@ -59,9 +60,9 @@ function timedTick(g, t) {
   lap('mode');
 }
 
-const sorted = (a) => Float64Array.from(a).sort();
-const pct = (s, p) => s[Math.min(s.length - 1, Math.floor(s.length * p))];
-const f = (v) => v.toFixed(2).padStart(7);
+const sorted = (a: number[]): Float64Array => Float64Array.from(a).sort();
+const pct = (s: Float64Array, p: number): number => s[Math.min(s.length - 1, Math.floor(s.length * p))];
+const f = (v: number): string => v.toFixed(2).padStart(7);
 
 console.log(`cell ${cellSize}, node ${process.version}, ${ticks} ticks after ${WARMUP} warmup, ms per tick`);
 console.log(['scenario', 'N', 'tick', 'tick p95', ...STAGES, 'dropped'].map((h) => h.padStart(9)).join(''));
@@ -69,14 +70,14 @@ for (const scenario of scenarios) {
   for (const n of ns) {
     const g = build(scenario, n);
     for (let k = 0; k < WARMUP; k++) tick(g, DT);
-    const t = Object.fromEntries(STAGES.map((s) => [s, []]));
+    const t = Object.fromEntries(STAGES.map((s): [string, number[]] => [s, []]));
     for (let k = 0; k < ticks; k++) timedTick(g, t);
     const total = t.ai.map((_, k) => STAGES.reduce((acc, s) => acc + t[s][k], 0));
     const ts = sorted(total);
 
     const g2 = build(scenario, n); // cross-check: the real tick()
     for (let k = 0; k < WARMUP; k++) tick(g2, DT);
-    const real = [];
+    const real: number[] = [];
     for (let k = 0; k < ticks; k++) {
       const t0 = performance.now();
       tick(g2, DT);
