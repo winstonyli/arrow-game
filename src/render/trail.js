@@ -3,18 +3,17 @@
 //    a short per-slot position history and `bentTail` turns two samples of it into the tail;
 //  - the player and each orbit blade get the same tail from a ring of samples kept by fx.js.
 export const TRAIL_MAX = 80; // px cap on a tail's length
+export const TRAIL_PER_R = 8; // a mover's tail is also capped at this many of its radii, so small movers get short tails
 export const TRAIL_N = 10; // history samples per mover
 export const TRAIL_MID = 4; // age (in samples) of the tail's bend
 export const TRAIL_END = TRAIL_N - 1; // age of the tail's tip
 export const TRAIL_DT = 1 / 60; // seconds between history samples
 
-// Writes the tail vector (from the mover back along its path) to `out`. The tail is drawn from the mover's
-// centre, so `r` (its radius) is added, ramping in over the first 10 px of tail, to make the visible part
-// start at the rim: a slow, large enemy still shows a tail.
 // Turns the offsets from a mover's centre to its history samples at TRAIL_MID and TRAIL_END (mx, my, ex, ey)
 // into the tail's bend and tip, written to `out` (mx, my, ex, ey). The tail is drawn from the mover's centre, so
 // `r` (its radius) is added to the length, ramping in over the first 10 px, to make the visible part start at
-// the rim: a slow, large enemy still shows a tail. Both points scale together, keeping the shape; zero if the
+// the rim: a slow, large enemy still shows a tail. The length is capped at TRAIL_MAX and, when `r` is known,
+// at TRAIL_PER_R * r. Both points scale together, keeping the shape; zero if the
 // mover has not moved.
 export function bentTail(mx, my, ex, ey, out, r = 0) {
   const l = Math.hypot(ex, ey);
@@ -22,9 +21,10 @@ export function bentTail(mx, my, ex, ey, out, r = 0) {
     out.mx = out.my = out.ex = out.ey = 0;
     return;
   }
-  const k = Math.min(TRAIL_MAX, l + r * Math.min(1, l / 10)) / l;
+  const cap = r > 0 ? Math.min(TRAIL_MAX, TRAIL_PER_R * r) : TRAIL_MAX;
+  const k = Math.min(cap, l + r * Math.min(1, l / 10)) / l;
   const m = Math.hypot(mx, my) * k;
-  const km = m > TRAIL_MAX ? (k * TRAIL_MAX) / m : k;
+  const km = m > cap ? (k * cap) / m : k;
   out.mx = mx * km;
   out.my = my * km;
   out.ex = ex * k;

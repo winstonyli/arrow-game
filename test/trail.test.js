@@ -4,7 +4,7 @@ import { World, KIND } from '../src/core/world.js';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.js';
 import { spawnGem } from '../src/game/gems.js';
 import { createFx } from '../src/render/fx.js';
-import { bentTail, TRAIL_MAX, TRAIL_N, TRAIL_DT, TRAIL_MID, TRAIL_END } from '../src/render/trail.js';
+import { bentTail, TRAIL_PER_R, TRAIL_MAX, TRAIL_N, TRAIL_DT, TRAIL_MID, TRAIL_END } from '../src/render/trail.js';
 import { packInstances, STRIDE } from '../src/render/webgl.js';
 
 const out = { mx: 0, my: 0, ex: 0, ey: 0 };
@@ -47,6 +47,17 @@ test('the tail starts at the rim: radius is added, ramping in over the first 10 
   bentTail(-2, 0, -4.5, 0, out, 10); // 4.5 px of motion: only part of the radius is added
   assert.ok(Math.abs(out.ex + (4.5 + 10 * 0.45)) < 1e-9);
   bentTail(-100, 0, -5000, 0, out, 36);
+  assert.ok(Math.abs(out.ex + TRAIL_MAX) < 1e-9);
+});
+
+test('the tail cap scales with the mover radius, up to TRAIL_MAX', () => {
+  bentTail(-1000, 0, -5000, 0, out, 4); // a fast arrow
+  assert.ok(Math.abs(out.ex + TRAIL_PER_R * 4) < 1e-9 && out.mx >= out.ex);
+  bentTail(-1000, 0, -5000, 0, out, 10);
+  assert.ok(Math.abs(out.ex + Math.min(TRAIL_MAX, TRAIL_PER_R * 10)) < 1e-9);
+  bentTail(-1000, 0, -5000, 0, out, 36); // a boss
+  assert.ok(Math.abs(out.ex + TRAIL_MAX) < 1e-9);
+  bentTail(-1000, 0, -5000, 0, out); // radius unknown: the flat cap
   assert.ok(Math.abs(out.ex + TRAIL_MAX) < 1e-9);
 });
 
