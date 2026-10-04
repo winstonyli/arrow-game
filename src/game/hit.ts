@@ -1,6 +1,7 @@
 import { KIND } from '../core/world.ts';
 import type { HitFn } from '../core/systems.ts';
 import type { Game } from './game.ts';
+import { CRIT_CHANCE, CRIT_MULT } from './modifiers.ts';
 
 // What a hit is, for the modifiers (Tasks 2-5): CRIT = may crit, KNOCK = may push, NOBLAST = its kills do not explode.
 export const HIT_CRIT = 1;
@@ -13,6 +14,8 @@ export const HIT_NOBLAST = 4;
 export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: number, dy: number): number {
   const { world } = game;
   if (world.kind[j] !== KIND.ENEMY) return 0;
+  const s = game.player.stats;
+  if (flags & HIT_CRIT && s.crit > 0 && game.rng() < s.crit * CRIT_CHANCE) dmg *= CRIT_MULT;
   world.hp[j] -= dmg;
   if (world.hp[j] > 0) return 0;
   game.onKill?.(j);

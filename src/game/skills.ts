@@ -1,6 +1,8 @@
 import { MAX_WEAPONS, WEAPONS } from './weapons.ts';
 import type { WeaponDef } from './weapons.ts';
 import type { PlayerStats } from './player.ts';
+import { MOD_MAX, MODS } from './modifiers.ts';
+import type { ModDef } from './modifiers.ts';
 
 export interface Skill {
   id: string;
@@ -43,7 +45,19 @@ function weaponSkill(w: WeaponDef): Skill {
   };
 }
 
-export const SKILLS: Skill[] = [...PASSIVES, ...WEAPONS.map(weaponSkill)];
+function modifierSkill(m: ModDef): Skill {
+  return {
+    arena: true,
+    id: m.id,
+    name: m.name,
+    desc: m.desc,
+    available: (s) => s[m.key] < MOD_MAX,
+    tag: (s) => (s[m.key] === 0 ? 'NEW' : `Lv ${s[m.key]} → ${s[m.key] + 1}`),
+    apply: (s) => { s[m.key] = Math.min(MOD_MAX, s[m.key] + 1); },
+  };
+}
+
+export const SKILLS: Skill[] = [...PASSIVES, ...WEAPONS.map(weaponSkill), ...MODS.map(modifierSkill)];
 
 export const SKILLS_BY_ID = Object.fromEntries(SKILLS.map((s) => [s.id, s]));
 

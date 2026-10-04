@@ -6,7 +6,9 @@ import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
 import { createGame } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
-import { hitEnemy } from '../src/game/hit.ts';
+import { hitEnemy, HIT_CRIT } from '../src/game/hit.ts';
+import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
+import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
 import type { Game } from '../src/game/game.ts';
 
@@ -56,4 +58,48 @@ test('orbitSystem sends a blade tick through the hit callback with the rate dama
   assert.equal(calls.length, 1);
   assert.equal(calls[0][0], e);
   assert.ok(Math.abs(calls[0][1] - 6) < 1e-9); // 30 * 2 * 0.1
+});
+
+const withRng = (g: Game, values: number[]) => {
+  let i = 0;
+  g.rng = () => values[Math.min(i++, values.length - 1)];
+  return () => i; // draws so far
+};
+
+test('crit never draws without the modifier, nor for a hit that cannot crit', () => {
+  const g = arenaGame();
+  const draws = withRng(g, [0]);
+  const j = at(g, 100);
+  hitEnemy(g, j, 10, HIT_CRIT, 0, 0); // level 0
+  g.player.stats.crit = 5;
+  hitEnemy(g, j, 10, 0, 0, 0); // flag missing
+  assert.equal(draws(), 0);
+});
+
+test('crit doubles a flagged hit when the roll lands under the chance and not above it', () => {
+  const g = arenaGame();
+  g.player.stats.crit = 5; // 50%
+  withRng(g, [0.49, 0.5]);
+  const a = at(g, 100);
+  const b = at(g, 200);
+  const hp = g.world.hp[a];
+  hitEnemy(g, a, 10, HIT_CRIT, 0, 0);
+  hitEnemy(g, b, 10, HIT_CRIT, 0, 0);
+  assert.equal(g.world.hp[a], hp - 20);
+  assert.equal(g.world.hp[b], hp - 10);
+});
+
+test('the crit modifier is an arena skill that levels to 5 and shows its level step', () => {
+  const s = baseStats();
+  assert.equal(offerTag(s, 'crit'), 'NEW');
+  applySkill(s, 'crit');
+  assert.equal(s.crit, 1);
+  assert.equal(offerTag(s, 'crit'), 'Lv 1 → 2');
+  for (let k = 0; k < 9; k++) applySkill(s, 'crit');
+  assert.equal(s.crit, 5);
+  const crit = SKILLS.find((k) => k.id === 'crit');
+  assert.equal(crit?.available?.(s), false);
+  const rooms = pickChoices(seeded(3), 50, null, false);
+  assert.ok(!rooms.includes('crit'));
+  assert.ok(pickChoices(seeded(3), 50, null, true).includes('crit'));
 });
