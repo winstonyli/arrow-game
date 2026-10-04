@@ -430,8 +430,8 @@ test('patch damage scales with damageMult and level', () => {
 test('a surviving patch tick applies Frost and Ignite but never crits or pushes', () => {
   const g = arenaGame();
   const s = g.player.stats;
-  s.frost = 1; s.ignite = 1; s.crit = 5; s.knockback = 5; s.damageMult = 1;
-  const j = at(g, 0, 0);
+  s.frost = 1; s.ignite = 1; s.crit = 10; s.knockback = 5; s.damageMult = 1; // crit 10 = chance 1, so any crit flag would show
+  const j = at(g, 6, 0); // off-centre of the patch, so a knock would have a direction and move it
   settle(g);
   const x0 = g.world.x[j];
   updateFlame(g, 1, 1 / 60);
