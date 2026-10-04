@@ -13,9 +13,10 @@ export const FLASH_TIME = 0.08; // seconds an enemy stays white after a hit
 export const POOL = 512;
 export const DOT = 0;
 export const RING = 1;
-export const PAL_GEM = -1; // particle palette: an enemy type index, this for gem gold, or PAL_WHITE
-export const PAL_WHITE = -2; // crit sparks: no kill uses white
-export const PAL_DUST = -3; // knockback dust: grey
+// Particle palette: an enemy type index (>= 0), or one of the negative ids below.
+export const PAL_GEM = -1; // gem gold
+export const PAL_WHITE = -2; // crit ring and sparks: white
+export const PAL_DUST = -3; // knockback dust: grey (the cue palette is distinct from kill rings, which use enemy colours or gold)
 const TAU = Math.PI * 2;
 
 export type Fx = ReturnType<typeof createFx>;
@@ -155,7 +156,7 @@ export function createFx(capacity: number, rng: () => number = Math.random) {
       dots(x, y, 5, 50, 50, 2, 0.4, PAL_GEM);
     },
 
-    // A landed crit: a ring and fast white sparks, a palette no kill or gem uses.
+    // A landed crit: a ring and fast white sparks, white, unlike kill rings.
     crit(x: number, y: number): void {
       emit(x, y, 0, 0, 6, 90, 0.2, RING, PAL_WHITE);
       dots(x, y, 6, 110, 60, 2, 0.25, PAL_WHITE);
