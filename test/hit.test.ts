@@ -6,9 +6,10 @@ import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
 import { createGame, tick } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { updateShockwave } from '../src/game/weapons/shockwave.ts';
+import { updateChain } from '../src/game/weapons/chain.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
-import { hitEnemy, explosionSystem, HIT_CRIT, HIT_KNOCK } from '../src/game/hit.ts';
-import { BLAST_CAP } from '../src/game/modifiers.ts';
+import { hitEnemy, explosionSystem, HIT_CRIT, HIT_KNOCK, HIT_STATUS } from '../src/game/hit.ts';
+import { BLAST_CAP, FROST_SECS, IGNITE_SECS } from '../src/game/modifiers.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
@@ -370,4 +371,60 @@ test('stateHash changes when a status timer is set on a live enemy and is restor
   assert.notEqual(burning, slowed);
   g.world.burnT[j] = 0;
   assert.equal(stateHash(g), base);
+});
+
+test('a surviving HIT_STATUS hit sets the timers by level, refreshes rather than stacks, and a kill sets nothing', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  const j = at(g, 100);
+  hitEnemy(g, j, 1, HIT_STATUS, 0, 0); // levels are 0: nothing set
+  assert.equal(g.world.slowT[j], 0);
+  assert.equal(g.world.burnT[j], 0);
+  s.frost = 1;
+  hitEnemy(g, j, 1, HIT_STATUS, 0, 0); // only frost owned
+  assert.equal(g.world.slowT[j], FROST_SECS);
+  assert.equal(g.world.burnT[j], 0);
+  s.ignite = 1;
+  g.world.slowT[j] = 0.5; // partly run down: a re-hit refreshes to the full duration, it does not add
+  hitEnemy(g, j, 1, HIT_STATUS, 0, 0);
+  assert.equal(g.world.slowT[j], FROST_SECS);
+  assert.equal(g.world.burnT[j], IGNITE_SECS);
+  const k = at(g, 300);
+  assert.equal(hitEnemy(g, k, 1e6, HIT_STATUS, 0, 0), 1); // lethal: the slot is despawned, no timer is left behind
+  assert.equal(g.world.slowT[k], 0);
+  assert.equal(g.world.burnT[k], 0);
+});
+
+test('hits without HIT_STATUS (blades, boomerang, burn, blasts) never apply a status', () => {
+  const g = arenaGame();
+  g.player.stats.frost = 5;
+  g.player.stats.ignite = 5;
+  const j = at(g, 100);
+  hitEnemy(g, j, 1, 0, 0, 0);
+  hitEnemy(g, j, 1, HIT_CRIT | HIT_KNOCK, 1, 0); // crit/knock alone carry no status either
+  assert.equal(g.world.slowT[j], 0);
+  assert.equal(g.world.burnT[j], 0);
+});
+
+test('arrows, the Shockwave ring and Chain zaps carry HIT_STATUS', () => {
+  const g = arenaGame();
+  g.player.stats.frost = 1;
+  const a = at(g, 100);
+  g.hits.arrow(a, 1, 1, 0); // the persistent arrow callback
+  assert.equal(g.world.slowT[a], FROST_SECS);
+  const b = at(g, 120, 40);
+  applySkill(g.player.stats, 'shockwave');
+  settle(g);
+  g.wstate.shock.cd = 0;
+  tick(g, 1 / 60);
+  for (let t = 0; t < 120 && g.world.slowT[b] === 0; t++) tick(g, 1 / 60); // the ring reaches it
+  assert.ok(g.world.slowT[b] > 0, 'shockwave applies frost');
+  const g2 = arenaGame();
+  g2.player.stats.frost = 1;
+  applySkill(g2.player.stats, 'chain');
+  const c = at(g2, 80);
+  settle(g2);
+  g2.wstate.chain.cd = 0;
+  updateChain(g2, 1, 1 / 60); // called directly: tick's own arrows could also hit it and mask the zap
+  assert.ok(g2.world.slowT[c] > 0, 'chain applies frost');
 });

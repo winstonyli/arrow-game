@@ -1,5 +1,5 @@
 import { KIND } from '../../core/world.ts';
-import { hitEnemy, HIT_CRIT } from '../hit.ts';
+import { hitEnemy, HIT_CRIT, HIT_STATUS } from '../hit.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -45,7 +45,7 @@ export function updateShockwave(game: Game, level: number, dt: number): number {
     if (world.kind[j] !== KIND.ENEMY) continue;
     const d = Math.hypot(world.x[j] - s.x, world.y[j] - s.y);
     if (d <= prev || d > s.r) continue;
-    kills += hitEnemy(game, j, dmg, HIT_CRIT, 0, 0);
+    kills += hitEnemy(game, j, dmg, HIT_CRIT | HIT_STATUS, 0, 0);
   }
   if (s.r >= s.max) s.on = false;
   return kills;

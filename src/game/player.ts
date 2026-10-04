@@ -32,6 +32,8 @@ export function baseStats() {
     knockback: 0,
     explode: 0,
     vamp: 0,
+    frost: 0, // status modifier levels (0..5): slow and burn per level, see game/modifiers.ts
+    ignite: 0,
   };
 }
 

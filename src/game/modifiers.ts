@@ -9,6 +9,10 @@ export const BLAST_BASE = 40; // px radius at level 0
 export const BLAST_PER = 10; // px radius per level
 export const BLAST_DMG = 10; // damage per level (x damageMult)
 export const BLAST_CAP = 64; // queued blasts per tick; the overflow is dropped
+export const FROST_SLOW = 0.12; // speed lost per level while slowed
+export const FROST_SECS = 2;
+export const IGNITE_DPS = 6; // per level, x damageMult
+export const IGNITE_SECS = 3;
 
 export type ModKey = 'crit' | 'knockback' | 'explode' | 'vamp';
 export interface ModDef { id: string; name: string; desc: string; key: ModKey }
