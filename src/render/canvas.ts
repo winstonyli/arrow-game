@@ -91,7 +91,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     ctx.fill();
   }
 
-  // Enemies under a status, drawn over their type colour: icy blue when slowed, then orange when burning (burning wins).
+  // Enemies under a status, drawn over their type colour: cyan when slowed, then red-orange when burning (burning wins).
   function tinted(world: World): void {
     for (let s = 0; s < 2; s++) {
       const timer = s ? world.burnT : world.slowT;
