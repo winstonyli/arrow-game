@@ -11,7 +11,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 - Rooms keeps its original offer pool (weapons are arena-only).
 - The slot cap is enforced and tested but not reachable yet: four weapons fill four of the five slots.
 - Every enemy hit now goes through one function, `hitEnemy` (`src/game/hit.ts`), instead of each weapon damaging enemies itself.
-- Four arena-only hit modifiers, levelled to 5: Critical Hits, Knockback, Vampiric, Explosive Kills (numbers in the README). Boomerang and Orbit Blade get neither Crit nor Knockback; explosions drain once per tick from a 64-slot queue.
+- Four arena-only hit modifiers, levelled to 5: Critical Hits, Knockback, Vampiric, Explosive Kills (numbers in the README). Boomerang and Orbit Blade get neither Crit nor Knockback; explosions drain once per tick from a 64-slot queue and show a ring at the blast radius. Knockback follows the hit direction, so a ricochet can push an enemy toward the player.
 - `test/modifiers-determinism.test.ts` pins the state hashes of a 60 s maxed-build run, run by both Bun and Node as a cross-engine check.
 - Checked in a visible browser pane (2026-10-04, WebGL and `?renderer=canvas2d`): NEW and level-step cards, shockwave ring, chain zap, boomerang, blades and the HUD level strip draw, with no console errors. Not checked: render-bench cost, held-key play, a long run.
 
