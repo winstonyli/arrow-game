@@ -643,8 +643,15 @@ test('a mine kill counts once, heals and queues an explosion; over a crowd kills
     g2.world.hp[e] = 0.01;
   }
   const seen: number[] = [];
-  g2.onKill = (x) => seen.push(g2.world.gen[x] * 100000 + x);
+  const orig = g2.onKill!; // keep the arena's own onKill so splitters split
+  g2.onKill = (x) => {
+    seen.push(g2.world.gen[x] * 100000 + x);
+    orig(x);
+  };
   const k2 = run(g2, 5, 1);
+  let swarmers = 0;
+  for (let i = 0; i < g2.world.high; i++) if (g2.world.kind[i] === KIND.ENEMY && g2.world.type[i] === ENEMY.SWARMER) swarmers++;
+  assert.ok(swarmers > 0, 'splitters split, so swarmers appeared');
   assert.equal(k2, seen.length);
   assert.equal(new Set(seen).size, seen.length);
 });

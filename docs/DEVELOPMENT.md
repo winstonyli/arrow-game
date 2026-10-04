@@ -14,13 +14,13 @@ Browser archer roguelite (Archero / arrow.io style). Strict TypeScript bundled b
 - Design specs and plans are kept out of the published tree.
 
 ## Build
-`bun run build` (Vite 8.3.2) bundles 53 modules into `dist/` in ~0.2 s. Sizes on 2026-10-04 (`du -sh dist`: 117K on disk, 103,537 bytes of files):
+`bun run build` (Vite 8.3.2) bundles 53 modules into `dist/` in ~0.2 s. Sizes on 2026-10-04, after Mines (`du -sh dist`: 121K on disk, 109,275 bytes of files; gzip is Node `zlib.gzipSync` at the default level):
 
 | file | bytes | gzip |
 |---|---|---|
-| `index.html` | 539 | 331 |
-| `assets/index-*.js` (the whole game, minified) | 67,694 | 26,673 |
-| `assets/index-*.css` | 8,680 | 2,234 |
+| `index.html` | 539 | 318 |
+| `assets/index-*.js` (the whole game, minified) | 73,432 | 28,764 |
+| `assets/index-*.css` | 8,680 | 2,209 |
 | `assets/share-tech-mono-latin-400-normal-*.woff2` | 13,500 | - |
 | `assets/orbitron-latin-500-normal-*.woff2` | 6,596 | - |
 | `assets/orbitron-latin-700-normal-*.woff2` | 6,528 | - |
@@ -104,17 +104,17 @@ Arena only, levelled 1 to 5 (`MOD_MAX`), offered and taken like weapons but they
 | Modifier | Effect per level | Applies to |
 |---|---|---|
 | Critical Hits (`crit`) | +10% chance to deal double damage (x2) | arrows, Shockwave, Chain Lightning |
-| Knockback (`knockback`) | pushes a surviving enemy back 10 px, along the hit direction | arrows, Chain Lightning |
+| Knockback (`knockback`) | pushes a surviving enemy back 10 px, along the hit direction | arrows, Chain Lightning, Mines |
 | Vampiric (`vamp`) | each kill heals 1 HP (capped at max HP) | every kill |
-| Frost (`frost`) | a surviving hit slows the enemy: -12% speed per level (floor 40% at level 5) for 2 s; a new hit refreshes the timer, it does not stack; icy cyan tint (`FROST_TINT`) | arrows, Shockwave, Chain Lightning |
-| Ignite (`ignite`) | a surviving hit sets the enemy burning: 6 damage per second per level x `damageMult` for 3 s; refreshes, does not stack; burn damage never crits, pushes or re-applies a status, and a burn kill still heals (Vampiric) and explodes; red-orange tint (`IGNITE_TINT`, wins over cyan); the burn lasts exactly 180 ticks and a burn kill's blast drains the same tick (`statusSystem` runs before `explosionSystem`) | arrows, Shockwave, Chain Lightning |
+| Frost (`frost`) | a surviving hit slows the enemy: -12% speed per level (floor 40% at level 5) for 2 s; a new hit refreshes the timer, it does not stack; icy cyan tint (`FROST_TINT`) | arrows, Shockwave, Chain Lightning, Flame trail, Mines |
+| Ignite (`ignite`) | a surviving hit sets the enemy burning: 6 damage per second per level x `damageMult` for 3 s; refreshes, does not stack; burn damage never crits, pushes or re-applies a status, and a burn kill still heals (Vampiric) and explodes; red-orange tint (`IGNITE_TINT`, wins over cyan); the burn lasts exactly 180 ticks and a burn kill's blast drains the same tick (`statusSystem` runs before `explosionSystem`) | arrows, Shockwave, Chain Lightning, Flame trail, Mines |
 | Explosive Kills (`explode`) | a kill explodes: radius 40 + 10 px x level, damage 10 x level x `damageMult` to every enemy that overlaps it (centre within radius + its own radius); a gold ring marks the radius | every kill except one caused by an explosion |
 
 At very high Swift Feet the 64-patch Flame trail ring overwrites the oldest live patches, so the trail shortens. Orbit Blade and Boomerang deliberately deal contact damage without `HIT_TICK`, so they still flash the enemy and count as hits. Boomerang and Orbit Blade hits get neither Crit nor Knockback (they still trigger Vampiric and Explosive). Explosions do not chain, never crit and never knock back. Knockback is along the hit direction, not away from the player, so a ricocheting arrow can push an enemy toward the player (up to 10 px x level); contact damage is still limited only by invulnerability frames, and clamping to the arena is the one guard. A kill only queues its blast; `explosionSystem` drains the queue once per tick, after the weapons, from a fixed 64-slot buffer (`BLAST_CAP`, the overflow is dropped). `test/modifiers-determinism.test.ts` runs a maxed build (all six weapons and all six modifiers at level 5; `applySkill` does not check slots) for 60 s and pins three state hashes, so Bun and Node must agree; it also asserts that slowing, burning, fire patches and mines all occur and that a mine detonates (a slot cleared well before `MINE_LIFE`; expiry does not blast). The 5-slot cap leaves four non-bow slots, so a real run holds at most four of the six weapons.
 
 Adding a weapon: write a def with a level table and an `update` (or `onLevel` if it caches a stat), register it in `WEAPONS`, add an icon, a state field in `WeaponState` and a `stateHash` line for that state (Mines hashes `on` for every slot, but `x`, `y` and `age` only for live slots, plus `started`, `lx`, `ly` and `cd`) (levels are hashed from `WEAPONS` automatically), then regenerate the goldens (`SIM_VERSION` bump).
 
-Known gaps (found in review, none blocking): the goldens exercise little of the new content (the arena golden picks only Swift Feet and Orbit Blade, so it exercises neither Frost nor Ignite, the rooms golden bow skills), so Shockwave, Chain Lightning, Boomerang, Flame trail, Mines and the six modifiers are covered by the maxed-build determinism test (all six weapons and all six modifiers, three hashes checked on both Bun and Node) rather than by a golden; `damageMult`, `cooldownMult` and `bladeDps` are not hashed (like the other stats); `Grid.nearest` assumes an enemy grid; with 6 or more Swift Feet the player outruns a returning boomerang (450 px/s) and it relaunches late; Chain lightning's WebGL dots skip each segment's endpoint (Canvas2D draws the full line); per-level range/dps and return-pass damage for Boomerang, and a stale-target test for Shockwave, are untested; the soak numbers above predate Flame trail, Mines and the modifiers (the smart bot's `PRIORITY` now lists them, weapons first, then modifiers, so re-measure before comparing).
+Known gaps (found in review, none blocking): the goldens exercise little of the new content (the arena golden picks only Swift Feet and Shockwave, so it exercises no modifier, neither Frost nor Ignite, the rooms golden bow skills), so Orbit Blade, Chain Lightning, Boomerang, Flame trail, Mines, Shockwave beyond level 1 and the six modifiers are covered by the maxed-build determinism test (all six weapons and all six modifiers, three hashes checked on both Bun and Node) rather than by a golden; `damageMult`, `cooldownMult` and `bladeDps` are not hashed (like the other stats); `Grid.nearest` assumes an enemy grid; with 6 or more Swift Feet the player outruns a returning boomerang (450 px/s) and it relaunches late; Chain lightning's WebGL dots skip each segment's endpoint (Canvas2D draws the full line); per-level range/dps and return-pass damage for Boomerang, and a stale-target test for Shockwave, are untested; the soak numbers above predate Flame trail, Mines and the modifiers (the smart bot's `PRIORITY` now lists them, weapons first, then modifiers, so re-measure before comparing).
 
 Deferred: the remaining weapons (Meteor, Beam, Daggers, Drone); an upgrade-variety round (per-weapon branches); Shockwave has no knockback. Checked in a visible browser pane on 2026-10-04 (WebGL and `?renderer=canvas2d`, weapons forced through the console): effects, NEW / level-step cards and the HUD level strip draw and the console stays clean. Not done: render-bench with weapons idle, held-key play, a natural long run.
 
