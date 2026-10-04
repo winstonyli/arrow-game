@@ -3,8 +3,8 @@
 Versioning and what counts as a release: see "Versioning and commits" in the README. Each entry names the
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
-## v0.2.0 (unreleased)
-TypeScript, Vite and Bun; no gameplay or sim change (`SIM_VERSION` 2, `REPLAY_VERSION` 1). The golden fixtures are byte-identical to v0.1.0 and still reproduce, so replays recorded on v0.1.0 stay valid. `package.json` reads `0.2.0-dev` until the owner cuts the release.
+## v0.2.0
+TypeScript, Vite and Bun; no gameplay or sim change (`SIM_VERSION` 2, `REPLAY_VERSION` 1). The golden fixtures are byte-identical to v0.1.0 and still reproduce, so replays recorded on v0.1.0 stay valid.
 
 - Every file in `src/`, `test/` and `scripts/` is strict TypeScript (`strict`, no `any` escape hatches, erasable syntax only, explicit `.ts` import specifiers); `bun run typecheck` runs `tsc --noEmit`.
 - Vite serves the game (`bun run dev`, port 8000) and bundles it (`bun run build` to `dist/`, `bun run preview`); fonts are bundled from `assets/fonts/`. `scripts/serve.js` and the `start` script are gone.
