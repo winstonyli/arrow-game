@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { World, KIND } from '../src/core/world.js';
+import { World, KIND } from '../src/core/world.ts';
 
 test('spawn returns distinct slots and tracks counts', () => {
   const w = new World(4);

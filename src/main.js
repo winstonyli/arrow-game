@@ -1,6 +1,6 @@
 import { createInput } from './input/input.js';
 import { createGame, tick, VIEW, CAPACITY } from './game/game.js';
-import { createStepper, startLoop } from './core/loop.js';
+import { createStepper, startLoop } from './core/loop.ts';
 import { createCanvasRenderer } from './render/canvas.js';
 import { createWebGLRenderer } from './render/webgl.js';
 import { createFx } from './render/fx.js';

@@ -1,5 +1,5 @@
-import { KIND } from '../core/world.js';
-import { clamp } from '../core/math.js';
+import { KIND } from '../core/world.ts';
+import { clamp } from '../core/math.ts';
 
 export function baseStats() {
   return {

@@ -1,9 +1,34 @@
-export const KIND = { NONE: 0, ENEMY: 1, PROJECTILE: 2, ENEMY_PROJECTILE: 3, GEM: 4 };
+export const KIND = { NONE: 0, ENEMY: 1, PROJECTILE: 2, ENEMY_PROJECTILE: 3, GEM: 4 } as const;
+export type Kind = (typeof KIND)[keyof typeof KIND];
 
 export class World {
-  constructor(capacity) {
+  capacity: number;
+  // Assigned in the constructor loop below.
+  x!: Float32Array;
+  y!: Float32Array;
+  vx!: Float32Array;
+  vy!: Float32Array;
+  radius!: Float32Array;
+  hp!: Float32Array;
+  damage!: Float32Array;
+  life!: Float32Array;
+  cd!: Float32Array;
+  type: Uint8Array;
+  pierce: Uint8Array;
+  bounce: Uint8Array;
+  lastHit: Int32Array;
+  lastHitGen: Uint16Array;
+  gen: Uint16Array;
+  kind: Uint8Array;
+  free: Uint32Array;
+  freeCount: number;
+  high: number;
+  dropped: number;
+  kindCount: Uint32Array;
+
+  constructor(capacity: number) {
     this.capacity = capacity;
-    for (const f of ['x', 'y', 'vx', 'vy', 'radius', 'hp', 'damage', 'life', 'cd']) {
+    for (const f of ['x', 'y', 'vx', 'vy', 'radius', 'hp', 'damage', 'life', 'cd'] as const) {
       this[f] = new Float32Array(capacity);
     }
     this.type = new Uint8Array(capacity);
@@ -21,11 +46,19 @@ export class World {
     this.kindCount = new Uint32Array(Object.keys(KIND).length);
   }
 
-  get count() {
+  get count(): number {
     return this.capacity - this.freeCount;
   }
 
-  spawn(kind, x, y, vx, vy, radius, hp) {
+  spawn(
+    kind: number,
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    radius: number,
+    hp: number,
+  ): number {
     if (this.freeCount === 0) {
       this.dropped++;
       return -1;
@@ -51,14 +84,14 @@ export class World {
     return i;
   }
 
-  despawn(i) {
+  despawn(i: number): void {
     this.gen[i]++;
     this.kindCount[this.kind[i]]--;
     this.kind[i] = KIND.NONE;
     this.free[this.freeCount++] = i;
   }
 
-  clearKind(kind) {
+  clearKind(kind: number): void {
     for (let i = 0; i < this.high; i++) if (this.kind[i] === kind) this.despawn(i);
   }
 }

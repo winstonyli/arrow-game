@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { World, KIND } from '../src/core/world.js';
-import { Grid } from '../src/core/grid.js';
+import { World, KIND } from '../src/core/world.ts';
+import { Grid } from '../src/core/grid.ts';
 import { createPlayer } from '../src/game/player.js';
 import { ENEMY, spawnEnemy } from '../src/game/enemies.js';
-import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.js';
+import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.ts';
 
 const bounds = { w: 900, h: 600 };
 

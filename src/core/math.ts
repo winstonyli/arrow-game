@@ -1,7 +1,7 @@
-export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+export const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
 // Deterministic PRNG (mulberry32) returning floats in [0, 1).
-export function seeded(seed) {
+export function seeded(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;

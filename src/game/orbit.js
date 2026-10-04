@@ -1,4 +1,4 @@
-import { KIND } from '../core/world.js';
+import { KIND } from '../core/world.ts';
 
 export const BLADE_ORBIT = 60; // px from the player's centre
 export const BLADE_RADIUS = 8;

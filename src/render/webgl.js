@@ -1,4 +1,4 @@
-import { KIND } from '../core/world.js';
+import { KIND } from '../core/world.ts';
 import { ENEMY_TYPES } from '../game/enemies.js';
 import { drawWorldGrid } from './grid-lines.js';
 import { POOL, RING } from './fx.js';

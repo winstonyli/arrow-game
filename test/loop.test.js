@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createStepper } from '../src/core/loop.js';
+import { createStepper } from '../src/core/loop.ts';
 import { TICK_DT } from '../src/replay/version.js';
 
 test('advance accumulates frame time into whole steps', () => {

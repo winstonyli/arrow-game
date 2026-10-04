@@ -6,11 +6,11 @@
 // N is the total entity count: half enemies, half player projectiles.
 import { createGame, tick, BOUNDS } from '../src/game/game.js';
 import { createStress } from '../src/modes/stress.js';
-import { seeded } from '../src/core/math.js';
-import { KIND } from '../src/core/world.js';
+import { seeded } from '../src/core/math.ts';
+import { KIND } from '../src/core/world.ts';
 import { ENEMY, enemyAISystem } from '../src/game/enemies.js';
 import { movePlayer, autoFire } from '../src/game/player.js';
-import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.js';
+import { moveSystem, projectileSystem, collisionSystem } from '../src/core/systems.ts';
 
 const arg = (name, dflt) => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
 const ns = arg('n', '1000,5000,10000,20000').split(',').map(Number);

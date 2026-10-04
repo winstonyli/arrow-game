@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { createGame, tick, choose } from '../src/game/game.js';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.js';
 import { createFx } from '../src/render/fx.js';
-import { createStepper } from '../src/core/loop.js';
-import { seeded } from '../src/core/math.js';
+import { createStepper } from '../src/core/loop.ts';
+import { seeded } from '../src/core/math.ts';
 import { createRooms } from '../src/modes/rooms.js';
 import { stateHash } from '../src/replay/hash.js';
 

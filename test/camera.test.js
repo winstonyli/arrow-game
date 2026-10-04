@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { followCamera } from '../src/core/camera.js';
+import { followCamera } from '../src/core/camera.ts';
 
 const view = { w: 900, h: 600 };
 const world = { w: 3000, h: 2000 };

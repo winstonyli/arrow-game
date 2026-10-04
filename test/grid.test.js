@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { World, KIND } from '../src/core/world.js';
-import { Grid } from '../src/core/grid.js';
+import { World, KIND } from '../src/core/world.ts';
+import { Grid } from '../src/core/grid.ts';
 
 function setup() {
   return { world: new World(100), grid: new Grid(640, 640, 64, 100) };

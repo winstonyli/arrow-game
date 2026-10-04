@@ -1,6 +1,18 @@
+import type { World } from './world.ts';
+
 // Uniform grid, rebuilt every tick by counting sort (no allocation).
 export class Grid {
-  constructor(width, height, cellSize, capacity) {
+  cs: number;
+  cols: number;
+  rows: number;
+  start: Int32Array;
+  cursor: Int32Array;
+  items: Uint32Array;
+  cell: Int32Array;
+  out: Uint32Array;
+  maxRadius: number;
+
+  constructor(width: number, height: number, cellSize: number, capacity: number) {
     this.cs = cellSize;
     this.cols = Math.ceil(width / cellSize);
     this.rows = Math.ceil(height / cellSize);
@@ -13,17 +25,17 @@ export class Grid {
     this.maxRadius = 0; // largest radius among the entities of the last rebuild
   }
 
-  _col(x) {
+  _col(x: number): number {
     const c = Math.floor(x / this.cs);
     return c < 0 ? 0 : c >= this.cols ? this.cols - 1 : c;
   }
 
-  _row(y) {
+  _row(y: number): number {
     const r = Math.floor(y / this.cs);
     return r < 0 ? 0 : r >= this.rows ? this.rows - 1 : r;
   }
 
-  rebuild(world, wantKind) {
+  rebuild(world: World, wantKind: number): void {
     const { start, cursor, items, cell, cols } = this;
     start.fill(0);
     let maxR = 0;
@@ -43,7 +55,7 @@ export class Grid {
   }
 
   // Fills this.out with candidate indices; returns the count. Valid until the next gather().
-  gather(x, y, r) {
+  gather(x: number, y: number, r: number): number {
     const c0 = this._col(x - r);
     const c1 = this._col(x + r);
     const r0 = this._row(y - r);
@@ -58,7 +70,7 @@ export class Grid {
     return n;
   }
 
-  nearest(world, x, y, maxR) {
+  nearest(world: World, x: number, y: number, maxR: number): number {
     const n = this.gather(x, y, maxR);
     let best = -1;
     let bestD = maxR * maxR;

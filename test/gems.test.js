@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { World, KIND } from '../src/core/world.js';
+import { World, KIND } from '../src/core/world.ts';
 import { createPlayer, movePlayer } from '../src/game/player.js';
-import { moveSystem } from '../src/core/systems.js';
+import { moveSystem } from '../src/core/systems.ts';
 import { spawnGem, gemSystem, GEM_LIFE } from '../src/game/gems.js';
 
 const setup = () => ({ world: new World(20), player: createPlayer(450, 500) });

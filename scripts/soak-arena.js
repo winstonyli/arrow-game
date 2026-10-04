@@ -8,8 +8,8 @@
 // Usage: node scripts/soak-arena.js [--minutes=10] [--bot=still|kite|smart] [--seed=1]
 import { createGame, tick, choose } from '../src/game/game.js';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.js';
-import { seeded } from '../src/core/math.js';
-import { KIND } from '../src/core/world.js';
+import { seeded } from '../src/core/math.ts';
+import { KIND } from '../src/core/world.ts';
 
 const arg = (name, dflt) => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
 const minutes = Number(arg('minutes', 10));

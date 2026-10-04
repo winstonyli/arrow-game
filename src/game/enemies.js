@@ -1,4 +1,4 @@
-import { KIND } from '../core/world.js';
+import { KIND } from '../core/world.ts';
 
 export const ENEMY = { CHASER: 0, SHOOTER: 1, BOSS: 2, DUMMY: 3, SWARMER: 4, BRUISER: 5, SPLITTER: 6 };
 

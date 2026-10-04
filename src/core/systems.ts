@@ -1,7 +1,9 @@
-import { KIND } from './world.js';
-import { clamp } from './math.js';
+import { KIND } from './world.ts';
+import type { World } from './world.ts';
+import type { Grid } from './grid.ts';
+import { clamp } from './math.ts';
 
-export function moveSystem(world, dt) {
+export function moveSystem(world: World, dt: number): void {
   for (let i = 0; i < world.high; i++) {
     if (world.kind[i] === KIND.NONE) continue;
     world.x[i] += world.vx[i] * dt;
@@ -14,7 +16,7 @@ export const HOMING_TURN = 4; // rad/s
 
 // Turns a homing projectile's velocity toward the nearest enemy in range, keeping its speed. The grid was
 // last rebuilt before this tick's moves, so slots are checked by kind.
-function steer(world, grid, i, dt) {
+function steer(world: World, grid: Grid, i: number, dt: number): void {
   const n = grid.gather(world.x[i], world.y[i], HOMING_RANGE);
   let best = -1;
   let bestD = HOMING_RANGE * HOMING_RANGE;
@@ -41,7 +43,12 @@ function steer(world, grid, i, dt) {
 }
 
 // `grid` (optional): enables steering of projectiles flagged homing (world.type = 1).
-export function projectileSystem(world, dt, bounds, grid = null) {
+export function projectileSystem(
+  world: World,
+  dt: number,
+  bounds: { w: number; h: number },
+  grid: Grid | null = null,
+): void {
   for (let i = 0; i < world.high; i++) {
     const k = world.kind[i];
     if (k !== KIND.PROJECTILE && k !== KIND.ENEMY_PROJECTILE) continue;
@@ -75,14 +82,28 @@ export function projectileSystem(world, dt, bounds, grid = null) {
   }
 }
 
-function hurt(player, dmg) {
+// Minimal structural view of game/player's Player that the collision system touches (Task 3 unifies).
+export interface CollisionPlayer {
+  x: number;
+  y: number;
+  radius: number;
+  hp: number;
+  invuln: number;
+}
+
+function hurt(player: CollisionPlayer, dmg: number): void {
   if (player.invuln > 0) return;
   player.hp -= dmg;
   player.invuln = 0.5;
 }
 
 // grid must be rebuilt for KIND.ENEMY this tick; grid.maxRadius sizes the candidate search. onKill(enemyIndex), if given, runs before a killed enemy is despawned. Returns the number of enemies killed.
-export function collisionSystem(world, grid, player, onKill) {
+export function collisionSystem(
+  world: World,
+  grid: Grid,
+  player: CollisionPlayer,
+  onKill?: ((enemyIndex: number) => void) | null,
+): number {
   let kills = 0;
   for (let i = 0; i < world.high; i++) {
     const k = world.kind[i];

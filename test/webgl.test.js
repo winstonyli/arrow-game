@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { packInstances, STRIDE } from '../src/render/webgl.js';
-import { World, KIND } from '../src/core/world.js';
+import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.js';
 import { createFx } from '../src/render/fx.js';
 

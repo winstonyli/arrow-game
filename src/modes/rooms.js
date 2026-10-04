@@ -1,4 +1,4 @@
-import { KIND } from '../core/world.js';
+import { KIND } from '../core/world.ts';
 import { ENEMY, spawnEnemy } from '../game/enemies.js';
 import { pickChoices } from '../game/skills.js';
 

@@ -1,7 +1,7 @@
-import { World, KIND } from '../core/world.js';
-import { Grid } from '../core/grid.js';
-import { followCamera } from '../core/camera.js';
-import { moveSystem, projectileSystem, collisionSystem } from '../core/systems.js';
+import { World, KIND } from '../core/world.ts';
+import { Grid } from '../core/grid.ts';
+import { followCamera } from '../core/camera.ts';
+import { moveSystem, projectileSystem, collisionSystem } from '../core/systems.ts';
 import { createPlayer, movePlayer, autoFire } from './player.js';
 import { enemyAISystem } from './enemies.js';
 import { applySkill } from './skills.js';

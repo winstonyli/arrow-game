@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { World, KIND } from '../src/core/world.js';
+import { World, KIND } from '../src/core/world.ts';
 import { ENEMY, spawnEnemy, enemyAISystem } from '../src/game/enemies.js';
 
 test('spawnEnemy fills type, hp and contact damage', () => {

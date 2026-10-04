@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSfx, MAX_VOICES, MIN_GAP, STREAK_RESET, PENTATONIC } from '../src/audio/sfx.js';
 import { createFx } from '../src/render/fx.js';
-import { World } from '../src/core/world.js';
+import { World } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.js';
 
 // Records what would play. Voices never end on their own; call ctx.endAll() to finish them.

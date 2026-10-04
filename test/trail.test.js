@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { World, KIND } from '../src/core/world.js';
+import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.js';
 import { spawnGem } from '../src/game/gems.js';
 import { createFx } from '../src/render/fx.js';
@@ -8,7 +8,7 @@ import { bentTail, TRAIL_PER_R, TRAIL_MAX, TRAIL_N, TRAIL_MID, TRAIL_END } from 
 import { packInstances, STRIDE } from '../src/render/webgl.js';
 import { createGame, tick } from '../src/game/game.js';
 import { createArena } from '../src/modes/arena.js';
-import { seeded } from '../src/core/math.js';
+import { seeded } from '../src/core/math.ts';
 
 const out = { mx: 0, my: 0, ex: 0, ey: 0 };
 const len = (x, y) => Math.hypot(x, y);

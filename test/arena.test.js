@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, tick } from '../src/game/game.js';
 import { createArena, ARENA_BOUNDS, spawnRate, xpFor, spawnPoint, BOSS_EVERY, BASE_RATE, RATE_PER_SEC } from '../src/modes/arena.js';
-import { KIND } from '../src/core/world.js';
+import { KIND } from '../src/core/world.ts';
 import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../src/game/enemies.js';
-import { seeded } from '../src/core/math.js';
+import { seeded } from '../src/core/math.ts';
 
 const make = (seed = 1) =>
   createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(seed), input: { x: 0, y: 0 } });

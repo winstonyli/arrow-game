@@ -1,8 +1,8 @@
-import { KIND } from '../core/world.js';
+import { KIND } from '../core/world.ts';
 import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../game/enemies.js';
 import { spawnGem } from '../game/gems.js';
 import { pickChoices } from '../game/skills.js';
-import { clamp } from '../core/math.js';
+import { clamp } from '../core/math.ts';
 
 export const ARENA_BOUNDS = { w: 3000, h: 2000 };
 

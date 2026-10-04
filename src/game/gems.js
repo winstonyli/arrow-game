@@ -1,4 +1,4 @@
-import { KIND } from '../core/world.js';
+import { KIND } from '../core/world.ts';
 
 export const GEM_RADIUS = 5;
 export const GEM_LIFE = 60; // seconds before an uncollected gem despawns

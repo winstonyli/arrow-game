@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, tick } from '../src/game/game.js';
 import { createStress } from '../src/modes/stress.js';
-import { seeded } from '../src/core/math.js';
-import { KIND } from '../src/core/world.js';
+import { seeded } from '../src/core/math.ts';
+import { KIND } from '../src/core/world.ts';
 import { ENEMY } from '../src/game/enemies.js';
 
 const make = (opts) =>

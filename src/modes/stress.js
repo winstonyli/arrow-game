@@ -1,4 +1,4 @@
-import { KIND } from '../core/world.js';
+import { KIND } from '../core/world.ts';
 import { ENEMY, spawnEnemy } from '../game/enemies.js';
 
 // Steady-state load for benchmarks: holds `enemies` enemies and `projectiles` player projectiles

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, tick, choose } from '../src/game/game.js';
 import { createRooms } from '../src/modes/rooms.js';
-import { KIND } from '../src/core/world.js';
+import { KIND } from '../src/core/world.ts';
 import { ENEMY } from '../src/game/enemies.js';
 import { baseStats } from '../src/game/player.js';
 import { applySkill } from '../src/game/skills.js';
