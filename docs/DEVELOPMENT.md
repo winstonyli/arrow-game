@@ -34,7 +34,7 @@ Plan 1 (core + rooms mode) implemented; playable at `bun run dev`. Gameplay feel
 Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Plan 3 (arena mode + camera) implemented; play it at `/?mode=arena` (rooms stays the default at `/`).
 
 ## Branches
-`dev` is where work lands: feature branches (`feat/*`, `fix/*`) merge into `dev`. `main` only moves by fast-forward from `dev` when cutting a release, so it is always a tested release point. Until the first release, `main` deliberately sits at the repo's first commit as a baseline. Merging is the owner's decision; run `bun test` and `node --test test/*.test.ts` on the merged result first. There is no remote.
+`dev` is where work lands: feature branches (`feat/*`, `fix/*`) merge into `dev`. `main` only moves by fast-forward from `dev` when cutting a release, so it is always a tested release point. `main` currently sits at the v0.2.0 release; v0.3.0 is unreleased and lives on `dev`. Merging is the owner's decision; run `bun test` and `node --test test/*.test.ts` on the merged result first. Pushing branches and tags to the public remote is also the owner's call.
 
 ## Versioning and commits
 Three separate versions, each with one job:
