@@ -22,7 +22,7 @@ Three separate versions, each with one job:
 
 Commits are Conventional Commits, `type: summary`, scope optional. Types in use: `feat`, `fix`, `docs`, `test`, `perf`, `chore`, plus `tune` for balance and feel changes. Mark a breaking change with `!` (`feat!:`) or a `BREAKING CHANGE:` footer. Commit bodies explain why, and name any `SIM_VERSION` bump.
 
-Prereleases are tagged on `dev` at points the owner picks. First milestone, `v0.1.0-alpha.1`, needs the checklist below to pass; nothing is tagged yet. Release checklist:
+Prereleases are tagged on `dev` at points the owner picks. `v0.1.0` is the first tag (made after the checklist below passed); the next release number is chosen per release. Release checklist:
 1. `node --test` passes on the tagged commit.
 2. If `SIM_VERSION` changed, the goldens are regenerated and committed.
 3. `scripts/render-bench` and `npm run soak` have run, with CPU load and Defender state recorded next to the numbers.
