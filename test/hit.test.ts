@@ -8,8 +8,8 @@ import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { updateShockwave } from '../src/game/weapons/shockwave.ts';
 import { updateChain } from '../src/game/weapons/chain.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
-import { hitEnemy, explosionSystem, HIT_CRIT, HIT_KNOCK, HIT_STATUS } from '../src/game/hit.ts';
-import { BLAST_CAP, FROST_SECS, IGNITE_SECS } from '../src/game/modifiers.ts';
+import { hitEnemy, explosionSystem, statusSystem, HIT_CRIT, HIT_KNOCK, HIT_STATUS } from '../src/game/hit.ts';
+import { BLAST_CAP, FROST_SECS, IGNITE_SECS, IGNITE_DPS } from '../src/game/modifiers.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
@@ -429,7 +429,7 @@ test('arrows, the Shockwave ring and Chain zaps carry HIT_STATUS', () => {
   assert.ok(g2.world.slowT[c] > 0, 'chain applies frost');
 });
 
-test('tick slows a Frost-hit chaser: it covers less ground than an unhit twin and none without Frost', () => {
+test('tick slows a Frost-hit chaser: it covers less ground than an unhit twin (Frost 5 vs 0 over the same ticks)', () => {
   const run = (frost: number) => {
     const g = arenaGame();
     g.player.stats.frost = frost;
@@ -443,4 +443,81 @@ test('tick slows a Frost-hit chaser: it covers less ground than an unhit twin an
   const free = run(0);
   const slowed = run(5);
   assert.ok(slowed > 0 && slowed < free * 0.5, `slowed ${slowed} vs free ${free}`);
+});
+
+test('statusSystem decrements both timers, floors at 0, and burn damage scales with dt and level', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.ignite = 2;
+  const j = at(g, 100);
+  const hp0 = g.world.hp[j];
+  g.world.slowT[j] = 0.05;
+  g.world.burnT[j] = 1;
+  statusSystem(g, 0.1);
+  assert.ok(Math.abs(g.world.burnT[j] - 0.9) < 1e-6);
+  assert.equal(g.world.slowT[j], 0);
+  assert.ok(Math.abs(hp0 - g.world.hp[j] - IGNITE_DPS * 2 * s.damageMult * 0.1) < 1e-4);
+  const k = at(g, 200);
+  g.world.burnT[k] = 1;
+  statusSystem(g, 0.2); // twice the dt: twice the damage on a twin burning the same way
+  assert.ok(Math.abs(g.world.hp[k] - (hp0 - IGNITE_DPS * 2 * s.damageMult * 0.2)) < 1e-4);
+  assert.ok(Math.abs(g.world.hp[j] - (hp0 - IGNITE_DPS * 2 * s.damageMult * 0.3)) < 1e-4); // j burned again in the second call
+});
+
+test('statusSystem does nothing without a status level, and an expired timer stops burning', () => {
+  const g = arenaGame();
+  const j = at(g, 100);
+  g.world.burnT[j] = 1; // no levels: the system returns before touching the world
+  const hp0 = g.world.hp[j];
+  assert.equal(statusSystem(g, 0.5), 0);
+  assert.equal(g.world.burnT[j], 1);
+  assert.equal(g.world.hp[j], hp0);
+  g.player.stats.ignite = 1;
+  g.world.burnT[j] = 0; // expired: no damage
+  statusSystem(g, 0.5);
+  assert.equal(g.world.hp[j], hp0);
+});
+
+test('burn kills count once, heal (Vampiric), queue a blast (Explosive) and never apply a status', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.ignite = 5;
+  s.vamp = 2;
+  s.explode = 1;
+  s.frost = 1;
+  g.player.hp = g.player.maxHp - 10;
+  const hp = g.player.hp;
+  const j = at(g, 100);
+  g.world.hp[j] = 0.001;
+  g.world.burnT[j] = 1;
+  const seen: number[] = [];
+  g.onKill = (x) => seen.push(x);
+  assert.equal(statusSystem(g, 1 / 60), 1);
+  assert.deepEqual(seen, [j]);
+  assert.equal(g.player.hp, hp + 2);
+  assert.equal(g.blasts.n, 1);
+  const other = at(g, 150);
+  g.world.burnT[other] = 1;
+  statusSystem(g, 1 / 60);
+  assert.equal(g.world.slowT[other], 0, 'a burn tick never starts Frost');
+});
+
+test('over a crowd burn kills equal onKill calls and no slot is killed twice (Splitter spawns recycle slots mid-loop)', () => {
+  const g = arenaGame();
+  g.player.stats.ignite = 5;
+  const killed: number[] = [];
+  const modeKill = g.onKill; // the arena's own onKill spawns Swarmers from a dead Splitter
+  g.onKill = (j) => {
+    killed.push(g.world.gen[j] * 100000 + j);
+    modeKill?.(j);
+  };
+  for (let n = 0; n < 60; n++) {
+    const j = spawnEnemy(g.world, n % 3 === 0 ? ENEMY.SPLITTER : ENEMY.CHASER, g.player.x + 50 + n * 4, g.player.y + (n % 7) * 20);
+    g.world.hp[j] = 0.01;
+    g.world.burnT[j] = 1;
+  }
+  const kills = statusSystem(g, 1 / 60);
+  assert.equal(kills, killed.length);
+  assert.equal(new Set(killed).size, killed.length);
+  assert.ok(kills >= 60, 'every seeded enemy burned to death');
 });

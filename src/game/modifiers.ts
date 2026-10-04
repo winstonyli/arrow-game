@@ -14,7 +14,7 @@ export const FROST_SECS = 2;
 export const IGNITE_DPS = 6; // per level, x damageMult
 export const IGNITE_SECS = 3;
 
-export type ModKey = 'crit' | 'knockback' | 'explode' | 'vamp' | 'frost';
+export type ModKey = 'crit' | 'knockback' | 'explode' | 'vamp' | 'frost' | 'ignite';
 export interface ModDef { id: string; name: string; desc: string; key: ModKey }
 
 export const MODS: ModDef[] = [
@@ -23,4 +23,5 @@ export const MODS: ModDef[] = [
   { id: 'vamp', name: 'Vampiric', desc: 'Kills heal you (+1 HP per level)', key: 'vamp' },
   { id: 'explode', name: 'Explosive Kills', desc: 'Kills explode and hurt nearby enemies', key: 'explode' },
   { id: 'frost', name: 'Frost', desc: 'Arrows, shockwave and lightning slow enemies (-12% speed per level, 2 s)', key: 'frost' },
+  { id: 'ignite', name: 'Ignite', desc: 'Arrows, shockwave and lightning set enemies on fire (6 damage per second per level, 3 s)', key: 'ignite' },
 ];

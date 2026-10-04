@@ -9,7 +9,7 @@ import { applySkill } from './skills.ts';
 import { gemSystem } from './gems.ts';
 import { orbitSystem } from './orbit.ts';
 import { createWeaponState, weaponSystem } from './weapons.ts';
-import { createBlasts, createHits, explosionSystem } from './hit.ts';
+import { createBlasts, createHits, explosionSystem, statusSystem } from './hit.ts';
 import type { Blasts, Hits } from './hit.ts';
 import type { WeaponState } from './weapons.ts';
 import type { Vec, Size } from '../core/math.ts';
@@ -156,6 +156,7 @@ export function tick(game: Game, dt: number): void {
   game.kills += orbitSystem(world, grid, player, game.time + dt, dt, game.onKill, game.hits.blade); // the renderers draw at the post-tick time
   game.kills += weaponSystem(game, dt);
   game.kills += explosionSystem(game);
+  game.kills += statusSystem(game, dt);
   game.xp += gemSystem(world, player, dt);
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);

@@ -2,7 +2,7 @@ import { KIND } from '../core/world.ts';
 import { clamp } from '../core/math.ts';
 import type { HitFn } from '../core/systems.ts';
 import type { Game } from './game.ts';
-import { BLAST_BASE, BLAST_CAP, BLAST_DMG, BLAST_PER, CRIT_CHANCE, CRIT_MULT, FROST_SECS, IGNITE_SECS, KNOCK_PX, VAMP_HP } from './modifiers.ts';
+import { BLAST_BASE, BLAST_CAP, BLAST_DMG, BLAST_PER, CRIT_CHANCE, CRIT_MULT, FROST_SECS, IGNITE_DPS, IGNITE_SECS, KNOCK_PX, VAMP_HP } from './modifiers.ts';
 
 // What a hit is, for the modifiers (Tasks 2-5): CRIT = may crit, KNOCK = may push, NOBLAST = its kills do not explode, STATUS = a surviving hit starts Frost and Ignite.
 export const HIT_CRIT = 1;
@@ -94,5 +94,26 @@ export function explosionSystem(game: Game): number {
     }
   }
   b.n = 0;
+  return kills;
+}
+
+// Runs the status timers (after explosionSystem): both count down, and a burning enemy takes IGNITE_DPS per level
+// through hitEnemy with no flags, so a burn never crits, pushes or starts a status; its kills still heal and blast.
+// Skipped entirely without a status level (timers cannot run without one). Walks the slots by index with `high`
+// re-read, since onKill may spawn into a freed slot (the Splitter); that slot is then tested by its own state.
+export function statusSystem(game: Game, dt: number): number {
+  const s = game.player.stats;
+  if (s.frost === 0 && s.ignite === 0) return 0;
+  const { world } = game;
+  const burn = IGNITE_DPS * s.ignite * s.damageMult * dt;
+  let kills = 0;
+  for (let i = 0; i < world.high; i++) {
+    if (world.kind[i] !== KIND.ENEMY) continue;
+    if (world.slowT[i] > 0) world.slowT[i] = Math.max(0, world.slowT[i] - dt);
+    if (world.burnT[i] > 0) {
+      world.burnT[i] = Math.max(0, world.burnT[i] - dt);
+      kills += hitEnemy(game, i, burn, 0, 0, 0);
+    }
+  }
   return kills;
 }
