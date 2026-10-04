@@ -12,13 +12,13 @@ Browser archer roguelite (Archero / arrow.io style). Strict TypeScript bundled b
 - Plan: `docs/superpowers/plans/2026-10-02-arrow-game-core-and-rooms.md`
 
 ## Build
-`bun run build` (Vite 8.3.2) bundles 43 modules into `dist/` in ~0.2 s. Sizes on 2026-10-04 (`du -sh dist`: 109K on disk, 95,381 bytes of files):
+`bun run build` (Vite 8.3.2) bundles 51 modules into `dist/` in ~0.2 s. Sizes on 2026-10-04 (`du -sh dist`: 117K on disk, 103,537 bytes of files):
 
 | file | bytes | gzip |
 |---|---|---|
-| `index.html` | 520 | 310 |
-| `assets/index-*.js` (the whole game, minified) | 59,672 | 23,639 |
-| `assets/index-*.css` | 8,565 | 2,224 |
+| `index.html` | 539 | 331 |
+| `assets/index-*.js` (the whole game, minified) | 67,694 | 26,673 |
+| `assets/index-*.css` | 8,680 | 2,234 |
 | `assets/share-tech-mono-latin-400-normal-*.woff2` | 13,500 | - |
 | `assets/orbitron-latin-500-normal-*.woff2` | 6,596 | - |
 | `assets/orbitron-latin-700-normal-*.woff2` | 6,528 | - |
