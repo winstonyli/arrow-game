@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { keysToVector } from '../src/input/input.js';
+import { keysToVector } from '../src/input/input.ts';
 
 test('no keys gives a zero vector', () => {
   assert.deepEqual(keysToVector(new Set()), { x: 0, y: 0 });

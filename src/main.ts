@@ -1,4 +1,4 @@
-import { createInput } from './input/input.js';
+import { createInput } from './input/input.ts';
 import { createGame, tick, VIEW, CAPACITY } from './game/game.ts';
 import { createStepper, startLoop } from './core/loop.ts';
 import { createCanvasRenderer } from './render/canvas.ts';
