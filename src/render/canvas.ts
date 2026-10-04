@@ -5,6 +5,7 @@ import { POOL, RING, PAL_WHITE, PAL_DUST } from './fx.ts';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.ts';
 import { CHAIN_LIFE } from '../game/weapons/chain.ts';
 import { BOOM_RADIUS } from '../game/weapons/boomerang.ts';
+import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
 import type { Size } from '../core/math.ts';
@@ -94,7 +95,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
   function tinted(world: World): void {
     for (let s = 0; s < 2; s++) {
       const timer = s ? world.burnT : world.slowT;
-      ctx.fillStyle = s ? '#ff9a3c' : '#79c0ff';
+      ctx.fillStyle = s ? IGNITE_TINT : FROST_TINT;
       ctx.beginPath();
       for (let i = 0; i < world.high; i++) {
         if (world.kind[i] !== KIND.ENEMY || timer[i] <= 0) continue;
@@ -159,7 +160,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       if (fx) tails(world, KIND.ENEMY, t, ENEMY_TYPES[t].color, fx);
       circles(world, KIND.ENEMY, t, ENEMY_TYPES[t].color);
     }
-    tinted(world);
+    if (game.player.stats.frost > 0 || game.player.stats.ignite > 0) tinted(world);
     if (fx) flashed(world, fx);
     if (fx) tails(world, KIND.ENEMY_PROJECTILE, -1, '#ff7b72', fx);
     circles(world, KIND.ENEMY_PROJECTILE, -1, '#ff7b72');

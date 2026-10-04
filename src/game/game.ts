@@ -155,8 +155,8 @@ export function tick(game: Game, dt: number): void {
   game.kills += collisionSystem(world, grid, player, game.onKill, game.hits.arrow);
   game.kills += orbitSystem(world, grid, player, game.time + dt, dt, game.onKill, game.hits.blade); // the renderers draw at the post-tick time
   game.kills += weaponSystem(game, dt);
+  game.kills += statusSystem(game, dt); // before explosionSystem, so burn-kill blasts drain this tick
   game.kills += explosionSystem(game);
-  game.kills += statusSystem(game, dt);
   game.xp += gemSystem(world, player, dt);
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);

@@ -13,6 +13,8 @@ export const FROST_SLOW = 0.12; // speed lost per level while slowed
 export const FROST_SECS = 2;
 export const IGNITE_DPS = 6; // per level, x damageMult
 export const IGNITE_SECS = 3;
+export const FROST_TINT = '#00e5ff'; // enemy tints, shared by both renderers; no other palette colour may sit near them (tested)
+export const IGNITE_TINT = '#ff2d00';
 
 export type ModKey = 'crit' | 'knockback' | 'explode' | 'vamp' | 'frost' | 'ignite';
 export interface ModDef { id: string; name: string; desc: string; key: ModKey }

@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import { KIND } from '../src/core/world.ts';
 import { collisionSystem } from '../src/core/systems.ts';
 import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
+import { COLORS } from '../src/render/webgl.ts';
 import { createGame, tick } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { updateShockwave } from '../src/game/weapons/shockwave.ts';
 import { updateChain } from '../src/game/weapons/chain.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
 import { hitEnemy, explosionSystem, statusSystem, HIT_CRIT, HIT_KNOCK, HIT_STATUS } from '../src/game/hit.ts';
-import { BLAST_CAP, FROST_SECS, IGNITE_SECS, IGNITE_DPS } from '../src/game/modifiers.ts';
+import { BLAST_CAP, FROST_TINT, IGNITE_TINT, FROST_SECS, IGNITE_SECS, IGNITE_DPS } from '../src/game/modifiers.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
@@ -520,4 +521,51 @@ test('over a crowd burn kills equal onKill calls and no slot is killed twice (Sp
   assert.equal(kills, killed.length);
   assert.equal(new Set(killed).size, killed.length);
   assert.ok(kills >= 60, 'every seeded enemy burned to death');
+});
+
+test('a burn kill through tick() drains its blast the same tick and the blast hits a neighbour', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.ignite = 1;
+  s.explode = 5;
+  const a = at(g, 300);
+  const b = at(g, 320);
+  g.world.hp[a] = 0.001;
+  g.world.burnT[a] = 1;
+  const hpB = g.world.hp[b];
+  tick(g, 1 / 60);
+  assert.equal(g.world.kind[a], KIND.NONE, 'the burning enemy died');
+  assert.equal(g.blasts.n, 0, 'the queue is empty at the end of the tick');
+  assert.ok(g.world.hp[b] < hpB - 1, 'the blast damaged the neighbour this tick');
+});
+
+test('a 3 s burn deals damage on exactly IGNITE_SECS * 60 ticks (float32 residue is treated as expired)', () => {
+  const g = arenaGame();
+  g.player.stats.ignite = 1;
+  const j = at(g, 100);
+  g.world.burnT[j] = Math.fround(IGNITE_SECS);
+  let n = 0;
+  for (let t = 0; t < 400 && g.world.burnT[j] > 0; t++) {
+    const hp = g.world.hp[j];
+    statusSystem(g, 1 / 60);
+    if (g.world.hp[j] < hp) n++;
+  }
+  assert.equal(g.world.burnT[j], 0);
+  assert.equal(n, IGNITE_SECS * 60);
+});
+
+test('the status tints are not any other enemy, gem, shot, flash or canvas colour (CIE Lab distance > 30)', () => {
+  const lin = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const lab = (h: string) => {
+    const n = parseInt(h.slice(1), 16);
+    const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255].map(lin);
+    const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047), y = f(0.2126 * r + 0.7152 * g + 0.0722 * b), z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+  };
+  const dist = (a: string, b: string) => Math.hypot(...lab(a).map((v, i) => v - lab(b)[i]));
+  const others = [...new Set([...COLORS, '#161b22', '#30363d'])].filter((c) => c !== FROST_TINT && c !== IGNITE_TINT);
+  assert.ok(others.length > 12);
+  for (const tint of [FROST_TINT, IGNITE_TINT]) for (const c of others) assert.ok(dist(tint, c) > 30, `${tint} vs ${c}`);
+  assert.ok(dist(FROST_TINT, IGNITE_TINT) > 30);
 });

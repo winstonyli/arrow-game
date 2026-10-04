@@ -97,7 +97,9 @@ export function explosionSystem(game: Game): number {
   return kills;
 }
 
-// Runs the status timers (after explosionSystem): both count down, and a burning enemy takes IGNITE_DPS per level
+const BURN_EPS = 1e-4;
+
+// Runs the status timers (before explosionSystem, so burn-kill blasts drain the same tick): both count down, and a burning enemy takes IGNITE_DPS per level
 // through hitEnemy with no flags, so a burn never crits, pushes or starts a status; its kills still heal and blast.
 // Skipped entirely without a status level (timers cannot run without one). Walks the slots by index with `high`
 // re-read, since onKill may spawn into a freed slot (the Splitter); that slot is then tested by its own state.
@@ -111,6 +113,10 @@ export function statusSystem(game: Game, dt: number): number {
     if (world.kind[i] !== KIND.ENEMY) continue;
     if (world.slowT[i] > 0) world.slowT[i] = Math.max(0, world.slowT[i] - dt);
     if (world.burnT[i] > 0) {
+      if (world.burnT[i] <= BURN_EPS) { // float32 countdown residue: expired, so a 3 s burn is exactly 180 ticks
+        world.burnT[i] = 0;
+        continue;
+      }
       world.burnT[i] = Math.max(0, world.burnT[i] - dt);
       kills += hitEnemy(game, i, burn, 0, 0, 0);
     }

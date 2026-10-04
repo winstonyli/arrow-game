@@ -4,6 +4,7 @@ import { drawWorldGrid } from './grid-lines.ts';
 import { POOL, RING, PAL_WHITE, PAL_DUST } from './fx.ts';
 import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.ts';
 import { CHAIN_LIFE } from '../game/weapons/chain.ts';
+import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { BOOM_RADIUS, MAX_BOOMS } from '../game/weapons/boomerang.ts';
 import { TRAIL_MAX } from './trail.ts';
 import { drawGhost } from './ghost-marker.ts';
@@ -28,7 +29,7 @@ const P_BLADE = P_FLASH + 1;
 const P_WEAPON = P_BLADE + 1;
 const P_SLOW = P_WEAPON + 1;
 const P_BURN = P_SLOW + 1;
-const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9', '#ffa657', '#79c0ff', '#ff9a3c'];
+export const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9', '#ffa657', FROST_TINT, IGNITE_TINT];
 const RING_LINES = 3; // concentric one-pixel rings make the shockwave's visible width
 const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
 const BOLT_DOT_R = 2.5;
