@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validate, toCode, fromCode, ReplayError, MAX_TICKS } from '../src/replay/codec.ts';
-import type { ReplayErrorCode } from '../src/replay/codec.ts';
+import type { Replay, ReplayErrorCode } from '../src/replay/codec.ts';
 import { fakeReplay } from '../scripts/lib/fake-replay.js';
 
 const rejects = (fn: () => Promise<unknown>, code?: ReplayErrorCode) =>
@@ -77,7 +77,7 @@ function noisyReplay(runs: number, seed = 1) {
 
 test('validate returns a normalized copy: unknown fields and __proto__ dropped', () => {
   const r = fakeReplay({ picks: [[2, 'power']] });
-  const junk = JSON.parse(JSON.stringify({ ...r, extra: 'x', result: { ...r.result, bonus: 1 } }).replace('{', '{"__proto__":{"polluted":1},'));
+  const junk = JSON.parse(JSON.stringify({ ...r, extra: 'x', result: { ...r.result, bonus: 1 } }).replace('{', '{"__proto__":{"polluted":1},')) as Replay; // deliberately malformed: extra fields and an own __proto__
   const v = validate(junk);
   assert.deepEqual(v, r);
   assert.equal(Object.hasOwn(v, '__proto__'), false);
