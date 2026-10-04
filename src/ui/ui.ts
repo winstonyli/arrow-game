@@ -1,26 +1,68 @@
 import { icon } from './icons.ts';
 import { SKILLS_BY_ID } from '../game/skills.ts';
+import { ReplayError } from '../replay/codec.ts';
+import type { ModeName } from '../game/game.ts';
+import type { HudModel, OverModel, ChallengeRow } from './model.ts';
 
-const h = (tag, cls, html = '') => {
+export type Screen = 'none' | 'title' | 'play' | 'pause' | 'over' | 'challenges' | 'watch';
+export interface WatchState {
+  speed: number;
+  done: boolean;
+  note: string;
+}
+export interface UiHandlers {
+  onPlay: (mode: ModeName) => void;
+  onResume: () => void;
+  onQuit: () => void;
+  onAgain: () => void;
+  onPause: () => void;
+  onPick: (id: string) => void;
+  onToggleSound: () => void;
+  onWatchLast: () => void;
+  onCopyLast: () => CodeSource;
+  onWatchSpeed: () => number;
+  onChallenges: () => void;
+  onBack: () => void;
+  onDaily: (mode: ModeName) => void;
+  onSeed: (mode: ModeName, text: string) => void;
+  onWatchEntry: (mode: ModeName, seed: number) => void;
+  onRace: (mode: ModeName, seed: number) => void;
+  onCopyEntry: (mode: ModeName, seed: number) => CodeSource;
+  onDelete: (mode: ModeName, seed: number) => void;
+  onImport: (text: string) => void;
+}
+/** A share code, or null when there is nothing to copy (awaited, so a promise of either works too). */
+type CodeSource = string | null | Promise<string | null>;
+// Elements carry their last written value as expandos so per-frame updates skip unchanged DOM writes.
+type Cached = HTMLElement & { _v?: string };
+type HudSlot = Cached & { _k?: string; _on?: boolean };
+
+const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html = ''): HTMLElementTagNameMap[K] => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   e.innerHTML = html;
   return e;
 };
-const button = (label, cls, fn) => {
+const button = (label: string, cls: string, fn: () => void) => {
   const b = h('button', `btn ${cls}`.trim(), label);
   b.type = 'button';
   b.onclick = fn;
   return b;
 };
+// A required element inside markup this module just built: missing means the template is broken.
+function lookup<T extends Element>(root: ParentNode, selector: string): T {
+  const e = root.querySelector(selector);
+  if (!e) throw new Error(`ui: missing element ${selector}`);
+  return e as T; // DOM boundary: querySelector cannot know the element type a selector names
+}
 // Only touch the DOM when a value changed: the HUD updates every frame but most values don't.
-const setText = (el, v) => {
+const setText = (el: Cached, v: string) => {
   if (el._v !== v) {
     el._v = v;
     el.textContent = v;
   }
 };
-const setWidth = (el, pct) => {
+const setWidth = (el: Cached, pct: number) => {
   const w = `${Math.round(Math.min(100, Math.max(0, pct)) * 2) / 2}%`;
   if (el._v !== w) {
     el._v = w;
@@ -28,7 +70,7 @@ const setWidth = (el, pct) => {
   }
 };
 // Clipboard with a prompt fallback (insecure origins and some browsers have no async clipboard).
-async function copyText(text) {
+async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -39,19 +81,20 @@ async function copyText(text) {
 }
 // A button that fetches a share code on click and copies it; flashes "Copied". If the code cannot be made,
 // `onError(message)` reports it (default: the button flashes the message).
-const codeButton = (label, cls, getCode, onError) => {
-  let timer = 0;
-  const flash = (text) => {
+const codeButton = (label: string, cls: string, getCode: () => CodeSource, onError?: (msg: string) => void) => {
+  let timer: ReturnType<typeof setTimeout> | 0 = 0;
+  const flash = (text: string) => {
     b.textContent = text;
     clearTimeout(timer);
     timer = setTimeout(() => (b.textContent = label), 1500);
   };
   const b = button(label, cls, async () => {
-    let code;
+    let code: string | null;
     try {
       code = await getCode();
     } catch (e) {
-      const msg = e?.code === 'too-large' || e?.code === 'invalid' ? 'Too long to share' : 'Could not make a code';
+      // getCode is toCode (or null): its own failures are ReplayErrors; anything else had no such code.
+      const msg = e instanceof ReplayError && (e.code === 'too-large' || e.code === 'invalid') ? 'Too long to share' : 'Could not make a code';
       if (onError) onError(msg);
       else flash(msg);
       return;
@@ -63,7 +106,7 @@ const codeButton = (label, cls, getCode, onError) => {
   return b;
 };
 
-export function createUi(root, on) {
+export function createUi(root: ParentNode, on: UiHandlers) {
   // HUD ------------------------------------------------------------------
   const hud = h('div', 'hud');
   hud.innerHTML = `
@@ -81,7 +124,7 @@ export function createUi(root, on) {
     <div class="skills"></div>
     <div class="sound-hint">[M] sound <span class="snd"></span></div>
     <div class="banner"><b class="glow-text">Warning</b><span>Something big is coming</span></div>`;
-  const q = (s) => hud.querySelector(s);
+  const q = (s: string) => lookup<HudSlot>(hud, s);
   const el = {
     hp: q('.bar.hp i'), hpN: q('.hp-n'), lv: q('.lv'), xp: q('.bar.xp i'), room: q('.room'), bossRoom: q('.boss-room'),
     time: q('.time'), kills: q('.kills'), foes: q('.foes-n'), skills: q('.skills'), snd: q('.snd'), banner: q('.banner'),
@@ -115,7 +158,7 @@ export function createUi(root, on) {
     button('Quit to title', '', () => on.onQuit()),
     h('div', 'mu', 'Esc to resume'),
   );
-  pausePanel.querySelector('h2').style.color = 'var(--g)';
+  lookup<HTMLElement>(pausePanel, 'h2').style.color = 'var(--g)';
   pause.append(pausePanel);
 
   const over = h('div', 'overlay');
@@ -138,7 +181,7 @@ export function createUi(root, on) {
   status.setAttribute('role', 'status');
   const importBtn = button('Import', 'g', () => on.onImport(importField.value));
   const backBtn = button('Back', 'b', () => on.onBack());
-  const row = (...kids) => {
+  const row = (...kids: HTMLElement[]) => {
     const r = h('div', 'row');
     r.append(...kids);
     return r;
@@ -155,50 +198,51 @@ export function createUi(root, on) {
   );
   challenges.append(chPanel);
 
-  function setChallenges(rows) {
+  function setChallenges(rows: ChallengeRow[]) {
     list.replaceChildren(
       ...(rows.length
         ? rows.map((r) => {
             const e = h('div', `entry${r.stale ? ' stale' : ''}`);
             const info = h('div', 'info');
-            info.append(h('b'), h('span'));
-            info.firstChild.textContent = r.title;
-            info.lastChild.textContent = r.stale ? `${r.line} · old version` : r.line;
+            const name = h('b');
+            const line = h('span');
+            info.append(name, line);
+            name.textContent = r.title;
+            line.textContent = r.stale ? `${r.line} · old version` : r.line;
             e.append(info);
             if (!r.stale) {
               e.append(button('Watch', 'g', () => on.onWatchEntry(r.mode, r.seed)), button('Race', '', () => on.onRace(r.mode, r.seed)), codeButton('Copy', 'b', () => on.onCopyEntry(r.mode, r.seed), setStatus));
             }
-            e.append(
-              button('✕', '', () => {
-                // The list is rebuilt: keep focus at the same position (the next row), else on Back.
-                const i = [...list.children].indexOf(e);
-                on.onDelete(r.mode, r.seed);
-                (list.children[i]?.querySelector('button') ?? backBtn).focus({ preventScroll: true });
-              }),
-            );
-            e.lastChild.setAttribute('aria-label', 'Delete');
+            const del = button('✕', '', () => {
+              // The list is rebuilt: keep focus at the same position (the next row), else on Back.
+              const i = [...list.children].indexOf(e);
+              on.onDelete(r.mode, r.seed);
+              (list.children[i]?.querySelector('button') ?? backBtn).focus({ preventScroll: true });
+            });
+            e.append(del);
+            del.setAttribute('aria-label', 'Delete');
             return e;
           })
         : [h('div', 'mu', 'No runs yet. Finish a run and it shows up here.')]),
     );
   }
-  const setStatus = (t) => setText(status, t);
-  const setImportBusy = (busy) => (importBtn.disabled = busy);
+  const setStatus = (t: string) => setText(status, t);
+  const setImportBusy = (busy: boolean) => (importBtn.disabled = busy);
 
   const picker = h('div', 'overlay picker');
   const pickHead = h('h2', 'glow-text');
   const cards = h('div', 'cards');
   picker.append(pickHead, cards, h('div', 'tip', 'Press 1, 2 or 3, or click'));
-  let offer = null;
+  let offer: string[] | null = null;
 
   // The watch bar is a sibling of the HUD, because the HUD is inert outside play.
   const watchbar = h('div', 'watchbar panel');
   const watchStatus = h('span', 'mu');
   const watchNote = h('span', '');
   const speedBtn = button('', 'g', () => setWatch({ ...watchState, speed: on.onWatchSpeed() }));
-  let watchState = { speed: 1, done: false, note: '' };
+  let watchState: WatchState = { speed: 1, done: false, note: '' };
   watchbar.append(watchStatus, speedBtn, button('Exit', 'b', () => on.onQuit()), watchNote);
-  function setWatch(s) {
+  function setWatch(s: WatchState) {
     watchState = s;
     setText(watchStatus, s.done ? 'Replay finished' : 'Replay');
     setText(speedBtn, `Speed ${s.speed}x`);
@@ -209,10 +253,10 @@ export function createUi(root, on) {
   root.append(hud, title, pause, over, challenges, picker, watchbar);
 
   // State ----------------------------------------------------------------
-  let screen = 'none';
-  const focusFirst = (node) => node.querySelector('button')?.focus({ preventScroll: true });
+  let screen: Screen = 'none';
+  const focusFirst = (node: ParentNode) => node.querySelector('button')?.focus({ preventScroll: true });
 
-  function show(name) {
+  function show(name: Screen) {
     screen = name;
     hud.hidden = name === 'none' || name === 'title' || name === 'over' || name === 'challenges';
     hud.dataset.watch = String(name === 'watch');
@@ -228,15 +272,15 @@ export function createUi(root, on) {
       focusFirst(pause);
     } else if (name === 'over') focusFirst(over);
     else if (name === 'challenges') focusFirst(challenges);
-    else document.activeElement?.blur();
+    else (document.activeElement as HTMLElement | null)?.blur(); // DOM boundary: activeElement is typed Element, which has no blur
   }
 
-  function setOffer(ids, header = '') {
+  function setOffer(ids: string[] | null, header = '') {
     offer = ids;
     picker.hidden = !ids;
     hud.inert = screen !== 'play' || !!ids;
     if (!ids) {
-      document.activeElement?.blur();
+      (document.activeElement as HTMLElement | null)?.blur(); // DOM boundary: as above
       return;
     }
     pickHead.textContent = header;
@@ -249,24 +293,25 @@ export function createUi(root, on) {
         return c;
       }),
     );
-    cards.firstChild.focus({ preventScroll: true });
+    // DOM boundary: cards holds only the buttons built above (for an empty offer it is null and this throws, as it always did).
+    (cards.firstChild as HTMLElement).focus({ preventScroll: true });
   }
 
   // 1-3 pick; arrows move between cards (Enter/Space activate the focused card natively).
-  addEventListener('keydown', (e) => {
+  addEventListener('keydown', (e: KeyboardEvent) => {
     if (!offer || e.repeat) return;
     const n = Number(e.key);
     if (n >= 1 && n <= offer.length) {
       e.preventDefault();
       on.onPick(offer[n - 1]);
     } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-      const list = [...cards.children];
-      const i = list.indexOf(document.activeElement);
+      const list = [...cards.children] as HTMLElement[]; // DOM boundary: cards holds only the buttons setOffer built
+      const i = list.findIndex((c) => c === document.activeElement); // indexOf, but activeElement is typed Element | null
       list[(i + (e.key === 'ArrowRight' ? 1 : list.length - 1)) % list.length]?.focus();
     }
   });
 
-  function update(m, muted) {
+  function update(m: HudModel, muted: boolean | undefined) {
     hud.dataset.kind = m.kind;
     setWidth(el.hp, m.hpPct);
     setText(el.hpN, String(m.hp));
@@ -299,13 +344,15 @@ export function createUi(root, on) {
     setText(soundBtn, `Sound: ${muted ? 'off' : 'on'}`);
   }
 
-  function showOver(m) {
+  function showOver(m: OverModel & { canReplay: boolean }) {
     overPanel.replaceChildren(
       h('h2', 'over-title glow-text', m.title),
       ...m.rows.map(([k, v]) => {
         const row = h('div', 'stat');
-        row.append(h('span', '', k), h('span', ''));
-        row.lastChild.textContent = v;
+        const label = h('span', '', k);
+        const value = h('span', '');
+        row.append(label, value);
+        value.textContent = v;
         return row;
       }),
       ...m.newBest.map((s) => h('div', 'new-best glow-text', s)),
@@ -315,7 +362,7 @@ export function createUi(root, on) {
     );
   }
 
-  function setBests(b) {
+  function setBests(b: { arena: string; rooms: string }) {
     bests.arena.textContent = `Arena: ${b.arena}`;
     bests.rooms.textContent = `Rooms: ${b.rooms}`;
   }

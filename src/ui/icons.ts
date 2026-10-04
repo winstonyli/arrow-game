@@ -1,5 +1,7 @@
 // Inline SVG glyphs (24x24, stroked in currentColor). Plain geometry; swap for a real icon set later.
-const PATHS = {
+// Keyed by plain string: skill ids are `string` in src/game (there is no SkillId union), plus the HUD glyphs
+// heart/skull/pause. `icon` checks the id at run time and throws on an unknown one.
+const PATHS: Record<string, string> = {
   multishot: '<path d="M12 20V6M12 20L5 8M12 20L19 8"/>',
   rapid: '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
   power: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
@@ -15,7 +17,7 @@ const PATHS = {
   pause: '<path d="M8 5v14M16 5v14"/>',
 };
 
-export function icon(id) {
+export function icon(id: string): string {
   const p = PATHS[id];
   if (!p) throw new Error(`unknown icon: ${id}`);
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
