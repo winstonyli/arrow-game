@@ -36,7 +36,7 @@ Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?rende
 
 ## Versioning and commits
 Three separate versions, each with one job:
-- **Release version** (`version` in `package.json`, git tags `vX.Y.Z`): `0.MINOR.PATCH` while unstable, `1.0.0` at the first public release. Minor = new content or features (a mode, an enemy, a skill), patch = fixes and tuning. Named prereleases use SemVer tags, `v0.1.0-alpha.1`, `-beta.1`, `-rc.1`; the `package.json` version reads the next version with `-dev` between tags (now `0.2.0-dev`).
+- **Release version** (`version` in `package.json`, git tags `vX.Y.Z`): `0.MINOR.PATCH` while unstable, `1.0.0` at the first public release. Minor = new content or features (a mode, an enemy, a skill), patch = fixes and tuning. Named prereleases use SemVer tags, `v0.1.0-alpha.1`, `-beta.1`, `-rc.1`; the `package.json` version reads the next version with `-dev` between tags (now `0.3.0-dev`).
 - **`SIM_VERSION`** (`src/replay/version.ts`, integer): bump on ANY change to sim behaviour, balance tuning included, because old replays and share codes stop verifying. Regenerate the goldens with `bun scripts/make-golden.ts --force` and say so in the commit body. It is independent of the release version: a patch release that tunes gem speed still bumps it.
 - **`REPLAY_VERSION`** (`src/replay/codec.ts`): bump only when the replay file format changes.
 
