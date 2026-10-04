@@ -10,13 +10,15 @@ import type { RenderGame } from '../src/render/canvas.ts';
 import { createWeaponState } from '../src/game/weapons.ts';
 import { CHAIN_LIFE } from '../src/game/weapons/chain.ts';
 import { BOOM_RADIUS } from '../src/game/weapons/boomerang.ts';
-import { WEAPON_INSTANCES } from '../src/render/webgl.ts';
+import { WEAPON_INSTANCES, COLORS } from '../src/render/webgl.ts';
+import { FLAME_LEVELS, FIRE_ALPHA } from '../src/game/weapons/flame.ts';
+import { IGNITE_TINT } from '../src/game/modifiers.ts';
 
-type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit'> };
+type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons'> };
 type PackGame = Pick<RenderGame, 'time' | 'camera' | 'view' | 'fx'> & Partial<Pick<RenderGame, 'wstate'>>;
 
 // Casts: packInstances reads only these player fields, and `fx` may be left out of a game (it reads undefined).
-const player = (over: Partial<PlayerStub> = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0 }, ...over }) as Player;
+const player = (over: Partial<PlayerStub> = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0, weapons: {} }, ...over }) as Player;
 const G = (o: Partial<PackGame> = {}) => ({ time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 }, ...o }) as PackGame;
 
 test('packInstances writes live entities by layer, player last, skipping free slots', () => {
@@ -149,7 +151,7 @@ test('layers draw gems, enemies, enemy projectiles, arrows, then particles, blad
   const fx = createFx(20, () => 0.5);
   fx.burst(5, 0); // 5 particles
   const out = new Float32Array(30 * STRIDE);
-  const pl = player({ x: 7, stats: { orbit: 1 } });
+  const pl = player({ x: 7, stats: { orbit: 1, weapons: {} } });
   const n = packInstances(w, pl, G({ fx }), out);
   assert.equal(n, 4 + 5 + 1 + 1); // entities, particles, one blade, player
   const T = ENEMY_TYPES.length;
@@ -226,4 +228,30 @@ test('packInstances draws a flying boomerang as a solid circle and skips an idle
   ws.boom.b[0].y = 50;
   assert.equal(packInstances(w, player(), G({ wstate: ws }), out), 2);
   assert.deepEqual(Array.from(out.subarray(0, 5)), [40, 50, BOOM_RADIUS, TT + 7, 2]); // P_WEAPON, solid
+});
+
+test('packInstances draws each live fire patch as a burn-coloured disc at most FIRE_ALPHA opaque that fades with its life, packed before enemies, and skips dead ones', () => {
+  const w = new World(4);
+  spawnEnemy(w, ENEMY.CHASER, 300, 300); // a plain enemy: it must be packed after every patch
+  const ws = createWeaponState();
+  const L = FLAME_LEVELS[2];
+  const f = ws.fire;
+  f.x[0] = 100; f.y[0] = 100; f.life[0] = L.life; // full life
+  f.x[1] = 150; f.y[1] = 100; f.life[1] = L.life / 2; // half
+  f.x[2] = 200; f.y[2] = 100; f.life[2] = 0; // dead
+  const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
+  const pl = player({ stats: { orbit: 0, weapons: { flame: 3 } } });
+  const n = packInstances(w, pl, G({ wstate: ws }), out);
+  const burn = COLORS.lastIndexOf(IGNITE_TINT); // P_BURN
+  const discs: number[][] = [];
+  let enemyAt = -1;
+  for (let i = 0; i < n; i++) {
+    if (out[i * STRIDE + 3] === burn) discs.push([out[i * STRIDE + 2], out[i * STRIDE + 4], i]);
+    else if (out[i * STRIDE] === 300) enemyAt = i;
+  }
+  assert.equal(discs.length, 2);
+  assert.equal(discs[0][0], L.radius);
+  assert.ok(Math.abs(discs[0][1] - FIRE_ALPHA) < 1e-6);
+  assert.ok(Math.abs(discs[1][1] - FIRE_ALPHA / 2) < 1e-6);
+  assert.ok(enemyAt >= 0 && discs.every((d) => d[2] < enemyAt), 'fire patches pack (draw) before enemies');
 });

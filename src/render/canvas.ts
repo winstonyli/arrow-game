@@ -5,6 +5,7 @@ import { POOL, RING, PAL_WHITE, PAL_DUST } from './fx.ts';
 import { bladePos, BLADE_RADIUS } from '../game/orbit.ts';
 import { CHAIN_LIFE } from '../game/weapons/chain.ts';
 import { BOOM_RADIUS } from '../game/weapons/boomerang.ts';
+import { FLAME_LEVELS, FIRE_CAP, FIRE_ALPHA } from '../game/weapons/flame.ts';
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
@@ -153,9 +154,21 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     drawWorldGrid(ctx, cam, view, bounds);
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
-    // Same layer order as webgl.ts: gems, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs), player.
+    // Same layer order as webgl.ts: gems, fire patches, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs), player.
     if (fx) tails(world, KIND.GEM, -1, GEM_COLOR, fx);
     circles(world, KIND.GEM, -1, GEM_COLOR);
+    // Fire patches sit above the gems but below enemies and shots (opaque ones hid them), at a capped alpha.
+    const fr = game.wstate.fire;
+    const fl = FLAME_LEVELS[(player.stats.weapons.flame || 1) - 1];
+    ctx.fillStyle = IGNITE_TINT;
+    for (let k = 0; k < FIRE_CAP; k++) {
+      if (fr.life[k] <= 0) continue;
+      ctx.globalAlpha = FIRE_ALPHA * Math.min(1, fr.life[k] / fl.life);
+      ctx.beginPath();
+      ctx.arc(fr.x[k], fr.y[k], fl.radius, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
     for (let t = 0; t < ENEMY_TYPES.length; t++) {
       if (fx) tails(world, KIND.ENEMY, t, ENEMY_TYPES[t].color, fx);
       circles(world, KIND.ENEMY, t, ENEMY_TYPES[t].color);

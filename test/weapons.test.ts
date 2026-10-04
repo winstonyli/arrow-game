@@ -15,6 +15,7 @@ import { ENEMY_TYPES } from '../src/game/enemies.ts';
 import { updateShockwave, SHOCK_LEVELS } from '../src/game/weapons/shockwave.ts';
 import { updateChain, CHAIN_LEVELS, CHAIN_LIFE, CHAIN_FALLOFF } from '../src/game/weapons/chain.ts';
 import { updateBoomerang, BOOM_LEVELS, BOOM_RADIUS } from '../src/game/weapons/boomerang.ts';
+import { updateFlame, FLAME_LEVELS, FIRE_CAP, FIRE_SPACING, FIRE_TICK } from '../src/game/weapons/flame.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import type { Game } from '../src/game/game.ts';
 
@@ -358,4 +359,160 @@ test('a boomerang ignores an enemy despawned after the grid was built', () => {
   g.onKill = () => killed++;
   assert.equal(updateBoomerang(g, 1, 0.01), 0);
   assert.equal(killed, 0);
+});
+
+const live = (g: Game) => g.wstate.fire.life.reduce((n, l) => n + (l > 0 ? 1 : 0), 0);
+const move = (g: Game, dx: number) => { g.player.x += dx; };
+
+test('flame drops a patch on the first update, none while standing still, one per FIRE_SPACING moved', () => {
+  const g = arenaGame();
+  settle(g);
+  updateFlame(g, 1, 1 / 60);
+  assert.equal(live(g), 1);
+  for (let t = 0; t < 30; t++) updateFlame(g, 1, 1 / 60); // still: no new patch
+  assert.equal(live(g), 1);
+  move(g, FIRE_SPACING - 1);
+  updateFlame(g, 1, 1 / 60);
+  assert.equal(live(g), 1); // not far enough
+  move(g, 1);
+  updateFlame(g, 1, 1 / 60);
+  assert.equal(live(g), 2);
+});
+
+test('flame overwrites the oldest patch when the ring is full', () => {
+  const g = arenaGame();
+  settle(g);
+  for (let k = 0; k < FIRE_CAP + 5; k++) {
+    updateFlame(g, 5, 1e-6); // long life, essentially no aging
+    move(g, FIRE_SPACING);
+  }
+  assert.equal(live(g), FIRE_CAP);
+  assert.equal(g.wstate.fire.head, 5); // wrapped five slots past the start
+});
+
+test('a patch ticks an overlapping enemy every FIRE_TICK, not more often, and ignores a distant one', () => {
+  const g = arenaGame();
+  g.player.stats.damageMult = 1;
+  const near = at(g, 0, 0); // on the first patch
+  const far = at(g, 200, 0);
+  settle(g);
+  updateFlame(g, 1, 1 / 60); // drops the patch (cd 0)
+  const dt = 1 / 60;
+  let ticks = 0;
+  let before = damage(g, near);
+  for (let t = 0; t < 60; t++) { // one second
+    updateFlame(g, 1, dt);
+    const d = damage(g, near);
+    if (d > before) ticks++;
+    before = d;
+  }
+  assert.equal(ticks, 4); // 1 s / 0.25 s
+  assert.ok(Math.abs(damage(g, near) - FLAME_LEVELS[0].dps * FIRE_TICK * 4) < 1e-3);
+  assert.equal(damage(g, far), 0);
+});
+
+test('patch damage scales with damageMult and level', () => {
+  const run = (level: number, mult: number) => {
+    const g = arenaGame();
+    g.player.stats.damageMult = mult;
+    const j = at(g, 0, 0);
+    settle(g);
+    updateFlame(g, level, 1 / 60);
+    for (let t = 0; t < 20; t++) updateFlame(g, level, 1 / 60); // crosses one tick
+    return damage(g, j);
+  };
+  const base = run(1, 1);
+  assert.ok(base > 0);
+  assert.ok(Math.abs(run(1, 2) - 2 * base) < 1e-3);
+  assert.ok(Math.abs(run(3, 1) / base - FLAME_LEVELS[2].dps / FLAME_LEVELS[0].dps) < 1e-3);
+});
+
+test('a surviving patch tick applies Frost and Ignite but never crits or pushes', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.frost = 1; s.ignite = 1; s.crit = 10; s.knockback = 5; s.damageMult = 1; // crit 10 = chance 1, so any crit flag would show
+  const j = at(g, 6, 0); // off-centre of the patch, so a knock would have a direction and move it
+  settle(g);
+  const x0 = g.world.x[j];
+  updateFlame(g, 1, 1 / 60);
+  for (let t = 0; t < 10 /* first tick only: the second lands ~15 updates later */; t++) updateFlame(g, 1, 1 / 60);
+  assert.ok(g.world.slowT[j] > 0);
+  assert.ok(g.world.burnT[j] > 0);
+  assert.equal(g.world.x[j], x0); // no knockback
+  assert.ok(Math.abs(damage(g, j) - FLAME_LEVELS[0].dps * FIRE_TICK) < 1e-3); // exactly one tick, no crit
+});
+
+test('a patch expires after its life and stops hitting', () => {
+  const g = arenaGame();
+  g.player.stats.damageMult = 1;
+  const j = at(g, 0, 0);
+  settle(g);
+  updateFlame(g, 1, 1 / 60);
+  for (let t = 0; t < 60 * 3; t++) updateFlame(g, 1, 1 / 60); // life is 2 s
+  assert.equal(live(g), 0);
+  const d = damage(g, j);
+  for (let t = 0; t < 60; t++) updateFlame(g, 1, 1 / 60);
+  assert.equal(damage(g, j), d);
+});
+
+test('a patch kill counts once, heals and queues a blast; over a crowd kills equal onKill calls with no double kill', () => {
+  const g = arenaGame();
+  g.player.stats.vamp = 2;
+  g.player.stats.explode = 1;
+  g.player.hp = g.player.maxHp - 10;
+  const j = at(g, 0, 0);
+  g.world.hp[j] = 0.001;
+  settle(g);
+  updateFlame(g, 1, 1 / 60);
+  const killed: number[] = [];
+  g.onKill = (x) => killed.push(g.world.gen[x] * 100000 + x);
+  let kills = 0;
+  for (let t = 0; t < 20; t++) kills += updateFlame(g, 1, 1 / 60);
+  assert.equal(kills, 1);
+  assert.equal(killed.length, 1);
+  assert.equal(g.player.hp, g.player.maxHp - 8);
+  assert.equal(g.blasts.n, 1);
+  const g2 = arenaGame();
+  for (let n = 0; n < 40; n++) {
+    const e = spawnEnemy(g2.world, n % 3 === 0 ? ENEMY.SPLITTER : ENEMY.CHASER, g2.player.x + (n % 8) * 3, g2.player.y + Math.floor(n / 8) * 3);
+    g2.world.hp[e] = 0.01;
+  }
+  settle(g2);
+  const seen: number[] = [];
+  g2.onKill = (x) => seen.push(g2.world.gen[x] * 100000 + x);
+  updateFlame(g2, 5, 1 / 60);
+  let k2 = 0;
+  for (let t = 0; t < 20; t++) { settle(g2); k2 += updateFlame(g2, 5, 1 / 60); }
+  assert.equal(k2, seen.length);
+  assert.equal(new Set(seen).size, seen.length);
+});
+
+test('stateHash changes with a patch life and with the drop point', () => {
+  const g = arenaGame();
+  settle(g);
+  const empty = stateHash(g);
+  updateFlame(g, 1, 1 / 60);
+  const dropped = stateHash(g);
+  assert.notEqual(dropped, empty);
+  g.wstate.fire.life[0] -= 0.5;
+  const aged = stateHash(g);
+  assert.notEqual(aged, dropped);
+  g.wstate.fire.life[0] += 0.5;
+  g.wstate.fire.lx += 1;
+  assert.notEqual(stateHash(g), dropped);
+});
+
+test('Flame trail is a levelled arena-only weapon offer that takes a slot, with an icon', () => {
+  const flame = SKILLS.find((k) => k.id === 'flame')!;
+  assert.ok(flame.arena);
+  assert.ok(WEAPONS.some((w) => w.id === 'flame'));
+  const s = baseStats();
+  assert.equal(flame.tag!(s), 'NEW');
+  for (let n = 0; n < 5; n++) applySkill(s, 'flame');
+  assert.equal(s.weapons.flame, 5);
+  assert.equal(flame.available!(s), false);
+  const full = baseStats();
+  full.weapons = { blade: 1, shockwave: 1, chain: 1, boomerang: 1 }; // the bow plus four fill the five slots
+  assert.equal(flame.available!(full), false);
+  assert.equal(Object.keys(full.weapons).length + 1, MAX_WEAPONS); // four weapons plus the bow fill the slots
 });

@@ -9,6 +9,7 @@ export const HIT_CRIT = 1;
 export const HIT_KNOCK = 2;
 export const HIT_NOBLAST = 4;
 export const HIT_STATUS = 8; // applies Frost / Ignite to a survivor
+export const HIT_TICK = 16; // a slice of continuous damage (burn, fire): the hit-flash and hit audio ignore it
 const BLAST_PAL = -1; // render/fx PAL_GEM (gold); the sim does not import render code
 
 // Positions of kills that explode this tick, drained by explosionSystem. Fixed size; empty between ticks, so it is
@@ -21,7 +22,7 @@ export const createBlasts = (): Blasts => ({ n: 0, x: new Float32Array(BLAST_CAP
 // despawn and returns 1; every other hit returns 0. Modifiers apply here: HIT_CRIT hits may crit (rolled on game.rng),
 // a surviving HIT_KNOCK hit is pushed back along (dx, dy), a kill heals the player (vamp) and queues a blast for
 // explosionSystem unless the hit is HIT_NOBLAST. A surviving HIT_STATUS hit refreshes slowT / burnT to the full
-// duration for each owned status (frost, ignite).
+// duration for each owned status (frost, ignite). A surviving HIT_TICK hit tells fx.soft so presentation shows no flash.
 export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: number, dy: number): number {
   const { world } = game;
   if (world.kind[j] !== KIND.ENEMY || world.hp[j] <= 0) return 0;
@@ -47,6 +48,7 @@ export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: 
       if (s.frost > 0) world.slowT[j] = FROST_SECS;
       if (s.ignite > 0) world.burnT[j] = IGNITE_SECS;
     }
+    if (flags & HIT_TICK) game.fx?.soft(j, dmg);
     return 0;
   }
   if (s.vamp > 0) game.player.hp = Math.min(game.player.maxHp, game.player.hp + s.vamp * VAMP_HP);
@@ -100,7 +102,7 @@ export function explosionSystem(game: Game): number {
 const BURN_EPS = 1e-4;
 
 // Runs the status timers (before explosionSystem, so burn-kill blasts drain the same tick): both count down, and a burning enemy takes IGNITE_DPS per level
-// through hitEnemy with no flags, so a burn never crits, pushes or starts a status; its kills still heal and blast.
+// through hitEnemy with HIT_TICK only, so a burn never crits, pushes or starts a status (presentation treats it as quiet); its kills still heal and blast.
 // Skipped entirely without a status level (timers cannot run without one). Walks the slots by index with `high`
 // re-read, since onKill may spawn into a freed slot (the Splitter); that slot is then tested by its own state.
 export function statusSystem(game: Game, dt: number): number {
@@ -118,7 +120,7 @@ export function statusSystem(game: Game, dt: number): number {
         continue;
       }
       world.burnT[i] = Math.max(0, world.burnT[i] - dt);
-      kills += hitEnemy(game, i, burn, 0, 0, 0);
+      kills += hitEnemy(game, i, burn, HIT_TICK, 0, 0);
     }
   }
   return kills;

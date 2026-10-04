@@ -40,6 +40,16 @@ export function stateHash(g: Game): number {
     mix(b.phase);
     for (const v of [b.x, b.y, b.dist, b.cd]) num(v);
   }
+  const fr = g.wstate.fire;
+  mix(fr.head);
+  mix(fr.started ? 1 : 0);
+  num(fr.lx);
+  num(fr.ly);
+  for (let k = 0; k < fr.life.length; k++) {
+    if (fr.life[k] <= 0) continue;
+    mix(k);
+    for (const v of [fr.x[k], fr.y[k], fr.life[k], fr.cd[k]]) num(v);
+  }
   num(g.time);
   num(g.xp);
   mix(g.kills);

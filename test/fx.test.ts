@@ -155,3 +155,18 @@ test('fx never changes the simulation: a seeded arena runs identically with and 
   assert.ok(base[0] > 0, 'the run must kill something to exercise the hooks');
   assert.deepEqual(run(true), base);
 });
+
+test('soft lowers hp without a flash or a counted hit, and a plain drop still flashes and counts', () => {
+  const { world, fx, game } = mk();
+  const a = spawnEnemy(world, ENEMY.BOSS, 10, 10);
+  fx.observe(game);
+  world.hp[a] -= 5;
+  fx.soft(a, 5);
+  fx.observe(game);
+  assert.equal(fx.flashing(a), false);
+  assert.equal(fx.hits, 0);
+  world.hp[a] -= 5;
+  fx.observe(game);
+  assert.equal(fx.flashing(a), true);
+  assert.equal(fx.hits, 1);
+});

@@ -109,6 +109,11 @@ export function createFx(capacity: number, rng: () => number = Math.random) {
 
     flashing: (i: number): boolean => flashUntil[i] > fx.clock,
 
+    // An hp drop of `dmg` on slot j that is continuous damage, not a hit: forget it so observe sees no drop.
+    soft(j: number, dmg: number): void {
+      lastHp[j] -= dmg;
+    },
+
     // Writes slot i's tail (see bentTail) to `out`; zero until it has two samples, and for a slot whose
     // current occupant has none yet, so a recycled slot never inherits a ghost.
     tail(world: World, i: number, out: Tail): void {
@@ -178,7 +183,7 @@ export function createFx(capacity: number, rng: () => number = Math.random) {
       fx.trauma = Math.min(1, fx.trauma + a);
     },
 
-    // Derives flashes and the hurt vignette from sim state. hp only ever falls on a hit, so a drop is a hit.
+    // Derives flashes and the hurt vignette from sim state. hp only ever falls on a hit, so a drop is a hit (except soft ticks).
     observe(game: Game): void {
       const { world, player } = game;
       for (let i = 0; i < world.high; i++) {

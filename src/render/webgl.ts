@@ -6,6 +6,7 @@ import { bladePos, BLADE_RADIUS, MAX_BLADES } from '../game/orbit.ts';
 import { CHAIN_LIFE } from '../game/weapons/chain.ts';
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { BOOM_RADIUS, MAX_BOOMS } from '../game/weapons/boomerang.ts';
+import { FLAME_LEVELS, FIRE_CAP, FIRE_ALPHA, type FireState } from '../game/weapons/flame.ts';
 import { TRAIL_MAX } from './trail.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World } from '../core/world.ts';
@@ -34,8 +35,8 @@ const RING_LINES = 3; // concentric one-pixel rings make the shockwave's visible
 const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
 const BOLT_DOT_R = 2.5;
 const MAX_BOLT_DOTS = 160; // a full-length level-5 zap is about 120 dots
-// Instances the buffer reserves for weapon visuals: the rings, the zap's dots, the boomerangs.
-export const WEAPON_INSTANCES = RING_LINES + MAX_BOLT_DOTS + MAX_BOOMS;
+// Instances the buffer reserves for weapon visuals: the rings, the zap's dots, the boomerangs, the fire patches.
+export const WEAPON_INSTANCES = RING_LINES + MAX_BOLT_DOTS + MAX_BOOMS + FIRE_CAP;
 const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));
 
 const LAYERS = [KIND.GEM, KIND.ENEMY, KIND.ENEMY_PROJECTILE, KIND.PROJECTILE];
@@ -54,11 +55,20 @@ function put(out: Float32Array, o: number, x: number, y: number, r: number, pal:
   out[o + 8] = ey;
 }
 
-// Layers, bottom to top (canvas.ts uses the same order): gems, enemies, enemy projectiles, player
-// projectiles, fx particles, blades, player. The background and grid
+// Layers, bottom to top (canvas.ts uses the same order): gems, fire patches (low alpha, under everything that moves),
+// enemies, enemy projectiles, player projectiles, fx particles, blades, weapon effects (shockwave, zap, boomerangs), player. The background and grid
 // are on a canvas below; the HP bar, vignette and HUD text on one above. Within a layer instances draw in
 // slot order. Entities carry their tail's bend and tip (see trail.ts); zero without fx.
 // Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
+// Fire patches go below the enemies: opaque discs on top hid them. Alpha is FIRE_ALPHA fading with life.
+function packFire(fr: FireState, player: Player, out: Float32Array, n: number): number {
+  const fl = FLAME_LEVELS[(player.stats.weapons.flame || 1) - 1];
+  for (let k = 0; k < FIRE_CAP; k++) {
+    if (fr.life[k] > 0) put(out, n++ * STRIDE, fr.x[k], fr.y[k], fl.radius, P_BURN, FIRE_ALPHA * Math.min(1, fr.life[k] / fl.life), 0, 0, 0, 0);
+  }
+  return n;
+}
+
 export function packInstances(world: World, player: Player, game: Pick<RenderGame, 'camera' | 'view' | 'fx' | 'time'> & Partial<Pick<RenderGame, 'wstate'>>, out: Float32Array): number {
   const { camera, view, fx } = game;
   const pad = fx ? SHAKE_PAD + TRAIL_MAX : 0;
@@ -68,6 +78,7 @@ export function packInstances(world: World, player: Player, game: Pick<RenderGam
   const y1 = camera.y + view.h + pad;
   let n = 0;
   for (const layer of LAYERS) {
+    if (layer === KIND.ENEMY && game.wstate) n = packFire(game.wstate.fire, player, out, n);
     for (let i = 0; i < world.high; i++) {
       const k = world.kind[i];
       if (k !== layer) continue;
