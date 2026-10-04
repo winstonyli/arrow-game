@@ -175,7 +175,7 @@ async function importCode(text) {
     if (!verify(replay)) throw new ReplayError(replay.engine !== engineTag() ? 'engine' : 'mismatch');
     const prev = store.list().find((e) => e.mode === replay.mode && e.seed === replay.seed);
     let note = '';
-    if (!store.submit(replay, importLabel(prev)).saved) {
+    if (!store.submit({ ...replay, savedAt: Date.now() }, importLabel(prev)).saved) {
       note = prev && !prev.stale && !better(replay.mode, replay.result, prev) ? 'Not saved: your stored run is better' : 'Not saved: storage is unavailable';
     }
     startWatch(replay, { from: 'challenges', note });

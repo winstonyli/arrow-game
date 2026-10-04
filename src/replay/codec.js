@@ -25,7 +25,10 @@ export class ReplayError extends Error {
 const isInt = (/** @type {any} */ v, /** @type {number} */ lo, /** @type {number} */ hi) => Number.isInteger(v) && v >= lo && v <= hi;
 const isNum = (/** @type {any} */ v) => typeof v === 'number' && Number.isFinite(v);
 
-/** Structural check of untrusted data. Returns the same object or throws ReplayError. @returns {Replay} */
+/**
+ * Structural check of untrusted data. Returns a normalized copy holding only the known fields (unknown keys,
+ * including `__proto__`, are dropped), or throws ReplayError. Field order matches the recorder's. @returns {Replay}
+ */
 export function validate(/** @type {any} */ r) {
   const bad = (code = 'invalid') => {
     throw new ReplayError(code);
@@ -53,7 +56,13 @@ export function validate(/** @type {any} */ r) {
   const s = r.result;
   if (!s || typeof s !== 'object' || !isNum(s.time) || !isInt(s.kills, 0, 1e9) || !isInt(s.level, 1, 1e6) || !isInt(s.room, 0, 1e6)) bad();
   if (!isNum(r.savedAt)) bad();
-  return r;
+  return {
+    v: r.v, sim: r.sim, engine: r.engine, mode: r.mode, seed: r.seed, ticks: r.ticks,
+    inputs: r.inputs.map(([n, x, y]) => [n, x, y]),
+    picks: r.picks.map(([t, id]) => [t, id]),
+    result: { time: s.time, kills: s.kills, level: s.level, room: s.room },
+    savedAt: r.savedAt,
+  };
 }
 
 const toB64 = (/** @type {Uint8Array} */ bytes) => {
@@ -100,11 +109,13 @@ async function pipe(/** @type {Uint8Array} */ bytes, /** @type {any} */ transfor
 }
 
 /** Share code: `AG1.` + base64url(deflate-raw(JSON)), or `AG0.` + base64url(JSON) where CompressionStream is missing. */
+// Copy applies the same limits as import, so every code we hand out can be read back (ReplayError 'too-large').
 export async function toCode(/** @type {Replay} */ replay) {
-  validate(replay);
-  const json = new TextEncoder().encode(JSON.stringify(replay));
-  if (typeof CompressionStream === 'undefined') return `AG0.${toB64(json)}`;
-  return `AG1.${toB64(await pipe(json, new CompressionStream('deflate-raw'), MAX_JSON_BYTES))}`;
+  const json = new TextEncoder().encode(JSON.stringify(validate(replay)));
+  if (json.length > MAX_JSON_BYTES) throw new ReplayError('too-large');
+  const code = typeof CompressionStream === 'undefined' ? `AG0.${toB64(json)}` : `AG1.${toB64(await pipe(json, new CompressionStream('deflate-raw'), MAX_JSON_BYTES))}`;
+  if (code.length > MAX_CODE_CHARS) throw new ReplayError('too-large');
+  return code;
 }
 
 /** @returns {Promise<Replay>} */

@@ -27,7 +27,7 @@ Every run is recorded as its seed plus quantized per-tick inputs and skill picks
 - **Share codes**: Copy code on the game over screen or in the list; paste into Import. Codes are `AG1.` plus base64url of deflated JSON; imports are re-simulated and rejected if they do not reproduce.
 - **Versioning**: `SIM_VERSION` in `src/replay/version.js`. Changing sim behaviour makes `test/replay-golden.test.js` fail: bump the version, then `node scripts/make-golden.mjs`. Old-version replays stay listed as stale and cannot be watched or raced.
 - **Caveat**: determinism is proven within one JS engine only. A replay recorded in another browser engine may drift (trig functions); the viewer warns.
-- `?mode=arena&seed=123` starts a direct run on a fixed seed (direct runs record and store nothing).
+- `?mode=arena&seed=123` starts a direct run on a fixed seed (direct runs keep the finished run in memory for Watch replay / Copy code but never write it to the store).
 
 ## Arena balance (kiting)
 In arena the player auto-fires while moving at half rate (`stats.moveFireRate = 0.5`; rooms keeps stand-still-to-fire, `moveFireRate = 0`), shooters and bosses only fire while on screen (`game.enemyFireOnScreen`), the early spawn ramp is gentler (`BASE_RATE 0.6`, `RATE_PER_SEC 0.015`), and the gem magnet is at least 1.5x the player's speed. A stationary player used to die at about 0:30.

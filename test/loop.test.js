@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStepper } from '../src/core/loop.js';
+import { TICK_DT } from '../src/replay/version.js';
 
 test('advance accumulates frame time into whole steps', () => {
   const s = createStepper(60);
@@ -17,4 +18,8 @@ test('caps steps after a long stall and drops the backlog', () => {
   const s = createStepper(60, 5);
   assert.equal(s.advance(10), 5);
   assert.equal(s.advance(0), 0);
+});
+
+test('the live loop steps at the replay tick rate (main.js uses createStepper())', () => {
+  assert.equal(createStepper().dt, TICK_DT); // replays are recorded per TICK_DT; changing the loop rate must bump SIM_VERSION
 });

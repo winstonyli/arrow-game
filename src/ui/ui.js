@@ -37,16 +37,28 @@ async function copyText(text) {
     return false;
   }
 }
-// A button that fetches a share code on click and copies it; flashes "Copied".
-const codeButton = (label, cls, getCode) => {
+// A button that fetches a share code on click and copies it; flashes "Copied". If the code cannot be made,
+// `onError(message)` reports it (default: the button flashes the message).
+const codeButton = (label, cls, getCode, onError) => {
   let timer = 0;
-  const b = button(label, cls, async () => {
-    const code = await getCode();
-    if (!code) return;
-    const ok = await copyText(code);
-    b.textContent = ok ? 'Copied' : label;
+  const flash = (text) => {
+    b.textContent = text;
     clearTimeout(timer);
     timer = setTimeout(() => (b.textContent = label), 1500);
+  };
+  const b = button(label, cls, async () => {
+    let code;
+    try {
+      code = await getCode();
+    } catch (e) {
+      const msg = e?.code === 'too-large' || e?.code === 'invalid' ? 'Too long to share' : 'Could not make a code';
+      if (onError) onError(msg);
+      else flash(msg);
+      return;
+    }
+    if (!code) return;
+    const ok = await copyText(code);
+    flash(ok ? 'Copied' : label);
   });
   return b;
 };
@@ -154,7 +166,7 @@ export function createUi(root, on) {
             info.lastChild.textContent = r.stale ? `${r.line} · old version` : r.line;
             e.append(info);
             if (!r.stale) {
-              e.append(button('Watch', 'g', () => on.onWatchEntry(r.mode, r.seed)), button('Race', '', () => on.onRace(r.mode, r.seed)), codeButton('Copy', 'b', () => on.onCopyEntry(r.mode, r.seed)));
+              e.append(button('Watch', 'g', () => on.onWatchEntry(r.mode, r.seed)), button('Race', '', () => on.onRace(r.mode, r.seed)), codeButton('Copy', 'b', () => on.onCopyEntry(r.mode, r.seed), setStatus));
             }
             e.append(
               button('✕', '', () => {
