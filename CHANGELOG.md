@@ -4,7 +4,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
 ## v0.3.0 (unreleased)
-`SIM_VERSION` 4, `REPLAY_VERSION` 1 (replays and share codes from `SIM_VERSION` 2 and 3 stop verifying; the file format is unchanged). Ships after v0.2.0 (the migration), so v0.2.0 stays a pure no-sim-change release.
+`SIM_VERSION` 5, `REPLAY_VERSION` 1 (replays and share codes from `SIM_VERSION` 2 to 4 stop verifying; the file format is unchanged). Ships after v0.2.0 (the migration), so v0.2.0 stays a pure no-sim-change release.
 
 - Weapons are levelled (5 levels) and held in up to 5 slots, the bow included. Orbit Blade moved onto the same mechanism (five levels, up to 8 blades); new arena weapons: Shockwave, Chain Lightning, Boomerang. Offer cards show NEW or the level step.
 - Power Shot and Rapid Fire now apply to every weapon; Multishot, Piercing, Ricochet and Homing stay bow-only and say so on their cards.
@@ -12,6 +12,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 - The slot cap is enforced and tested but not reachable yet: four weapons fill four of the five slots.
 - Every enemy hit now goes through one function, `hitEnemy` (`src/game/hit.ts`), instead of each weapon damaging enemies itself.
 - Four arena-only hit modifiers, levelled to 5: Critical Hits, Knockback, Vampiric, Explosive Kills (numbers in the README). Boomerang and Orbit Blade get neither Crit nor Knockback; explosions drain once per tick from a 64-slot queue and show a ring at the blast radius. Knockback follows the hit direction, so a ricochet can push an enemy toward the player.
+- Two status modifiers, Frost and Ignite (arena only, levels 1 to 5; arrows, Shockwave and Chain Lightning apply them, Boomerang, Orbit Blade and explosions do not). Frost: -12% enemy speed per level for 2 s (floor 40% at level 5). Ignite: 6 damage per second per level x `damageMult` for 3 s; a burn kill still heals and explodes. A new hit refreshes the timer, nothing stacks. Slowed enemies tint icy blue, burning ones orange (both renderers). Per-enemy status timers are hashed while set, so `SIM_VERSION` is 5 and replays from earlier sim versions are flagged stale. The determinism test now covers all six modifiers (new pinned hashes, Bun and Node agree) and asserts both statuses occur.
 - Crit and Knockback now have particle cues (a white ring and sparks on a crit, grey dust at the old spot on a push). Presentation only: no sim change, goldens and the determinism hashes are unchanged. Checked in a visible browser pane on 2026-10-04 (WebGL and `?renderer=canvas2d`): both fire from real play and draw; the crit ring and sparks read clearly, the dust puff is faint. render-bench has not been run.
 - `test/modifiers-determinism.test.ts` pins the state hashes of a 60 s maxed-build run, run by both Bun and Node as a cross-engine check.
 - Checked in a visible browser pane (2026-10-04, WebGL and `?renderer=canvas2d`): NEW and level-step cards, shockwave ring, chain zap, boomerang, blades and the HUD level strip draw, with no console errors. Not checked: render-bench cost, held-key play, a long run.
