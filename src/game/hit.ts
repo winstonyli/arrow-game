@@ -2,7 +2,7 @@ import { KIND } from '../core/world.ts';
 import { clamp } from '../core/math.ts';
 import type { HitFn } from '../core/systems.ts';
 import type { Game } from './game.ts';
-import { CRIT_CHANCE, CRIT_MULT, KNOCK_PX } from './modifiers.ts';
+import { CRIT_CHANCE, CRIT_MULT, KNOCK_PX, VAMP_HP } from './modifiers.ts';
 
 // What a hit is, for the modifiers (Tasks 2-5): CRIT = may crit, KNOCK = may push, NOBLAST = its kills do not explode.
 export const HIT_CRIT = 1;
@@ -29,6 +29,7 @@ export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: 
     }
     return 0;
   }
+  if (s.vamp > 0) game.player.hp = Math.min(game.player.maxHp, game.player.hp + s.vamp * VAMP_HP);
   game.onKill?.(j);
   world.despawn(j);
   return 1;

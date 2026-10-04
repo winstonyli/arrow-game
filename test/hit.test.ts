@@ -145,3 +145,30 @@ test('the knockback modifier is a levelled arena skill', () => {
   assert.equal(s.knockback, 1);
   assert.ok(!pickChoices(seeded(3), 50, null, false).includes('knockback'));
 });
+
+test('vampiric heals per kill and per level, capped at max HP, and not for a hit that does not kill', () => {
+  const g = arenaGame();
+  g.player.stats.vamp = 3;
+  g.player.hp = 50;
+  hitEnemy(g, at(g, 100), 1, 0, 0, 0); // survives
+  assert.equal(g.player.hp, 50);
+  hitEnemy(g, at(g, 150), 1e6, 0, 0, 0);
+  assert.equal(g.player.hp, 53);
+  g.player.hp = g.player.maxHp - 1;
+  hitEnemy(g, at(g, 200), 1e6, 0, 0, 0);
+  assert.equal(g.player.hp, g.player.maxHp);
+});
+
+test('vampiric does nothing at level 0', () => {
+  const g = arenaGame();
+  g.player.hp = 50;
+  hitEnemy(g, at(g, 100), 1e6, 0, 0, 0);
+  assert.equal(g.player.hp, 50);
+});
+
+test('the vampiric modifier is a levelled arena skill', () => {
+  const s = baseStats();
+  applySkill(s, 'vamp');
+  assert.equal(s.vamp, 1);
+  assert.ok(!pickChoices(seeded(3), 50, null, false).includes('vamp'));
+});
