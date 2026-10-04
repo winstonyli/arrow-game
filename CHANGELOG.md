@@ -10,7 +10,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 - Power Shot and Rapid Fire now apply to every weapon; Multishot, Piercing, Ricochet and Homing stay bow-only and say so on their cards.
 - Rooms keeps its original offer pool (weapons are arena-only).
 - The slot cap is enforced and tested but not reachable yet: four weapons fill four of the five slots.
-- Not verified in a browser: the weapon effects and offer cards were not checked visually (hidden Browser pane); see the README "Weapons" section.
+- Checked in a visible browser pane (2026-10-04, WebGL and `?renderer=canvas2d`): NEW and level-step cards, shockwave ring, chain zap, boomerang, blades and the HUD level strip draw, with no console errors. Not checked: render-bench cost, held-key play, a long run.
 
 ## v0.2.0 (unreleased)
 TypeScript, Vite and Bun; no gameplay or sim change (`SIM_VERSION` 2, `REPLAY_VERSION` 1). The golden fixtures are byte-identical to v0.1.0 and still reproduce, so replays recorded on v0.1.0 stay valid. `package.json` reads `0.2.0-dev` until the owner cuts the release.
