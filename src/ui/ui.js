@@ -39,12 +39,14 @@ async function copyText(text) {
 }
 // A button that fetches a share code on click and copies it; flashes "Copied".
 const codeButton = (label, cls, getCode) => {
+  let timer = 0;
   const b = button(label, cls, async () => {
     const code = await getCode();
     if (!code) return;
     const ok = await copyText(code);
     b.textContent = ok ? 'Copied' : label;
-    setTimeout(() => (b.textContent = label), 1500);
+    clearTimeout(timer);
+    timer = setTimeout(() => (b.textContent = label), 1500);
   });
   return b;
 };
@@ -212,7 +214,8 @@ export function createUi(root, on) {
     el.ghost.hidden = !m.ghost;
     if (m.ghost) {
       setText(el.ghost, m.ghost.text);
-      el.ghost.dataset.ahead = String(m.ghost.ahead);
+      const ahead = String(m.ghost.ahead);
+      if (el.ghost.dataset.ahead !== ahead) el.ghost.dataset.ahead = ahead;
     }
     setText(el.snd, muted ? 'off' : 'on');
     setText(soundBtn, `Sound: ${muted ? 'off' : 'on'}`);

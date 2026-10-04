@@ -74,7 +74,8 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 .new-best { color: var(--g); }
 .title-name { color: var(--a); font-size: calc(var(--u) * 26) !important; }
 
-.watchbar { position: absolute; left: 50%; bottom: calc(var(--u) * 10); transform: translateX(-50%); display: flex; align-items: center; gap: calc(var(--u) * 10); padding: calc(var(--u) * 6) calc(var(--u) * 10); font: 500 calc(var(--u) * 12) var(--display); letter-spacing: calc(var(--u) * 1); text-transform: uppercase; pointer-events: auto; white-space: nowrap; }
+/* bottom: 42u clears the skill chips (bottom 8u + ~26u tall), which stay visible while watching. */
+.watchbar { position: absolute; left: 50%; bottom: calc(var(--u) * 42); transform: translateX(-50%); display: flex; align-items: center; gap: calc(var(--u) * 10); padding: calc(var(--u) * 6) calc(var(--u) * 10); font: 500 calc(var(--u) * 12) var(--display); letter-spacing: calc(var(--u) * 1); text-transform: uppercase; pointer-events: auto; white-space: nowrap; }
 .watchbar .btn { width: auto; padding: calc(var(--u) * 5) calc(var(--u) * 10); }
 #ui [data-watch=true] .pause-btn, #ui [data-watch=true] .sound-hint { display: none; }
 .ghost-line { position: absolute; right: calc(var(--u) * 8); top: calc(var(--u) * 52); font: 500 calc(var(--u) * 12) var(--display); letter-spacing: calc(var(--u) * 1); text-transform: uppercase; color: var(--g); text-shadow: 0 0 calc(var(--u) * 8) currentColor; }
