@@ -11,7 +11,7 @@ import { createWeaponState } from '../src/game/weapons.ts';
 import { CHAIN_LIFE } from '../src/game/weapons/chain.ts';
 import { BOOM_RADIUS } from '../src/game/weapons/boomerang.ts';
 import { WEAPON_INSTANCES, COLORS } from '../src/render/webgl.ts';
-import { FLAME_LEVELS } from '../src/game/weapons/flame.ts';
+import { FLAME_LEVELS, FIRE_ALPHA } from '../src/game/weapons/flame.ts';
 import { IGNITE_TINT } from '../src/game/modifiers.ts';
 
 type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons'> };
@@ -230,22 +230,28 @@ test('packInstances draws a flying boomerang as a solid circle and skips an idle
   assert.deepEqual(Array.from(out.subarray(0, 5)), [40, 50, BOOM_RADIUS, TT + 7, 2]); // P_WEAPON, solid
 });
 
-test('packInstances draws each live fire patch as a burn-coloured disc whose alpha fades with its life, and skips dead ones', () => {
-  const w = new World(2);
+test('packInstances draws each live fire patch as a burn-coloured disc at most FIRE_ALPHA opaque that fades with its life, packed before enemies, and skips dead ones', () => {
+  const w = new World(4);
+  spawnEnemy(w, ENEMY.CHASER, 300, 300); // a plain enemy: it must be packed after every patch
   const ws = createWeaponState();
   const L = FLAME_LEVELS[2];
   const f = ws.fire;
   f.x[0] = 100; f.y[0] = 100; f.life[0] = L.life; // full life
   f.x[1] = 150; f.y[1] = 100; f.life[1] = L.life / 2; // half
   f.x[2] = 200; f.y[2] = 100; f.life[2] = 0; // dead
-  const out = new Float32Array((2 + WEAPON_INSTANCES) * STRIDE);
+  const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
   const pl = player({ stats: { orbit: 0, weapons: { flame: 3 } } });
   const n = packInstances(w, pl, G({ wstate: ws }), out);
   const burn = COLORS.lastIndexOf(IGNITE_TINT); // P_BURN
   const discs: number[][] = [];
-  for (let i = 0; i < n; i++) if (out[i * STRIDE + 3] === burn) discs.push([out[i * STRIDE + 2], out[i * STRIDE + 4]]);
+  let enemyAt = -1;
+  for (let i = 0; i < n; i++) {
+    if (out[i * STRIDE + 3] === burn) discs.push([out[i * STRIDE + 2], out[i * STRIDE + 4], i]);
+    else if (out[i * STRIDE] === 300) enemyAt = i;
+  }
   assert.equal(discs.length, 2);
   assert.equal(discs[0][0], L.radius);
-  assert.ok(Math.abs(discs[0][1] - 1) < 1e-6);
-  assert.ok(Math.abs(discs[1][1] - 0.5) < 1e-6);
+  assert.ok(Math.abs(discs[0][1] - FIRE_ALPHA) < 1e-6);
+  assert.ok(Math.abs(discs[1][1] - FIRE_ALPHA / 2) < 1e-6);
+  assert.ok(enemyAt >= 0 && discs.every((d) => d[2] < enemyAt), 'fire patches pack (draw) before enemies');
 });

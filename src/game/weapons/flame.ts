@@ -6,6 +6,7 @@ import type { WeaponDef } from '../weapons.ts';
 export const FIRE_CAP = 64; // patches alive at once; the oldest is overwritten when the ring is full
 export const FIRE_SPACING = 20; // px the player moves between drops
 export const FIRE_TICK = 0.25; // seconds between a patch's damage ticks
+export const FIRE_ALPHA = 0.35; // presentation only: a patch's opacity cap (it fades from here); opaque patches hid enemies and shots
 export const FLAME_LEVELS = [
   { dps: 8, life: 2, radius: 14 },
   { dps: 12, life: 2.5, radius: 16 },
@@ -47,7 +48,10 @@ export function updateFlame(game: Game, level: number, dt: number): number {
     for (let q = 0; q < n; q++) {
       const j = grid.out[q];
       if (world.kind[j] !== KIND.ENEMY) continue;
-      if (Math.hypot(world.x[j] - f.x[k], world.y[j] - f.y[k]) > L.radius + world.radius[j]) continue;
+      const ex = world.x[j] - f.x[k];
+      const ey = world.y[j] - f.y[k];
+      const r = L.radius + world.radius[j];
+      if (ex * ex + ey * ey > r * r) continue;
       kills += hitEnemy(game, j, dmg, HIT_STATUS | HIT_TICK, 0, 0);
     }
   }
