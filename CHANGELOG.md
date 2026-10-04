@@ -14,6 +14,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 - Four arena-only hit modifiers, levelled to 5: Critical Hits, Knockback, Vampiric, Explosive Kills (numbers in the README). Boomerang and Orbit Blade get neither Crit nor Knockback; explosions drain once per tick from a 64-slot queue and show a ring at the blast radius. Knockback follows the hit direction, so a ricochet can push an enemy toward the player.
 - `test/modifiers-determinism.test.ts` pins the state hashes of a 60 s maxed-build run, run by both Bun and Node as a cross-engine check.
 - Checked in a visible browser pane (2026-10-04, WebGL and `?renderer=canvas2d`): NEW and level-step cards, shockwave ring, chain zap, boomerang, blades and the HUD level strip draw, with no console errors. Not checked: render-bench cost, held-key play, a long run.
+- Modifiers checked in a visible browser pane (2026-10-04; WebGL, plus Canvas2D for the card, HUD strip and blast rings): the modifier cards show their icons and tags, picking Crit puts it on the HUD strip, the explosion ring fires once per blast, and the console stays clean. Not eyeballed: the crit and knockback cues (there are none by design), a long natural run.
 
 ## v0.2.0
 TypeScript, Vite and Bun; no gameplay or sim change (`SIM_VERSION` 2, `REPLAY_VERSION` 1). The golden fixtures are byte-identical to v0.1.0 and still reproduce, so replays recorded on v0.1.0 stay valid.
