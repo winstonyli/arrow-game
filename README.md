@@ -43,7 +43,7 @@ Every run is recorded as its seed plus quantized per-tick inputs and skill picks
 - **Challenges** (title screen): Daily Arena / Daily Rooms (seed derived from the local date), or any text or number as a seed. A run on a seed you have a best for races it as a translucent ghost with a live comparison line.
 - **Watch replay**: from the game over screen or the Challenges list; 1x or 4x, Esc to exit.
 - **Share codes**: Copy code on the game over screen or in the list; paste into Import. Codes are `AG1.` plus base64url of deflated JSON; imports are re-simulated and rejected if they do not reproduce.
-- **Versioning**: `SIM_VERSION` in `src/replay/version.js`. Changing sim behaviour makes `test/replay-golden.test.js` fail: bump the version, then `node scripts/make-golden.mjs`. Old-version replays stay listed as stale and cannot be watched or raced.
+- **Versioning**: `SIM_VERSION` in `src/replay/version.js`. Changing sim behaviour makes `test/replay-golden.test.ts` fail: bump the version, then `node scripts/make-golden.mjs`. Old-version replays stay listed as stale and cannot be watched or raced.
 - **Caveat**: determinism is proven within one JS engine only. A replay recorded in another browser engine may drift (trig functions); the viewer warns.
 - `?mode=arena&seed=123` starts a direct run on a fixed seed (direct runs keep the finished run in memory for Watch replay / Copy code but never write it to the store).
 
