@@ -1608,3 +1608,68 @@ test('Daggers is a levelled arena-only weapon offer that takes a slot, with the 
   assert.equal(daggers.available!(full), false);
   assert.ok(!SKILLS.filter((k) => !k.arena).some((k) => k.id === 'daggers')); // the Rooms pool is unchanged
 });
+
+test('a spent dagger overlapping two enemies on one move hits exactly one of them', () => {
+  const g = arenaGame();
+  g.player.vx = 300;
+  const a = tough(g, at(g, 150, 0)); // spends the level-1 pierce on move 11
+  const b = tough(g, at(g, 200, -8)); // b and c both first overlap the centre dagger on move 16 (x = 186.7)
+  const c = tough(g, at(g, 200, 8));
+  runK(g, 1, 30);
+  assert.ok(lost(g, a) > 0);
+  assert.equal([b, c].filter((e) => lost(g, e) > 0).length, 1, 'pierce 1 means two hits in all');
+});
+
+test('a dagger freed at range does not hit on its freeing move', () => {
+  const g = arenaGame();
+  g.player.vx = 300;
+  const e = tough(g, at(g, 345, 0)); // move 27 (x = 315) is 30 px off; move 28 (x = 326.7, left < 0) would overlap
+  runK(g, 1, 30);
+  assert.equal(lost(g, e), 0);
+});
+
+test('a dagger that killed enemy j hits a new enemy recycled into slot j (lastGen is captured before the hit)', () => {
+  const g = arenaGame();
+  g.player.vx = 300;
+  const j = at(g, 200, 0);
+  g.world.hp[j] = 0.001;
+  runK(g, 1, 17); // 16 moves: x = 186.7 kills j
+  assert.equal(g.world.kind[j], KIND.NONE);
+  assert.equal(g.wstate.daggers.on[1], 1);
+  const j2 = tough(g, at(g, 200, 0)); // reuses slot j
+  assert.equal(j2, j);
+  runK(g, 1, 1); // move 17: x = 198.3 overlaps the new enemy
+  assert.ok(lost(g, j2) > 0, 'the recycled slot is hit, not skipped');
+  assert.equal(g.wstate.daggers.on[1], 0, 'its last pierce is spent');
+});
+
+test('the aim threshold uses the speed, not one axis: vy alone moves the fan, a slow diagonal counts as still', () => {
+  const g = arenaGame();
+  at(g, -100, 0);
+  g.player.vy = 300;
+  runK(g, 1, 1);
+  assert.equal(liveK(g), 3);
+  assert.ok(Math.abs(angleK(g, 1) - Math.PI / 2) < 1e-5);
+  const g2 = arenaGame();
+  at(g2, 120, -160);
+  g2.player.vx = 14; g2.player.vy = 14; // speed 19.8 < DAGGER_MOVE_MIN, though |vx| + |vy| = 28 is above it
+  runK(g2, 1, 1);
+  assert.equal(liveK(g2), 3);
+  assert.ok(Math.abs(angleK(g2, 1) - -Math.atan2(160, 120)) < 1e-5);
+});
+
+test('a still player with the nearest enemy beyond the level range holds fire and cd stays 0', () => {
+  const g = arenaGame();
+  at(g, 340, 0); // level-1 range 320
+  runK(g, 1, 5);
+  assert.equal(liveK(g), 0);
+  assert.equal(g.wstate.daggers.cd, 0);
+});
+
+test('a relaunched slot forgets the previous dagger\'s last-hit enemy', () => {
+  const g = arenaGame();
+  g.player.vx = 300;
+  const j = tough(g, at(g, 150, 0));
+  runK(g, 1, 100); // volley 1 (updates 1-29) hits j once; volley 2 (from update 61 or 62) reuses slot 1 and must hit it again
+  assert.ok(Math.abs(lost(g, j) - 2 * DAGGER_LEVELS[0].dmg) < 1e-3);
+});
