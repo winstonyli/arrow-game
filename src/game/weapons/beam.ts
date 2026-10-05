@@ -23,7 +23,7 @@ export const createBeamState = (): BeamState => ({ angle: 0, started: 0, live: 0
 // The length at a level, clamped to the table (shared by both renderers).
 export const beamLength = (level: number): number => BEAM_LEVELS[Math.min(BEAM_LEVELS.length, Math.max(1, level)) - 1].length;
 
-// How many dots the beam is drawn with (shared by both renderers).
+// How many dots the beam is drawn with (the WebGL renderer and its test).
 export const beamDots = (length: number): number => Math.min(BEAM_MAX_DOTS, Math.floor(length / BEAM_DOT_GAP));
 
 // Points the beam at the nearest enemy in range, turning at the level's capped rate along the shorter arc, and every
