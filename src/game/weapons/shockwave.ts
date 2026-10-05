@@ -53,8 +53,8 @@ export function updateShockwave(game: Game, level: number, dt: number): number {
 
 export const SHOCKWAVE: WeaponDef = {
   id: 'shockwave',
-  name: 'Shockwave',
-  desc: 'A ring pulses out from you and hits everything it crosses',
+  name: 'Quake',
+  desc: 'The ground ripples outward from your feet, hitting everything it reaches',
   maxLevel: SHOCK_LEVELS.length,
   update: updateShockwave,
 };

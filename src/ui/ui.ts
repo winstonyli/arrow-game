@@ -125,7 +125,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     <div class="ghost-line" hidden></div>
     <div class="skills"></div>
     <div class="sound-hint">[M] sound <span class="snd"></span></div>
-    <div class="banner"><b class="glow-text">Warning</b><span>Something big is coming</span></div>`;
+    <div class="banner"><b class="glow-text">Knock Knock</b><span>Guess who's here</span></div>`;
   const q = (s: string) => lookup<HudSlot>(hud, s);
   const el = {
     hp: q('.bar.hp i'), hpN: q('.hp-n'), lv: q('.lv'), xp: q('.bar.xp i'), room: q('.room'), bossRoom: q('.boss-room'),
@@ -140,12 +140,12 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   const bests = { arena: h('div', 'mu'), rooms: h('div', 'mu') };
   titlePanel.append(
     h('h1', 'title-name glow-text', 'Arrow game'),
-    h('div', 'mu', 'Survive. Level up. Repeat.'),
-    button('Arena', 'primary b', () => on.onPlay('arena')),
+    h('div', 'mu', 'One archer. Too many enemies.'),
+    button('Pit', 'primary b', () => on.onPlay('arena')),
     bests.arena,
-    button('Rooms', '', () => on.onPlay('rooms')),
+    button('Keep', '', () => on.onPlay('rooms')),
     bests.rooms,
-    button('Challenges', 'g', () => on.onChallenges()),
+    button('Echoes', 'g', () => on.onChallenges()),
     h('div', 'mu', 'WASD or arrows to move. Aim is automatic.'),
   );
   title.append(titlePanel);
@@ -176,8 +176,8 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   seedField.setAttribute('aria-label', 'Seed');
   const importField = h('input', 'field');
   importField.type = 'text';
-  importField.placeholder = 'Paste a replay code';
-  importField.setAttribute('aria-label', 'Replay code');
+  importField.placeholder = 'Paste an echo code';
+  importField.setAttribute('aria-label', 'Echo code');
   const list = h('div', 'list');
   const status = h('div', 'status');
   status.setAttribute('role', 'status');
@@ -189,10 +189,10 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     return r;
   };
   chPanel.append(
-    h('h2', 'glow-text', 'Challenges'),
-    row(button('Daily Arena', 'primary', () => on.onDaily('arena')), button('Daily Rooms', 'primary b', () => on.onDaily('rooms'))),
-    row(seedField, button('Arena', 'g', () => on.onSeed('arena', seedField.value)), button('Rooms', 'g', () => on.onSeed('rooms', seedField.value))),
-    h('div', 'mu', 'Your best runs (race them as a ghost)'),
+    h('h2', 'glow-text', 'Echoes'),
+    row(button('Daily Pit', 'primary', () => on.onDaily('arena')), button('Daily Keep', 'primary b', () => on.onDaily('rooms'))),
+    row(seedField, button('Pit', 'g', () => on.onSeed('arena', seedField.value)), button('Keep', 'g', () => on.onSeed('rooms', seedField.value))),
+    h('div', 'mu', 'Past you is waiting. Race them.'),
     list,
     row(importField, importBtn),
     status,
@@ -246,7 +246,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   watchbar.append(watchStatus, speedBtn, button('Exit', 'b', () => on.onQuit()), watchNote);
   function setWatch(s: WatchState) {
     watchState = s;
-    setText(watchStatus, s.done ? 'Replay finished' : 'Replay');
+    setText(watchStatus, s.done ? 'Echo finished' : 'Echo');
     setText(speedBtn, `Speed ${s.speed}x`);
     setText(watchNote, s.note);
   }
@@ -321,7 +321,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     setText(el.kills, String(m.kills));
     if (m.kind === 'rooms') {
       setText(el.room, String(m.room));
-      setText(el.bossRoom, m.bossRoom ? 'Boss room' : '');
+      setText(el.bossRoom, m.bossRoom ? 'Showdown' : '');
       setText(el.foes, String(m.enemies));
     } else {
       setText(el.lv, String(m.level));
@@ -366,8 +366,8 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   }
 
   function setBests(b: { arena: string; rooms: string }) {
-    bests.arena.textContent = `Arena: ${b.arena}`;
-    bests.rooms.textContent = `Rooms: ${b.rooms}`;
+    bests.arena.textContent = `Pit: ${b.arena}`;
+    bests.rooms.textContent = `Keep: ${b.rooms}`;
   }
 
   return { show, update, setOffer, showOver, setBests, setWatch, setChallenges, setStatus, setImportBusy };

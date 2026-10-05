@@ -75,8 +75,8 @@ export function updateBeam(game: Game, level: number, dt: number): number {
 
 export const BEAM: WeaponDef = {
   id: 'beam',
-  name: 'Beam',
-  desc: 'A beam slowly turns toward the nearest enemy and burns everything on its line',
+  name: 'Lighthouse',
+  desc: 'A beam sweeps round to the nearest enemy and scorches all in its light',
   maxLevel: BEAM_LEVELS.length,
   update: updateBeam,
 };

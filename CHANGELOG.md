@@ -3,6 +3,11 @@
 Versioning and what counts as a release: see "Versioning and commits" in the README. Each entry names the
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
+## Unreleased (v0.3.1)
+Display text only: `SIM_VERSION` 11 and `REPLAY_VERSION` 1 are unchanged, and ids stay fixed, so stored replays and share codes still verify.
+
+- A naming pass over every weapon, skill and modifier (name and description), the two modes (Arena is now Pit, Rooms is now Keep), the Challenges screen (now Echoes), the title tagline, the boss pill and banner, and the replay bar. The old-to-new map is in docs/DEVELOPMENT.md ("Display names").
+
 ## v0.3.0
 `SIM_VERSION` 11, `REPLAY_VERSION` 1 (replays and share codes from `SIM_VERSION` 2 to 10 stop verifying; the file format is unchanged). Ships after v0.2.0 (the migration), so v0.2.0 stays a pure no-sim-change release.
 

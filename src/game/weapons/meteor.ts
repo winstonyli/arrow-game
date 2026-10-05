@@ -93,8 +93,8 @@ export function updateMeteors(game: Game, level: number, dt: number): number {
 
 export const METEOR: WeaponDef = {
   id: 'meteor',
-  name: 'Meteor',
-  desc: 'Marks random enemies nearby, then drops a meteor on each spot',
+  name: 'Incoming!',
+  desc: 'Targets get a warning ring, then a flaming rock hits the spot',
   maxLevel: METEOR_LEVELS.length,
   update: updateMeteors,
 };

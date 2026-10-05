@@ -74,8 +74,8 @@ export function updateDrone(game: Game, level: number, dt: number): number {
 
 export const DRONE: WeaponDef = {
   id: 'drone',
-  name: 'Drone',
-  desc: 'Drones trail you and shoot the nearest enemy in their own range',
+  name: 'Hornets',
+  desc: 'A buzzing swarm follows you and stings the nearest enemy in reach',
   maxLevel: DRONE_LEVELS.length,
   update: updateDrone,
 };

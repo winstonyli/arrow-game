@@ -110,8 +110,8 @@ export function updateMines(game: Game, level: number, dt: number): number {
 
 export const MINES: WeaponDef = {
   id: 'mines',
-  name: 'Mines',
-  desc: 'Drops mines behind you that blast enemies who come close',
+  name: 'Breadcrumbs',
+  desc: 'You drop little bombs as you go, and enemies that follow set them off',
   maxLevel: MINE_LEVELS.length,
   update: updateMines,
 };

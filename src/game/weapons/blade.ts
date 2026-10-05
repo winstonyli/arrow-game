@@ -12,8 +12,8 @@ export const BLADE_LEVELS = [
 
 export const BLADE: WeaponDef = {
   id: 'blade',
-  name: 'Orbit Blade',
-  desc: 'Blades circle you and cut what they touch',
+  name: 'Whirligig',
+  desc: 'Spinning blades whirl around you and slice what they touch',
   maxLevel: BLADE_LEVELS.length,
   onLevel(s, level) {
     s.orbit = BLADE_LEVELS[level - 1].count;

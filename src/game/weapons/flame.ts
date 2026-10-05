@@ -73,8 +73,8 @@ export function updateFlame(game: Game, level: number, dt: number): number {
 
 export const FLAME: WeaponDef = {
   id: 'flame',
-  name: 'Flame Trail',
-  desc: 'Leaves fire behind you that burns enemies standing in it',
+  name: 'Hot Heels',
+  desc: 'Fire follows your steps and scorches enemies on the ground behind you',
   maxLevel: FLAME_LEVELS.length,
   update: updateFlame,
 };

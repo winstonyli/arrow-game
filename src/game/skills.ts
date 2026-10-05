@@ -16,14 +16,14 @@ export interface Skill {
 
 const PASSIVES: Skill[] = [
   { id: 'multishot', name: 'Multishot', desc: '+1 arrow per volley (bow)', apply: (s) => { s.projectileCount += 1; } },
-  { id: 'rapid', name: 'Rapid Fire', desc: '+30% attack speed (not Beam, Flame, Blade)', apply: (s) => { s.cooldownMult /= 1.3; } },
-  { id: 'power', name: 'Power Shot', desc: '+40% damage (all weapons)', apply: (s) => { s.damageMult *= 1.4; } },
-  { id: 'pierce', name: 'Piercing', desc: 'Arrows pierce 1 more enemy (bow)', apply: (s) => { s.pierce += 1; } },
-  { id: 'ricochet', name: 'Ricochet', desc: 'Arrows bounce off walls 2 times (bow)', apply: (s) => { s.bounce += 2; } },
-  { id: 'swift', name: 'Swift Feet', desc: '+15% move speed', apply: (s) => { s.moveSpeed *= 1.15; } },
-  { arena: true, id: 'regen', name: 'Regeneration', desc: '+1 HP per second', apply: (s) => { s.regen += 1; } },
+  { id: 'rapid', name: 'Quick Draw', desc: 'The bow and your timed weapons attack 30% faster (not Lighthouse, Hot Heels, Whirligig)', apply: (s) => { s.cooldownMult /= 1.3; } },
+  { id: 'power', name: 'Big Numbers', desc: 'Every hit does 40% more damage', apply: (s) => { s.damageMult *= 1.4; } },
+  { id: 'pierce', name: 'Skewer', desc: 'Arrows go through 1 more enemy before they stop', apply: (s) => { s.pierce += 1; } },
+  { id: 'ricochet', name: 'Pinball', desc: 'Arrows bounce off walls 2 more times', apply: (s) => { s.bounce += 2; } },
+  { id: 'swift', name: 'Zoomies', desc: 'You run 15% faster', apply: (s) => { s.moveSpeed *= 1.15; } },
+  { arena: true, id: 'regen', name: 'Chicken Soup', desc: '+1 HP per second, steady as you go', apply: (s) => { s.regen += 1; } },
   { arena: true, id: 'magnet', name: 'Magnet', desc: '+50% gem pickup range', apply: (s) => { s.pickupRadius *= 1.5; } },
-  { arena: true, available: (s) => !s.homing, id: 'homing', name: 'Homing', desc: 'Arrows curve toward enemies (bow)', apply: (s) => { s.homing = 1; } },
+  { arena: true, available: (s) => !s.homing, id: 'homing', name: 'Heat Seeker', desc: 'Arrows steer themselves toward nearby enemies', apply: (s) => { s.homing = 1; } },
 ];
 
 const slotsUsed = (s: PlayerStats): number => Object.keys(s.weapons).length + 1; // the bow always holds one

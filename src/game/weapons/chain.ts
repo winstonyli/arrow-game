@@ -77,8 +77,8 @@ export function updateChain(game: Game, level: number, dt: number): number {
 
 export const CHAIN: WeaponDef = {
   id: 'chain',
-  name: 'Chain Lightning',
-  desc: 'A bolt strikes the nearest enemy and jumps to others nearby',
+  name: 'Live Wire',
+  desc: 'A bolt snaps to the nearest enemy and whips on to its neighbours',
   maxLevel: CHAIN_LEVELS.length,
   update: updateChain,
 };

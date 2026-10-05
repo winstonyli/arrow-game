@@ -82,8 +82,8 @@ export function updateBoomerang(game: Game, level: number, dt: number): number {
 
 export const BOOMERANG: WeaponDef = {
   id: 'boomerang',
-  name: 'Boomerang',
-  desc: 'Flies out and back, cutting everything it touches',
+  name: 'Yo-Yo',
+  desc: 'Shoots out at the nearest enemy and snaps back, hitting on both trips',
   maxLevel: BOOM_LEVELS.length,
   update: updateBoomerang,
 };

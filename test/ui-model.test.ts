@@ -132,8 +132,8 @@ test('challengeRows summarize stored replays', () => {
     { mode: 'rooms', seed: 9, label: '', time: 50, kills: 12, level: 1, room: 6, stale: true },
   ];
   const rows = challengeRows(entries);
-  assert.deepEqual(rows[0], { mode: 'arena', seed: 7, title: 'Arena · Daily 2026-10-03', line: '2:05 · 40 kills', stale: false });
-  assert.deepEqual(rows[1], { mode: 'rooms', seed: 9, title: 'Rooms · Seed 9', line: 'Room 6 · 12 kills', stale: true });
+  assert.deepEqual(rows[0], { mode: 'arena', seed: 7, title: 'Pit · Daily 2026-10-03', line: '2:05 · 40 kills', stale: false });
+  assert.deepEqual(rows[1], { mode: 'rooms', seed: 9, title: 'Keep · Seed 9', line: 'Room 6 · 12 kills', stale: true });
 });
 
 test('importError maps codes to messages with a fallback', () => {

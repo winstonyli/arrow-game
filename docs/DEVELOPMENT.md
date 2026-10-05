@@ -52,7 +52,7 @@ Prereleases are tagged on `main` at points the owner picks. `v0.1.0` is the firs
 5. Tag the release commit on `main`, then bump `package.json` to the next `-dev` version in a follow-up commit.
 
 ## UI
-`/` opens a title screen (Arena or Rooms); `/?mode=arena` and `/?mode=rooms` skip it, as does `?stress=N` (those never auto-pause, so benchmarks run unfocused). Esc or P pauses (also on tab blur when started from the title); M mutes; 1-3 or a click picks a skill. Personal bests are kept in `localStorage` (`arrow-best-arena`, `arrow-best-rooms`). `?debug` shows the entity and frame-time line at the bottom.
+`/` opens a title screen (Pit or Keep); `/?mode=arena` and `/?mode=rooms` skip it, as does `?stress=N` (those never auto-pause, so benchmarks run unfocused). Esc or P pauses (also on tab blur when started from the title); M mutes; 1-3 or a click picks a skill. Personal bests are kept in `localStorage` (`arrow-best-arena`, `arrow-best-rooms`). `?debug` shows the entity and frame-time line at the bottom.
 
 The screens and HUD are DOM overlays (`src/ui/`): `model.ts` holds the pure view-models, `ui.ts` the DOM controller, `ui.css` the Synthwave theme (tokens as custom properties). Fonts are self-hosted in `assets/fonts/` (Orbitron, Share Tech Mono; SIL OFL). The sim only exposes `game.skills` (owned-skill counts) and `game.bossAt` (last boss spawn time) for the UI.
 
@@ -62,7 +62,7 @@ Parked: a volume slider and settings screen, a real icon set (the glyphs are sim
 
 Every run is recorded as its seed plus quantized per-tick inputs and skill picks (`src/replay/`), so it can be re-simulated exactly. The best run per mode and seed is kept in `localStorage` (cap 40; random-seed runs are dropped first, then the oldest).
 
-- **Challenges** (title screen): Daily Arena / Daily Rooms (seed derived from the local date), or any text or number as a seed. A run on a seed you have a best for races it as a translucent ghost with a live comparison line.
+- **Echoes** (title screen): Daily Pit / Daily Keep (seed derived from the local date), or any text or number as a seed. A run on a seed you have a best for races it as a translucent ghost with a live comparison line.
 - **Watch replay**: from the game over screen or the Challenges list; 1x or 4x, Esc to exit.
 - **Share codes**: Copy code on the game over screen or in the list; paste into Import. Codes are `AG1.` plus base64url of deflated JSON; imports are re-simulated and rejected if they do not reproduce.
 - **Versioning**: `SIM_VERSION` in `src/replay/version.ts`. Changing sim behaviour makes `test/replay-golden.test.ts` fail: bump the version once per release cycle (see the `SIM_VERSION` entry above), then `bun scripts/make-golden.ts --force`. Old-version replays stay listed as stale and cannot be watched or raced.
@@ -124,6 +124,15 @@ Deferred: an upgrade-variety round (per-weapon branches); Shockwave has no knock
 
 ## Sound
 `src/audio/sfx.ts` synthesizes every effect with WebAudio (no asset files): shot, hit, kill (heavier for bruisers and bosses), gem pickup (pitch climbs a pentatonic scale while pickups keep coming, restarts after 0.5 s), level-up arpeggio, damage, boss spawn, game over. Presentation-only like fx: `game.sfx` is optional, the sim only calls `sfx.kill` (via `onKill`) and `sfx.boss`; `sfx.observe(game)` derives the rest from state changes once per frame. Per-sound throttles (`MIN_GAP`), a 24-voice cap and a compressor keep a crowd from turning to noise. Audio starts on the first key press or touch (browser autoplay rules); **M** mutes (remembered in localStorage, shown in the HUD). There is no sound in stress mode. Levels were checked offline (every sound peaks between 0.06 and 0.45, no NaN), but nobody has judged how it sounds yet; all gains and pitches are first guesses in that file.
+
+## Display names
+Only `name` and `desc` (and the UI strings) are display text; ids, files and constants keep the old names, and replays store skill ids, so a rename never touches the sim. v0.3.1 names (id: display):
+- Modes: arena: Pit; rooms: Keep. Title-screen Challenges: Echoes (the replay bar says Echo; Daily labels and error messages are unchanged).
+- Weapons: blade: Whirligig; shockwave: Quake; chain: Live Wire; boomerang: Yo-Yo; flame: Hot Heels; mines: Breadcrumbs; meteor: Incoming!; beam: Lighthouse; drone: Hornets; daggers: Pincushion.
+- Skills: rapid: Quick Draw; power: Big Numbers; pierce: Skewer; ricochet: Pinball; swift: Zoomies; regen: Chicken Soup; homing: Heat Seeker (multishot and magnet are unchanged).
+- Modifiers: crit: Lucky Strike; knockback: Personal Space; explode: Popcorn; frost: Molasses; ignite: Cooked (vamp stays Vampiric).
+- Boss: the Keep-mode pill reads Showdown; the spawn banner reads Knock Knock / Guess who's here.
+Known gap: the Quick Draw, Lucky Strike, Personal Space, Molasses and Cooked descriptions list weapons or exclusions by display name, so they go stale when a weapon gains or loses a modifier; v0.4.0 revisits weapon upgrade parity and should re-sync them (or generalise the text). The enemy type names (chaser, shooter and so on) are internal and never shown.
 
 ## Arena soak
 The soak bots were re-run on `SIM_VERSION` 3 (2026-10-04, Bun, machine about 49% busy, Defender real-time protection off, BelowNormal priority), so those numbers are contended; the pre-weapons numbers stay beside them for reference and are not directly comparable.

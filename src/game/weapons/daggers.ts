@@ -119,8 +119,8 @@ export function updateDaggers(game: Game, level: number, dt: number): number {
 
 export const DAGGERS: WeaponDef = {
   id: 'daggers',
-  name: 'Daggers',
-  desc: 'Throws a fan of piercing daggers the way you move',
+  name: 'Pincushion',
+  desc: 'A fan of pointy blades flies ahead of you and skewers everything in the way',
   maxLevel: DAGGER_LEVELS.length,
   update: updateDaggers,
 };
