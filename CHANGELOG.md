@@ -4,9 +4,10 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
 ## Unreleased (v0.3.1)
-Display text only: `SIM_VERSION` 11 and `REPLAY_VERSION` 1 are unchanged, and ids stay fixed, so stored replays and share codes still verify.
+`SIM_VERSION` 12, `REPLAY_VERSION` 1 (replays and share codes from v0.3.0 stop verifying; the file format is unchanged). The naming pass is display text only and ids stay fixed; the sim change is the dagger pool below.
 
 - A naming pass over every weapon, skill and modifier (name and description), the two modes (Arena is now Pit, Rooms is now Keep), the Challenges screen (now Echoes), the title tagline, the boss pill and banner, and the replay bar. The old-to-new map is in docs/DEVELOPMENT.md ("Display names").
+- Daggers: the pool grows from 14 to 28 slots, so stacked Rapid Fire keeps full fans up to 7 picks at level 5 (it was 4); `DAGGER_CAP` also sizes the WebGL buffer share.
 
 ## v0.3.0
 `SIM_VERSION` 11, `REPLAY_VERSION` 1 (replays and share codes from `SIM_VERSION` 2 to 10 stop verifying; the file format is unchanged). Ships after v0.2.0 (the migration), so v0.2.0 stays a pure no-sim-change release.

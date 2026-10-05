@@ -91,7 +91,7 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   return out;
 }
 
-const EXPECTED: number[] = [1514612189, 981486644, 546334360];
+const EXPECTED: number[] = [608878031, 1908451674, 2543615662];
 
 test('a maxed build hashes the same on every run and on both engines', () => {
   const a = run();

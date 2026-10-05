@@ -1527,16 +1527,18 @@ test('the pool holds at most DAGGER_CAP daggers; a full pool skips the launch an
   g.player.vx = 300;
   const px = g.player.x;
   const py = g.player.y;
-  runK(g, 5, 1);
-  assert.equal(liveK(g), 7);
-  runK(g, 5, 1);
-  assert.equal(liveK(g), DAGGER_CAP); // 7 + 7: slots 0-6 moved once, 7-13 just launched
+  const volleys = DAGGER_CAP / 7;
+  for (let v = 1; v <= volleys; v++) {
+    runK(g, 5, 1);
+    assert.equal(liveK(g), 7 * v); // each update launches a fresh volley of 7 into free slots
+  }
+  assert.equal(liveK(g), DAGGER_CAP);
   const a0 = angleK(g, 0);
   const left0 = d.left[0];
-  runK(g, 5, 1); // the third volley finds no free slot
+  runK(g, 5, 1); // the next volley finds no free slot
   assert.equal(liveK(g), DAGGER_CAP);
-  assert.ok(Math.abs(d.x[0] - (px + 2 * STEP * Math.cos(a0))) < 1e-3); // slot 0 kept flying (two moves), not relaunched
-  assert.ok(Math.abs(d.y[0] - (py + 2 * STEP * Math.sin(a0))) < 1e-3);
+  assert.ok(Math.abs(d.x[0] - (px + volleys * STEP * Math.cos(a0))) < 1e-3); // slot 0 kept flying (one move per update after its launch), not relaunched
+  assert.ok(Math.abs(d.y[0] - (py + volleys * STEP * Math.sin(a0))) < 1e-3);
   assert.ok(Math.abs(d.left[0] - (left0 - STEP)) < 1e-3);
   assert.equal(d.pierce[0], DAGGER_LEVELS[4].pierce);
   for (let t = 0; t < 60; t++) { runK(g, 5, 1); assert.ok(liveK(g) <= DAGGER_CAP); }

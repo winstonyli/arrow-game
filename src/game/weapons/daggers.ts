@@ -3,7 +3,7 @@ import { hitEnemy, HIT_CRIT, HIT_STATUS } from '../hit.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
-export const DAGGER_CAP = 14; // one level-5 volley (7) lives about 0.57 s, under the 0.8 s interval; extra Rapid Fire can overlap volleys, and a full pool skips daggers
+export const DAGGER_CAP = 28; // a level-5 volley (7) lives about 0.57 s; four volleys fit, which covers up to 6 Rapid Fire picks, and past that a full pool skips daggers
 export const DAGGER_SPEED = 700; // px/s
 export const DAGGER_RADIUS = 6;
 export const DAGGER_SPREAD = 0.18; // rad between neighbouring daggers in a fan

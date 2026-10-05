@@ -48,7 +48,7 @@ In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` first (or use PowerShell), beca
 
 - **Weapons** (Pit, levels 1 to 5, up to four held at once alongside the bow): Whirligig, Quake, Live Wire, Yo-Yo, Hot Heels, Breadcrumbs, Incoming!, Lighthouse, Hornets and Pincushion; the bow with its Multishot, Piercing, Ricochet and Homing upgrades.
 - **Modifiers** (Pit, levels 1 to 5): Lucky Strike, Personal Space, Vampiric, Popcorn, Molasses and Cooked.
-- **Deterministic replays**: every run is its seed plus quantized inputs and picks, so it can be re-simulated exactly and verified (`SIM_VERSION` 11).
+- **Deterministic replays**: every run is its seed plus quantized inputs and picks, so it can be re-simulated exactly and verified (`SIM_VERSION` 12).
 - **Daily challenges, ghosts and share codes**, as described above.
 - **Rendering and polish**: WebGL2 renderer with a Canvas2D fallback (`?renderer=canvas2d`), motion trails, screen shake and hit effects, and WebAudio-synthesized sound with no audio files.
 
