@@ -11,7 +11,7 @@ import { DRONE } from '../src/game/weapons/drone.ts';
 import { KIND } from '../src/core/world.ts';
 import { METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 
-// Nine weapons (the bow aside) and all six modifiers at level 5 (applySkill does not check slots), an invulnerable drifting player, checkpoints every 20 s.
+// Nine weapons (the bow aside) and all six modifiers at level 5, except the Drone at level 4 (at 5 it kills the few enemies before the beam or a meteor reaches one; applySkill does not check slots), an invulnerable drifting player, checkpoints every 20 s.
 function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean; detonated: boolean; meteors: boolean; struck: boolean; beamed: boolean; droned: boolean }): number[] {
   const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(7), input: { x: 0.6, y: 0.3 } });
   g.player.hp = g.player.maxHp = 1e9;
