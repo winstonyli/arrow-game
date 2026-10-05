@@ -34,22 +34,22 @@ Plan 1 (core + rooms mode) implemented; playable at `bun run dev`. Gameplay feel
 Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?renderer=canvas2d` for the fallback). Plan 3 (arena mode + camera) implemented; play it at `/?mode=arena` (rooms stays the default at `/`).
 
 ## Branches
-`dev` is where work lands: feature branches (`feat/*`, `fix/*`) merge into `dev`. `main` only moves by fast-forward from `dev` when cutting a release, so it is always a tested release point. `main` currently sits at the v0.2.0 release; v0.3.0 is unreleased and lives on `dev`. Merging is the owner's decision; run `bun test` and `node --test test/*.test.ts` on the merged result first. Pushing branches and tags to the public remote is also the owner's call.
+`main` is the trunk: work lands there through feature branches (`feat/*`, `fix/*`, `docs/*`), and releases are marked by `vX.Y.Z` tags, not by a separate branch (the old `dev` branch was folded into `main` after v0.3.0). Between tags, `package.json` carries the next `-dev` version. Merging is the owner's decision; run `bun test` and `node --test test/*.test.ts` on the merged result first. Tagging and pushing branches and tags to the public remote are also the owner's call. A future live demo should deploy from `v*` tags, not from every push to `main`, so unreleased work never ships by accident.
 
 ## Versioning and commits
 Three separate versions, each with one job:
-- **Release version** (`version` in `package.json`, git tags `vX.Y.Z`): `0.MINOR.PATCH` while unstable, `1.0.0` at the first public release. Minor = new content or features (a mode, an enemy, a skill), patch = fixes and tuning. Named prereleases use SemVer tags, `v0.1.0-alpha.1`, `-beta.1`, `-rc.1`; the `package.json` version reads the next version with `-dev` between tags (now `0.3.0-dev`).
+- **Release version** (`version` in `package.json`, git tags `vX.Y.Z`): `0.MINOR.PATCH` while unstable, `1.0.0` at the first public release. Minor = new content or features (a mode, an enemy, a skill), patch = fixes and tuning. Named prereleases use SemVer tags, `v0.1.0-alpha.1`, `-beta.1`, `-rc.1`; the `package.json` version reads the next version with `-dev` between tags (now `0.4.0-dev`).
 - **`SIM_VERSION`** (`src/replay/version.ts`, integer): bump on the FIRST change to sim behaviour after a release (balance tuning included), because old replays and share codes stop verifying. Further sim changes before the next release share that bump: nobody holds replays from an unreleased build, so only your own dev replays break, and they fail verification instead of showing as stale. Whenever the sim changes, still regenerate the goldens with `bun scripts/make-golden.ts --force`, repin the determinism hashes and say so in the commit body. It is independent of the release version: a patch release that tunes gem speed still bumps it. After a release, even a number change needs the bump; batch such changes into the next release.
 - **`REPLAY_VERSION`** (`src/replay/codec.ts`): bump only when the replay file format changes.
 
 Commits are Conventional Commits, `type: summary`, scope optional. Types in use: `feat`, `fix`, `docs`, `test`, `perf`, `chore`, plus `tune` for balance and feel changes. Mark a breaking change with `!` (`feat!:`) or a `BREAKING CHANGE:` footer. Commit bodies explain why, and name any `SIM_VERSION` bump.
 
-Prereleases are tagged on `dev` at points the owner picks. `v0.1.0` is the first tag (made after the checklist below passed); the next release number is chosen per release. Release checklist:
+Prereleases are tagged on `main` at points the owner picks. `v0.1.0` is the first tag (made after the checklist below passed); the next release number is chosen per release. Release checklist:
 1. `bun test` and `node --test test/*.test.ts` pass on the tagged commit, and `bun run typecheck` is clean.
 2. If `SIM_VERSION` changed, the goldens are regenerated and committed.
 3. `bun run bench:render` and `bun run soak` have run, with CPU load and Defender state recorded next to the numbers.
 4. `package.json` version and the tag match; a `CHANGELOG.md` entry lists the changes and any `SIM_VERSION` bump (the file is created with the first tag).
-5. For a full release only: `main` fast-forwards to the tag.
+5. Tag the release commit on `main`, then bump `package.json` to the next `-dev` version in a follow-up commit.
 
 ## UI
 `/` opens a title screen (Arena or Rooms); `/?mode=arena` and `/?mode=rooms` skip it, as does `?stress=N` (those never auto-pause, so benchmarks run unfocused). Esc or P pauses (also on tab blur when started from the title); M mutes; 1-3 or a click picks a skill. Personal bests are kept in `localStorage` (`arrow-best-arena`, `arrow-best-rooms`). `?debug` shows the entity and frame-time line at the bottom.
