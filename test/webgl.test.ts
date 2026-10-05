@@ -16,6 +16,7 @@ import { MINE_RADIUS, MINE_LIFE } from '../src/game/weapons/mines.ts';
 import { METEOR_LEVELS, METEOR_RING_MIN, METEOR_RING_MAX, METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 import { BEAM_LEVELS, BEAM_ALPHA, beamDots } from '../src/game/weapons/beam.ts';
 import { DRONE_DOT_R, DRONE_TRACER, DRONE_TRACER_DOTS, droneAlpha } from '../src/game/weapons/drone.ts';
+import { DAGGER_DOT_R } from '../src/game/weapons/daggers.ts';
 import { IGNITE_TINT } from '../src/game/modifiers.ts';
 
 type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons'> };
@@ -383,4 +384,42 @@ test('packInstances draws each active drone as a weapon-coloured body and a fadi
   dr.on[0] = 0;
   r = scan();
   assert.equal(r.bodies.length, 1);
+});
+test('packInstances draws each live dagger as a head dot and two fading trailing dots behind it, after the drones and above enemies, and nothing for a free slot', () => {
+  const w = new World(4);
+  spawnEnemy(w, ENEMY.CHASER, 300, 300); // daggers pack after it (weapon effects draw above enemies)
+  const ws = createWeaponState();
+  ws.drones.on[0] = 1; ws.drones.x[0] = 700; ws.drones.y[0] = 500; // daggers pack after the drones (its tracer is spent by default)
+  const dg = ws.daggers;
+  dg.on[0] = 1; dg.x[0] = 100; dg.y[0] = 200; dg.dx[0] = 1; dg.dy[0] = 0; // flying +x: trail toward -x
+  dg.on[5] = 1; dg.x[5] = 400; dg.y[5] = 100; dg.dx[5] = 0; dg.dy[5] = 1; // flying +y: trail toward -y
+  const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
+  const pl = player({ x: 50, y: 60, stats: { orbit: 0, weapons: { daggers: 5, drone: 1 } } });
+  const pw = TT + 7; // P_WEAPON, as in the beam and drone tests
+  const scan = () => {
+    const n = packInstances(w, pl, G({ wstate: ws }), out);
+    const dots: number[][] = [];
+    let enemyAt = -1;
+    let droneAt = -1;
+    for (let i = 0; i < n; i++) {
+      const o = i * STRIDE;
+      if (out[o + 3] === pw && out[o + 2] === DAGGER_DOT_R) dots.push([out[o], out[o + 1], out[o + 4], i]);
+      else if (out[o + 3] === pw && out[o + 2] === DRONE_DOT_R) droneAt = i;
+      else if (out[o] === 300) enemyAt = i;
+    }
+    return { dots, enemyAt, droneAt };
+  };
+  let r = scan();
+  const want = [[100, 200, 1], [95, 200, 0.6], [90, 200, 0.3], [400, 100, 1], [400, 95, 0.6], [400, 90, 0.3]]; // slot order, head first
+  assert.equal(r.dots.length, want.length); // slots 1-4 and 6-13 are free: nothing
+  for (let i = 0; i < want.length; i++) {
+    assert.ok(Math.abs(r.dots[i][0] - want[i][0]) < 1e-3 && Math.abs(r.dots[i][1] - want[i][1]) < 1e-3, `dot ${i} position`);
+    assert.ok(Math.abs(r.dots[i][2] - want[i][2]) < 1e-6, `dot ${i} alpha`); // the out buffer is float32
+  }
+  assert.ok(r.enemyAt >= 0 && r.dots.every((d) => d[3] > r.enemyAt), 'daggers pack (draw) after enemies');
+  assert.ok(r.droneAt >= 0 && r.dots.every((d) => d[3] > r.droneAt), 'daggers pack after the drones');
+  dg.on[0] = 0;
+  r = scan();
+  assert.equal(r.dots.length, 3);
+  assert.equal(r.dots[0][0], 400);
 });

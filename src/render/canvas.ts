@@ -10,6 +10,7 @@ import { MINE_CAP, MINE_RADIUS, mineAlpha } from '../game/weapons/mines.ts';
 import { METEOR_CAP, meteorRadius, meteorAlpha } from '../game/weapons/meteor.ts';
 import { BEAM_ALPHA, beamLength } from '../game/weapons/beam.ts';
 import { DRONE_MAX, DRONE_DOT_R, DRONE_TRACER, droneAlpha } from '../game/weapons/drone.ts';
+import { DAGGER_CAP, DAGGER_DOT_R, DAGGER_TRAIL } from '../game/weapons/daggers.ts';
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
@@ -158,7 +159,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     drawWorldGrid(ctx, cam, view, bounds);
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
-    // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs, meteor strike rings, beam, drones), player.
+    // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs, meteor strike rings, beam, drones, daggers), player.
     if (fx) tails(world, KIND.GEM, -1, GEM_COLOR, fx);
     circles(world, KIND.GEM, -1, GEM_COLOR);
     // Fire patches sit above the gems but below enemies and shots (opaque ones hid them), at a capped alpha.
@@ -269,6 +270,27 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       ctx.globalAlpha = 1;
       ctx.beginPath();
       ctx.arc(dr.x[k], dr.y[k], DRONE_DOT_R, 0, TAU);
+      ctx.fill();
+    }
+    // The daggers: a short streak behind each (one segment per trail step, fading), then the head.
+    const dg = ws.daggers;
+    ctx.strokeStyle = '#ffa657';
+    ctx.fillStyle = '#ffa657';
+    ctx.lineWidth = 2;
+    for (let k = 0; k < DAGGER_CAP; k++) {
+      if (!dg.on[k]) continue;
+      for (let t = 0; t < DAGGER_TRAIL.length; t++) {
+        const from = t === 0 ? 0 : DAGGER_TRAIL[t - 1][0];
+        const to = DAGGER_TRAIL[t][0];
+        ctx.globalAlpha = DAGGER_TRAIL[t][1];
+        ctx.beginPath();
+        ctx.moveTo(dg.x[k] - dg.dx[k] * from, dg.y[k] - dg.dy[k] * from);
+        ctx.lineTo(dg.x[k] - dg.dx[k] * to, dg.y[k] - dg.dy[k] * to);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(dg.x[k], dg.y[k], DAGGER_DOT_R, 0, TAU);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
