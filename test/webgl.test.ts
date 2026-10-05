@@ -13,6 +13,7 @@ import { BOOM_RADIUS } from '../src/game/weapons/boomerang.ts';
 import { WEAPON_INSTANCES, COLORS } from '../src/render/webgl.ts';
 import { FLAME_LEVELS, FIRE_ALPHA } from '../src/game/weapons/flame.ts';
 import { MINE_RADIUS, MINE_LIFE } from '../src/game/weapons/mines.ts';
+import { METEOR_LEVELS, METEOR_RING_MIN, METEOR_RING_MAX, METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 import { IGNITE_TINT } from '../src/game/modifiers.ts';
 
 type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons'> };
@@ -284,4 +285,32 @@ test('packInstances draws each live mine as a weapon-coloured disc: dim unarmed,
   assert.ok(Math.abs(discs[1][2] - 1) < 1e-6);
   assert.ok(Math.abs(discs[2][2] - 0.5) < 1e-6);
   assert.ok(enemyAt >= 0 && discs.every((d) => d[3] < enemyAt), 'mines pack (draw) before enemies');
+});
+
+test('packInstances draws each pending meteor strike as a weapon-coloured ring at the blast radius whose opacity rises with age, above enemies, and skips dead ones', () => {
+  const w = new World(4);
+  spawnEnemy(w, ENEMY.CHASER, 300, 300); // a strike must pack after it (weapon effects draw above enemies)
+  const ws = createWeaponState();
+  const m = ws.meteors;
+  const set = (k: number, x: number, age: number, on = 1) => { m.on[k] = on; m.x[k] = x; m.y[k] = 100; m.age[k] = age; };
+  set(0, 100, 0); // just marked
+  set(1, 150, METEOR_TELEGRAPH / 2); // half way
+  set(2, 200, 0, 0); // dead slot
+  const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
+  const pl = player({ stats: { orbit: 0, weapons: { meteor: 3 } } });
+  const n = packInstances(w, pl, G({ wstate: ws }), out);
+  const pw = TT + 7; // P_WEAPON, as in the boomerang test
+  const rings: number[][] = [];
+  let enemyAt = -1;
+  for (let i = 0; i < n; i++) {
+    const o = i * STRIDE;
+    if (out[o + 3] === pw && out[o + 1] === 100) rings.push([out[o], out[o + 2], out[o + 4], i]);
+    else if (out[o] === 300) enemyAt = i;
+  }
+  assert.equal(rings.length, 2);
+  assert.deepEqual(rings.map((r) => r[0]), [100, 150]);
+  assert.ok(rings.every((r) => r[1] === METEOR_LEVELS[2].radius));
+  assert.ok(Math.abs(rings[0][2] + METEOR_RING_MIN) < 1e-6); // negative alpha = ring
+  assert.ok(Math.abs(rings[1][2] + (METEOR_RING_MIN + (METEOR_RING_MAX - METEOR_RING_MIN) / 2)) < 1e-6);
+  assert.ok(enemyAt >= 0 && rings.every((r) => r[3] > enemyAt), 'strikes pack (draw) after enemies');
 });
