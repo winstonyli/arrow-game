@@ -9,6 +9,7 @@ import { FLAME_LEVELS, FIRE_CAP, FIRE_ALPHA } from '../game/weapons/flame.ts';
 import { MINE_CAP, MINE_RADIUS, mineAlpha } from '../game/weapons/mines.ts';
 import { METEOR_CAP, meteorRadius, meteorAlpha } from '../game/weapons/meteor.ts';
 import { BEAM_ALPHA, beamLength } from '../game/weapons/beam.ts';
+import { DRONE_MAX, DRONE_DOT_R, DRONE_TRACER, droneAlpha } from '../game/weapons/drone.ts';
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
@@ -157,7 +158,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     drawWorldGrid(ctx, cam, view, bounds);
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
-    // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs, meteor strike rings, beam), player.
+    // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs, meteor strike rings, beam, drones), player.
     if (fx) tails(world, KIND.GEM, -1, GEM_COLOR, fx);
     circles(world, KIND.GEM, -1, GEM_COLOR);
     // Fire patches sit above the gems but below enemies and shots (opaque ones hid them), at a capped alpha.
@@ -250,6 +251,25 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       ctx.moveTo(player.x, player.y);
       ctx.lineTo(player.x + Math.cos(ws.beam.angle) * bl, player.y + Math.sin(ws.beam.angle) * bl);
       ctx.stroke();
+    }
+    // The drones: a tracer line to the last shot's target while it is fresh, then the body.
+    const dr = ws.drones;
+    ctx.strokeStyle = '#ffa657';
+    ctx.fillStyle = '#ffa657';
+    ctx.lineWidth = 2;
+    for (let k = 0; k < DRONE_MAX; k++) {
+      if (!dr.on[k]) continue;
+      if (dr.age[k] < DRONE_TRACER) {
+        ctx.globalAlpha = droneAlpha(dr.age[k]);
+        ctx.beginPath();
+        ctx.moveTo(dr.x[k], dr.y[k]);
+        ctx.lineTo(dr.tx[k], dr.ty[k]);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(dr.x[k], dr.y[k], DRONE_DOT_R, 0, TAU);
+      ctx.fill();
     }
     ctx.globalAlpha = 1;
     if (fx) trackTail(fx, 0, player.x, player.y, player.radius, '#3fb950');

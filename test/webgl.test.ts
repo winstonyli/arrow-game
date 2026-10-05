@@ -15,6 +15,7 @@ import { FLAME_LEVELS, FIRE_ALPHA } from '../src/game/weapons/flame.ts';
 import { MINE_RADIUS, MINE_LIFE } from '../src/game/weapons/mines.ts';
 import { METEOR_LEVELS, METEOR_RING_MIN, METEOR_RING_MAX, METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 import { BEAM_LEVELS, BEAM_ALPHA, beamDots } from '../src/game/weapons/beam.ts';
+import { DRONE_DOT_R, DRONE_TRACER, DRONE_TRACER_DOTS, droneAlpha } from '../src/game/weapons/drone.ts';
 import { IGNITE_TINT } from '../src/game/modifiers.ts';
 
 type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons'> };
@@ -341,4 +342,45 @@ test('packInstances draws the live beam as evenly spaced weapon-coloured dots to
   ws.beam.live = 0;
   const m = packInstances(w, pl, G({ wstate: ws }), out);
   assert.equal(m, n - dots);
+});
+test('packInstances draws each active drone as a weapon-coloured body and a fading tracer of evenly spaced dots to its target, above enemies, and nothing for inactive drones or a spent tracer', () => {
+  const w = new World(4);
+  spawnEnemy(w, ENEMY.CHASER, 300, 300); // drones pack after it (weapon effects draw above enemies)
+  const ws = createWeaponState();
+  const dr = ws.drones;
+  dr.on[0] = 1; dr.x[0] = 100; dr.y[0] = 200; dr.tx[0] = 160; dr.ty[0] = 200; dr.age[0] = DRONE_TRACER / 2;
+  dr.on[1] = 1; dr.x[1] = 400; dr.y[1] = 100; dr.age[1] = DRONE_TRACER; // active, tracer spent
+  const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
+  const pl = player({ x: 50, y: 60, stats: { orbit: 0, weapons: { drone: 3 } } });
+  const pw = TT + 7; // P_WEAPON, as in the beam test
+  const scan = () => {
+    const n = packInstances(w, pl, G({ wstate: ws }), out);
+    const bodies: number[][] = [];
+    const dots: number[][] = [];
+    let enemyAt = -1;
+    for (let i = 0; i < n; i++) {
+      const o = i * STRIDE;
+      if (out[o + 3] === pw && Math.abs(out[o + 2] - DRONE_DOT_R) < 1e-6) bodies.push([out[o], out[o + 1], i]);
+      else if (out[o + 3] === pw) dots.push([out[o], out[o + 4], i]);
+      else if (out[o] === 300) enemyAt = i;
+    }
+    return { bodies, dots, enemyAt };
+  };
+  let r = scan();
+  assert.equal(r.bodies.length, 2); // slot 2 is inactive: no body
+  assert.deepEqual(r.bodies.map((b) => [b[0], b[1]]).sort(), [[100, 200], [400, 100]].sort());
+  assert.equal(r.dots.length, DRONE_TRACER_DOTS); // only slot 0 has a live tracer
+  r.dots.sort((a, b) => a[0] - b[0]);
+  for (let i = 0; i < DRONE_TRACER_DOTS; i++) {
+    assert.ok(Math.abs(r.dots[i][0] - (100 + (60 * (i + 1)) / DRONE_TRACER_DOTS)) < 1e-3); // the last dot is on the target
+    assert.ok(Math.abs(r.dots[i][1] - droneAlpha(DRONE_TRACER / 2)) < 1e-6);
+  }
+  assert.ok(r.enemyAt >= 0 && r.bodies.every((b) => b[2] > r.enemyAt) && r.dots.every((d) => d[2] > r.enemyAt), 'drones pack (draw) after enemies');
+  dr.age[0] = DRONE_TRACER; // spent
+  r = scan();
+  assert.equal(r.dots.length, 0);
+  assert.equal(r.bodies.length, 2);
+  dr.on[0] = 0;
+  r = scan();
+  assert.equal(r.bodies.length, 1);
 });

@@ -5,7 +5,7 @@ import type { WeaponDef } from '../weapons.ts';
 export const DRONE_MAX = 3;
 export const DRONE_FOLLOW = 6; // per second: each update a drone closes min(1, DRONE_FOLLOW * dt) of the gap to its target point
 export const DRONE_STAGGER = 0.15; // seconds between the drones' first shots
-export const DRONE_TRACER = 0.08; // seconds a shot's tracer is drawn (presentation only)
+export const DRONE_TRACER = Math.fround(0.08); // seconds a shot's tracer is drawn (presentation only); f32-exact so a spent age (stored in a Float32Array) compares >= it
 export const DRONE_DOT_R = 5; // the drone's drawn radius (presentation only)
 export const DRONE_TRACER_DOTS = 6; // dots in a tracer (presentation only)
 export const DRONE_INSTANCES = DRONE_MAX * (1 + DRONE_TRACER_DOTS); // the WebGL buffer's share: a body and a tracer per drone
