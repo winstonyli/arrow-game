@@ -14,6 +14,7 @@ import { WEAPON_INSTANCES, COLORS } from '../src/render/webgl.ts';
 import { FLAME_LEVELS, FIRE_ALPHA } from '../src/game/weapons/flame.ts';
 import { MINE_RADIUS, MINE_LIFE } from '../src/game/weapons/mines.ts';
 import { METEOR_LEVELS, METEOR_RING_MIN, METEOR_RING_MAX, METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
+import { BEAM_LEVELS, BEAM_ALPHA, beamDots } from '../src/game/weapons/beam.ts';
 import { IGNITE_TINT } from '../src/game/modifiers.ts';
 
 type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons'> };
@@ -313,4 +314,31 @@ test('packInstances draws each pending meteor strike as a weapon-coloured ring a
   assert.ok(Math.abs(rings[0][2] + METEOR_RING_MIN) < 1e-6); // negative alpha = ring
   assert.ok(Math.abs(rings[1][2] + (METEOR_RING_MIN + (METEOR_RING_MAX - METEOR_RING_MIN) / 2)) < 1e-6);
   assert.ok(enemyAt >= 0 && rings.every((r) => r[3] > enemyAt), 'strikes pack (draw) after enemies');
+});
+test('packInstances draws the live beam as evenly spaced weapon-coloured dots to the end of the line at BEAM_ALPHA, above enemies, and nothing when it is not live', () => {
+  const w = new World(4);
+  spawnEnemy(w, ENEMY.CHASER, 300, 300); // dots must pack after it (weapon effects draw above enemies)
+  const ws = createWeaponState();
+  ws.beam.live = 1; ws.beam.started = 1; ws.beam.angle = Math.PI / 2; // straight down
+  const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
+  const pl = player({ x: 50, y: 60, stats: { orbit: 0, weapons: { beam: 3 } } });
+  const L = BEAM_LEVELS[2];
+  const dots = beamDots(L.length);
+  const n = packInstances(w, pl, G({ wstate: ws }), out);
+  const pw = TT + 7; // P_WEAPON, as in the boomerang test
+  const hit: number[][] = [];
+  let enemyAt = -1;
+  for (let i = 0; i < n; i++) {
+    const o = i * STRIDE;
+    if (out[o + 3] === pw && Math.abs(out[o] - 50) < 1e-3 && out[o + 1] > 60) hit.push([out[o + 1], out[o + 4], i]);
+    else if (out[o] === 300) enemyAt = i;
+  }
+  assert.equal(hit.length, dots);
+  assert.ok(Math.abs(hit[0][0] - (60 + L.length / dots)) < 1e-3);
+  assert.ok(Math.abs(hit[dots - 1][0] - (60 + L.length)) < 1e-3); // the last dot is at the end
+  assert.ok(hit.every((d) => Math.abs(d[1] - BEAM_ALPHA) < 1e-6));
+  assert.ok(enemyAt >= 0 && hit.every((d) => d[2] > enemyAt), 'beam dots pack (draw) after enemies');
+  ws.beam.live = 0;
+  const m = packInstances(w, pl, G({ wstate: ws }), out);
+  assert.equal(m, n - dots);
 });
