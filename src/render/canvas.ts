@@ -7,7 +7,7 @@ import { CHAIN_LIFE } from '../game/weapons/chain.ts';
 import { BOOM_RADIUS } from '../game/weapons/boomerang.ts';
 import { FLAME_LEVELS, FIRE_CAP, FIRE_ALPHA } from '../game/weapons/flame.ts';
 import { MINE_CAP, MINE_RADIUS, mineAlpha } from '../game/weapons/mines.ts';
-import { METEOR_CAP, METEOR_LEVELS, meteorAlpha } from '../game/weapons/meteor.ts';
+import { METEOR_CAP, meteorRadius, meteorAlpha } from '../game/weapons/meteor.ts';
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
@@ -229,7 +229,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     }
     // Pending meteor strikes: a ring at the blast radius, brighter as impact nears.
     const mt = ws.meteors;
-    const mr = METEOR_LEVELS[Math.min(5, Math.max(1, player.stats.weapons.meteor ?? 1)) - 1].radius;
+    const mr = meteorRadius(player.stats.weapons.meteor ?? 1);
     ctx.strokeStyle = '#ffa657'; // the colour the boomerangs use
     ctx.lineWidth = 3;
     for (let k = 0; k < METEOR_CAP; k++) {

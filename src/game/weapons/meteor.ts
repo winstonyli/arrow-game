@@ -16,6 +16,7 @@ export const METEOR_LEVELS = [
   { count: 2, dmg: 125, radius: 52, interval: 2.8 },
   { count: 3, dmg: 160, radius: 56, interval: 2.4 },
 ];
+export const meteorRadius = (level: number): number => METEOR_LEVELS[Math.min(METEOR_LEVELS.length, Math.max(1, level)) - 1].radius;
 
 // A fixed pool of pending strikes (parallel arrays; a slot is live while on[k] is 1) and the fire timer `cd`.
 // Presentation reads x/y/age/on and never writes them.

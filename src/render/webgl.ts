@@ -8,7 +8,7 @@ import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { BOOM_RADIUS, MAX_BOOMS } from '../game/weapons/boomerang.ts';
 import { FLAME_LEVELS, FIRE_CAP, FIRE_ALPHA, type FireState } from '../game/weapons/flame.ts';
 import { MINE_CAP, MINE_RADIUS, mineAlpha, type MineState } from '../game/weapons/mines.ts';
-import { METEOR_CAP, METEOR_LEVELS, meteorAlpha, type MeteorState } from '../game/weapons/meteor.ts';
+import { METEOR_CAP, meteorRadius, meteorAlpha, type MeteorState } from '../game/weapons/meteor.ts';
 import { TRAIL_MAX } from './trail.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World } from '../core/world.ts';
@@ -161,7 +161,7 @@ export function packInstances(world: World, player: Player, game: Pick<RenderGam
       }
     }
     for (const b of ws.boom.b) if (b.phase !== 0) put(out, n++ * STRIDE, b.x, b.y, BOOM_RADIUS, P_WEAPON, SOLID, 0, 0, 0, 0);
-    n = packMeteors(ws.meteors, METEOR_LEVELS[Math.min(5, Math.max(1, player.stats.weapons.meteor ?? 1)) - 1].radius, out, n);
+    n = packMeteors(ws.meteors, meteorRadius(player.stats.weapons.meteor ?? 1), out, n);
   }
   tv.mx = tv.my = tv.ex = tv.ey = 0;
   if (fx) fx.trackTail(0, player.x, player.y, player.radius, tv);
