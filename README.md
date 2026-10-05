@@ -31,7 +31,7 @@ Requires [Bun](https://bun.sh). Node is only used for an optional cross-engine t
 bun install          # dev dependencies only
 bun run dev          # Vite dev server on http://localhost:8000
 bun run build        # production bundle in dist/
-bun test             # the full test suite (366 tests)
+bun test             # the full test suite (369 tests)
 node --test test/*.test.ts   # same tests on Node/V8, a cross-engine check of the golden hashes
 bun run typecheck    # tsc --noEmit
 ```

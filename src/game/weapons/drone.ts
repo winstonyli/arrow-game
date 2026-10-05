@@ -65,7 +65,7 @@ export function updateDrone(game: Game, level: number, dt: number): number {
     if (t < 0) continue;
     d.tx[k] = world.x[t]; // before the hit: a kill can free and refill the slot
     d.ty[k] = world.y[t];
-    d.cd[k] = L.interval;
+    d.cd[k] = L.interval * player.stats.cooldownMult;
     d.age[k] = 0;
     kills += hitEnemy(game, t, dmg, HIT_CRIT | HIT_STATUS, 0, 0);
   }

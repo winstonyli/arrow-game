@@ -1280,3 +1280,28 @@ test('a drone shot is a full hit, not a quiet tick: it never tells fx.soft', () 
   runD(g, 1, 1 / 60);
   assert.deepEqual(soft, []);
 });
+
+test('Rapid Fire (cooldownMult) scales the Mines drop interval', () => {
+  const g = arenaGame();
+  g.player.stats.cooldownMult = 0.5;
+  run(g, 1, 1 / 60);
+  assert.equal(liveMines(g), 1);
+  assert.ok(Math.abs(g.wstate.mines.cd - MINE_LEVELS[0].interval * 0.5) < 1e-9);
+});
+
+test('Rapid Fire (cooldownMult) scales the Meteor volley interval', () => {
+  const g = arenaGame();
+  g.player.stats.cooldownMult = 0.5;
+  at(g, METEOR_RANGE - 20, 0);
+  runM(g, 1, 1 / 60);
+  assert.equal(pending(g), 1);
+  assert.ok(Math.abs(g.wstate.meteors.cd - METEOR_LEVELS[0].interval * 0.5) < 1e-9);
+});
+
+test('Rapid Fire (cooldownMult) scales the Drone shot interval', () => {
+  const g = arenaGame();
+  g.player.stats.cooldownMult = 0.5;
+  tough(g, at(g, -100, -32));
+  runD(g, 1, 1 / 60); // first shot on the activation update
+  assert.ok(Math.abs(g.wstate.drones.cd[0] - DRONE_LEVELS[0].interval * 0.5) < 1e-6); // cd is a Float32Array
+});
