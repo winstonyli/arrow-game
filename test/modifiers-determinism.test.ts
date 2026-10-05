@@ -6,13 +6,14 @@ import { applySkill } from '../src/game/skills.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import { seeded } from '../src/core/math.ts';
 import { MINE_LIFE } from '../src/game/weapons/mines.ts';
+import { BEAM_TICK } from '../src/game/weapons/beam.ts';
 import { METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 
-// All seven weapons and all six modifiers at level 5 (applySkill does not check slots), an invulnerable drifting player, checkpoints every 20 s.
-function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean; detonated: boolean; meteors: boolean; struck: boolean }): number[] {
+// Eight weapons (the bow aside) and all six modifiers at level 5 (applySkill does not check slots), an invulnerable drifting player, checkpoints every 20 s.
+function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean; detonated: boolean; meteors: boolean; struck: boolean; beamed: boolean }): number[] {
   const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(7), input: { x: 0.6, y: 0.3 } });
   g.player.hp = g.player.maxHp = 1e9;
-  for (const id of ['blade', 'shockwave', 'chain', 'boomerang', 'flame', 'mines', 'meteor', 'crit', 'knockback', 'explode', 'vamp', 'frost', 'ignite']) {
+  for (const id of ['blade', 'shockwave', 'chain', 'boomerang', 'flame', 'mines', 'meteor', 'beam', 'crit', 'knockback', 'explode', 'vamp', 'frost', 'ignite']) {
     for (let k = 0; k < 5; k++) applySkill(g.player.stats, id);
   }
   const out: number[] = [];
@@ -22,6 +23,8 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   const mt = g.wstate.meteors;
   const prevMOn = new Uint8Array(mt.on.length);
   const prevMAge = new Float32Array(mt.on.length);
+  const bm = g.wstate.beam;
+  let prevCd = bm.cd;
   for (let t = 1; t <= 3600; t++) {
     g.offer = null; // skip level-up pauses: the picks above are the build
     if (seen) { prevOn.set(mn.on); prevAge.set(mn.age); prevMOn.set(mt.on); prevMAge.set(mt.age); }
@@ -38,6 +41,11 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
         if (prevMOn[k] === 1 && (mt.on[k] === 0 || mt.age[k] < prevMAge[k]) && prevMAge[k] + 1 / 60 >= METEOR_TELEGRAPH) seen.struck = true;
       }
     }
+    if (seen) {
+      // The beam tick timer reloads by BEAM_TICK when a damage tick lands.
+      if (bm.cd - prevCd > BEAM_TICK / 2) seen.beamed = true;
+      prevCd = bm.cd;
+    }
     if (t % 1200 === 0) out.push(stateHash(g));
     if (seen && t % 60 === 0) {
       for (let i = 0; i < g.world.high; i++) {
@@ -52,7 +60,7 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   return out;
 }
 
-const EXPECTED: number[] = [700606888, 3139108006, 53437540];
+const EXPECTED: number[] = [3242544587, 1057789969, 3204847702];
 
 test('a maxed build hashes the same on every run and on both engines', () => {
   const a = run();
@@ -60,8 +68,8 @@ test('a maxed build hashes the same on every run and on both engines', () => {
   assert.deepEqual(a, EXPECTED);
 });
 
-test('the maxed build actually slows and burns enemies and drops fire patches, mines that detonate and meteors that land, so the hashes cover them', () => {
-  const seen = { slow: false, burn: false, fire: false, mines: false, detonated: false, meteors: false, struck: false };
+test('the maxed build actually slows and burns enemies and drops fire patches, mines that detonate, meteors that land and a beam that ticks, so the hashes cover them', () => {
+  const seen = { slow: false, burn: false, fire: false, mines: false, detonated: false, meteors: false, struck: false, beamed: false };
   run(seen);
-  assert.deepEqual(seen, { slow: true, burn: true, fire: true, mines: true, detonated: true, meteors: true, struck: true });
+  assert.deepEqual(seen, { slow: true, burn: true, fire: true, mines: true, detonated: true, meteors: true, struck: true, beamed: true });
 });

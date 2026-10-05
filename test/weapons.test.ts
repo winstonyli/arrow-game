@@ -18,6 +18,7 @@ import { updateBoomerang, BOOM_LEVELS, BOOM_RADIUS } from '../src/game/weapons/b
 import { updateFlame, FLAME_LEVELS, FIRE_CAP, FIRE_SPACING, FIRE_TICK } from '../src/game/weapons/flame.ts';
 import { updateMines, MINE_LEVELS, MINE_CAP, MINE_SPACING, MINE_LIFE, MINE_ARM } from '../src/game/weapons/mines.ts';
 import { updateMeteors, METEOR_LEVELS, METEOR_CAP, METEOR_RANGE, METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
+import { updateBeam, BEAM_LEVELS, BEAM_TICK } from '../src/game/weapons/beam.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import type { Game } from '../src/game/game.ts';
 
@@ -888,4 +889,183 @@ test('Meteor is a levelled arena-only weapon offer that takes a slot, with an ic
   full.weapons = { blade: 1, shockwave: 1, chain: 1, boomerang: 1 };
   assert.equal(Object.keys(full.weapons).length + 1, MAX_WEAPONS);
   assert.equal(meteor.available!(full), false);
+});
+
+const runB = (g: Game, level: number, secs: number) => {
+  let kills = 0;
+  for (let t = 0; t < Math.round(secs * 60); t++) { settle(g); kills += updateBeam(g, level, 1 / 60); }
+  return kills;
+};
+const hp = (g: Game, j: number) => g.world.hp[j];
+
+test('the first update with a target snaps the beam to it; with no target nothing changes and live is 0', () => {
+  const g = arenaGame();
+  const b = g.wstate.beam;
+  runB(g, 1, 1 / 60);
+  assert.equal(b.live, 0);
+  assert.equal(b.started, 0);
+  assert.equal(b.cd, 0);
+  at(g, 0, 100); // straight down (+y)
+  runB(g, 1, 1 / 60);
+  assert.equal(b.live, 1);
+  assert.equal(b.started, 1);
+  assert.ok(Math.abs(b.angle - Math.PI / 2) < 1e-6);
+  g.world.kind.fill(0); // all enemies gone: the beam goes off but keeps its heading and timer
+  const cd = b.cd, angle = b.angle;
+  runB(g, 1, 0.5);
+  assert.equal(b.live, 0);
+  assert.equal(b.angle, angle);
+  assert.equal(b.cd, cd);
+});
+
+test('after the snap the beam turns at most turn * dt per tick toward the target, by the shorter arc, and stays capped when the nearest changes', () => {
+  const g = arenaGame();
+  const b = g.wstate.beam;
+  const L = BEAM_LEVELS[0];
+  const first = at(g, 100, 0); // +x, angle 0
+  runB(g, 1, 1 / 60);
+  assert.equal(b.angle, 0);
+  g.world.x[first] = g.player.x; g.world.y[first] = g.player.y + 100; // the target jumps to +y (π/2 away)
+  const before = b.angle;
+  runB(g, 1, 1 / 60);
+  assert.ok(Math.abs(b.angle - before - L.turn / 60) < 1e-6); // exactly one capped step, toward +y
+  runB(g, 1, 1.4);
+  assert.ok(Math.abs(b.angle - Math.PI / 2) < 1e-6); // arrived (π/2 / 1.2 = 1.31 s of turning needed after the snap tick, 1.4 s + 1 tick done) and did not overshoot
+  const g2 = arenaGame();
+  const b2 = g2.wstate.beam;
+  const t2 = at(g2, -100, 0.001 * 0); // behind: angle π
+  runB(g2, 1, 1 / 60);
+  assert.ok(Math.abs(Math.abs(b2.angle) - Math.PI) < 1e-6);
+  g2.world.x[t2] = g2.player.x - 100; g2.world.y[t2] = g2.player.y - 100; // up-left: angle -3π/4, a short arc across ±π
+  runB(g2, 1, 1 / 60);
+  assert.ok(Math.abs(b2.angle) > Math.PI - L.turn / 60 - 1e-6); // moved by one capped step across the seam, not the long way round
+  runB(g2, 1, 2);
+  assert.ok(Math.abs(b2.angle - (-3 * Math.PI / 4)) < 1e-6);
+});
+
+test('a target must be within the beam length; a nearer enemy outside never counts', () => {
+  const g = arenaGame();
+  const b = g.wstate.beam;
+  const L = BEAM_LEVELS[0];
+  at(g, L.length + 5, 0);
+  runB(g, 1, 1 / 60);
+  assert.equal(b.live, 0);
+  at(g, L.length - 5, 0);
+  runB(g, 1, 1 / 60);
+  assert.equal(b.live, 1);
+});
+
+test('the beam hits enemies on the segment and nothing off it, past the end, or behind the player', () => {
+  const g = arenaGame();
+  const L = BEAM_LEVELS[0];
+  const BR = ENEMY_TYPES[ENEMY.BRUISER].radius;
+  const on = at(g, 15, 0); // the nearest enemy, so the target, on the line
+  const justIn = at(g, 60, L.halfWidth + BR - 1);
+  const justOut = at(g, 60, L.halfWidth + BR + 2);
+  const behind = at(g, -60, 0);
+  const SW = ENEMY_TYPES[ENEMY.SWARMER];
+  const behindNear = spawnEnemy(g.world, ENEMY.SWARMER, g.player.x - 18, g.player.y); // gathered (same cells) but 18 > halfWidth + 7 from the player: only the segment clamp keeps it out
+  const past = at(g, L.length + L.halfWidth + BR + 5, 0);
+  runB(g, 1, 1 / 60); // snap, first tick
+  const dmg = (j: number) => BRUISER_HP - hp(g, j);
+  assert.ok(dmg(on) > 0);
+  assert.ok(dmg(justIn) > 0);
+  assert.equal(dmg(justOut), 0);
+  assert.equal(dmg(behind), 0);
+  assert.equal(SW.hp - hp(g, behindNear), 0);
+  assert.equal(dmg(past), 0);
+});
+
+test('the beam ticks every 0.25 s and no more often, for exactly dps * 0.25 * damageMult, never crits or pushes, and applies Frost and Ignite', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.damageMult = 2; s.crit = 10; s.frost = 1; s.ignite = 1; s.knockback = 3;
+  const j = at(g, 100, 0);
+  const x0 = g.world.x[j];
+  runB(g, 1, 1 / 60);
+  const d1 = BRUISER_HP - hp(g, j);
+  assert.ok(Math.abs(d1 - BEAM_LEVELS[0].dps * BEAM_TICK * 2) < 1e-3); // crit 10 is chance 1: a crit flag would show
+  runB(g, 1, BEAM_TICK - 0.05); // not yet due again
+  assert.equal(BRUISER_HP - hp(g, j), d1);
+  runB(g, 1, 0.1);
+  assert.ok(Math.abs(BRUISER_HP - hp(g, j) - 2 * d1) < 1e-3);
+  assert.ok(g.world.slowT[j] > 0 && g.world.burnT[j] > 0);
+  assert.equal(g.world.x[j], x0); // no push even with Knockback
+});
+
+test('beam ticks are quiet: every surviving hit tells fx.soft', () => {
+  const g = arenaGame();
+  const soft: Array<[number, number]> = [];
+  g.fx = { kill: () => {}, burst: () => {}, shake: () => {}, sample: () => {}, crit: () => {}, push: () => {}, soft: (j, d) => soft.push([j, d]) };
+  const j = at(g, 100, 0);
+  runB(g, 1, 1 / 60);
+  assert.deepEqual(soft, [[j, BEAM_LEVELS[0].dps * BEAM_TICK * g.player.stats.damageMult]]);
+});
+
+test('a beam kill counts once, heals and queues an explosion; over a crowd kills equal onKill calls, splitters split, no double kill', () => {
+  const g = arenaGame();
+  g.player.stats.vamp = 2;
+  g.player.stats.explode = 1;
+  g.player.hp = g.player.maxHp - 10;
+  const j = at(g, 100, 0);
+  g.world.hp[j] = 0.001;
+  const killed: number[] = [];
+  g.onKill = (x) => killed.push(g.world.gen[x] * 100000 + x);
+  const kills = runB(g, 1, 1 / 60);
+  assert.equal(kills, 1);
+  assert.equal(killed.length, 1);
+  assert.equal(g.player.hp, g.player.maxHp - 8);
+  assert.equal(g.blasts.n, 1);
+  const g2 = arenaGame();
+  for (let n = 0; n < 40; n++) {
+    const e = spawnEnemy(g2.world, n % 3 === 0 ? ENEMY.SPLITTER : ENEMY.CHASER, g2.player.x + 40 + (n % 8) * 12, g2.player.y + ((n % 3) - 1) * 3);
+    g2.world.hp[e] = 0.01;
+  }
+  const seen: number[] = [];
+  const orig = g2.onKill!;
+  g2.onKill = (x) => { seen.push(g2.world.gen[x] * 100000 + x); orig(x); };
+  const k2 = runB(g2, 5, 1 / 60);
+  let swarmers = 0;
+  for (let i = 0; i < g2.world.high; i++) if (g2.world.kind[i] === KIND.ENEMY && g2.world.type[i] === ENEMY.SWARMER) swarmers++;
+  assert.ok(k2 > 0 && swarmers > 0, 'enemies died and splitters split');
+  assert.equal(k2, seen.length);
+  assert.equal(new Set(seen).size, seen.length);
+});
+
+test('stateHash changes with the beam angle, live, started and the tick timer', () => {
+  const g = arenaGame();
+  at(g, 100, 0);
+  settle(g);
+  const empty = stateHash(g);
+  updateBeam(g, 1, 1 / 60);
+  const b = g.wstate.beam;
+  const on = stateHash(g);
+  assert.notEqual(on, empty);
+  b.angle += 0.1;
+  assert.notEqual(stateHash(g), on);
+  b.angle -= 0.1;
+  b.cd += 0.1;
+  assert.notEqual(stateHash(g), on);
+  b.cd -= 0.1;
+  b.live = 0;
+  assert.notEqual(stateHash(g), on);
+  b.live = 1;
+  b.started = 0;
+  assert.notEqual(stateHash(g), on);
+});
+
+test('Beam is a levelled arena-only weapon offer that takes a slot, with an icon', () => {
+  const beam = SKILLS.find((k) => k.id === 'beam')!;
+  assert.ok(beam.arena);
+  assert.ok(WEAPONS.some((w) => w.id === 'beam'));
+  const s = baseStats();
+  assert.equal(beam.tag!(s), 'NEW');
+  for (let n = 0; n < 5; n++) applySkill(s, 'beam');
+  assert.equal(s.weapons.beam, 5);
+  assert.equal(beam.available!(s), false);
+  const full = baseStats();
+  full.weapons = { blade: 1, shockwave: 1, chain: 1, boomerang: 1 };
+  assert.equal(Object.keys(full.weapons).length + 1, MAX_WEAPONS);
+  assert.equal(beam.available!(full), false);
+  assert.ok(!SKILLS.filter((k) => !k.arena).some((k) => k.id === 'beam')); // the Rooms pool is unchanged
 });
