@@ -15,6 +15,8 @@ import { BEAM, createBeamState } from './weapons/beam.ts';
 import type { BeamState } from './weapons/beam.ts';
 import { DRONE, createDroneState } from './weapons/drone.ts';
 import type { DroneState } from './weapons/drone.ts';
+import { DAGGERS, createDaggerState } from './weapons/daggers.ts';
+import type { DaggerState } from './weapons/daggers.ts';
 import type { Game } from './game.ts';
 import type { PlayerStats } from './player.ts';
 
@@ -33,11 +35,11 @@ export interface WeaponDef {
   update?: (game: Game, level: number, dt: number) => number; // runs each tick while owned; returns kills
 }
 
-export const WEAPONS: WeaponDef[] = [BLADE, SHOCKWAVE, CHAIN, BOOMERANG, FLAME, MINES, METEOR, BEAM, DRONE];
+export const WEAPONS: WeaponDef[] = [BLADE, SHOCKWAVE, CHAIN, BOOMERANG, FLAME, MINES, METEOR, BEAM, DRONE, DAGGERS];
 
 // Per-run weapon state, on game.wstate: advanced by weaponSystem, hashed by stateHash, read by the renderers.
-export interface WeaponState { shock: ShockState; chain: ChainState; boom: BoomState; fire: FireState; mines: MineState; meteors: MeteorState; beam: BeamState; drones: DroneState }
-export const createWeaponState = (): WeaponState => ({ shock: createShockState(), chain: createChainState(), boom: createBoomState(), fire: createFireState(), mines: createMineState(), meteors: createMeteorState(), beam: createBeamState(), drones: createDroneState() });
+export interface WeaponState { shock: ShockState; chain: ChainState; boom: BoomState; fire: FireState; mines: MineState; meteors: MeteorState; beam: BeamState; drones: DroneState; daggers: DaggerState }
+export const createWeaponState = (): WeaponState => ({ shock: createShockState(), chain: createChainState(), boom: createBoomState(), fire: createFireState(), mines: createMineState(), meteors: createMeteorState(), beam: createBeamState(), drones: createDroneState(), daggers: createDaggerState() });
 
 // Runs every owned weapon that has an update. Orbit blades have none (orbitSystem runs them). Returns kills.
 export function weaponSystem(game: Game, dt: number): number {
