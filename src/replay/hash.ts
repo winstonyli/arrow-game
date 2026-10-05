@@ -86,6 +86,19 @@ export function stateHash(g: Game): number {
     num(dr.ty[k]);
     num(dr.age[k]);
   }
+  const dg = g.wstate.daggers;
+  for (let k = 0; k < dg.on.length; k++) {
+    mix(dg.on[k]);
+    num(dg.x[k]);
+    num(dg.y[k]);
+    num(dg.dx[k]);
+    num(dg.dy[k]);
+    num(dg.left[k]);
+    mix(dg.pierce[k]);
+    mix(dg.lastHit[k]); // -1 mixes as 0xffffffff
+    mix(dg.lastGen[k]);
+  }
+  num(dg.cd);
   num(g.time);
   num(g.xp);
   mix(g.kills);

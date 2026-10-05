@@ -8,11 +8,15 @@ import { seeded } from '../src/core/math.ts';
 import { MINE_LIFE } from '../src/game/weapons/mines.ts';
 import { BEAM } from '../src/game/weapons/beam.ts';
 import { DRONE } from '../src/game/weapons/drone.ts';
+import { DAGGERS } from '../src/game/weapons/daggers.ts';
 import { KIND } from '../src/core/world.ts';
 import { METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 
-// Nine weapons (the bow aside) and all six modifiers at level 5, except the Drone at level 4 (at 5 it kills the few enemies before the beam or a meteor reaches one; applySkill does not check slots), an invulnerable drifting player, checkpoints every 20 s.
-function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean; detonated: boolean; meteors: boolean; struck: boolean; beamed: boolean; droned: boolean }): number[] {
+// Daggers' level in the maxed build: the highest level at which every coverage flag below stays true (Task 1 procedure).
+const DAGGER_LEVEL = 5;
+
+// Ten weapons (the bow aside) and all six modifiers at level 5, except the Drone at level 4 (at 5 it kills the few enemies before the beam or a meteor reaches one; applySkill does not check slots); Daggers at level 5 kept every coverage flag true, an invulnerable drifting player, checkpoints every 20 s.
+function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean; detonated: boolean; meteors: boolean; struck: boolean; beamed: boolean; droned: boolean; daggered: boolean }): number[] {
   const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(7), input: { x: 0.6, y: 0.3 } });
   g.player.hp = g.player.maxHp = 1e9;
   for (const id of ['blade', 'shockwave', 'chain', 'boomerang', 'flame', 'mines', 'meteor', 'beam', 'crit', 'knockback', 'explode', 'vamp', 'frost', 'ignite']) {
@@ -20,6 +24,7 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   }
   // The Drone is held at level 4 (two drones, range 280): at level 5 the arena's few enemies die to the drones before the beam or a meteor ever reaches one, and the run would no longer cover them.
   for (let k = 0; k < 4; k++) applySkill(g.player.stats, 'drone');
+  for (let k = 0; k < DAGGER_LEVEL; k++) applySkill(g.player.stats, 'daggers');
   const out: number[] = [];
   const mn = g.wstate.mines;
   const prevOn = new Uint8Array(mn.on.length);
@@ -41,6 +46,13 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
     const before = enemyHp();
     const kills = droneUpdate(game, level, dt);
     if (kills > 0 || enemyHp() < before - 1e-6) seen.droned = true;
+    return kills;
+  };
+  const daggerUpdate = DAGGERS.update!;
+  if (seen) DAGGERS.update = (game, level, dt) => {
+    const before = enemyHp();
+    const kills = daggerUpdate(game, level, dt);
+    if (kills > 0 || enemyHp() < before - 1e-6) seen.daggered = true;
     return kills;
   };
   try {
@@ -74,11 +86,12 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   } finally {
     BEAM.update = beamUpdate;
     DRONE.update = droneUpdate;
+    DAGGERS.update = daggerUpdate;
   }
   return out;
 }
 
-const EXPECTED: number[] = [13223591, 2352640282, 761394689];
+const EXPECTED: number[] = [1514612189, 981486644, 546334360];
 
 test('a maxed build hashes the same on every run and on both engines', () => {
   const a = run();
@@ -86,8 +99,8 @@ test('a maxed build hashes the same on every run and on both engines', () => {
   assert.deepEqual(a, EXPECTED);
 });
 
-test('the maxed build actually slows and burns enemies and drops fire patches, mines that detonate, meteors that land and a beam that ticks and drones that shoot, so the hashes cover them', () => {
-  const seen = { slow: false, burn: false, fire: false, mines: false, detonated: false, meteors: false, struck: false, beamed: false, droned: false };
+test('the maxed build actually slows and burns enemies and drops fire patches, mines that detonate, meteors that land and a beam that ticks, drones that shoot and daggers that hit, so the hashes cover them', () => {
+  const seen = { slow: false, burn: false, fire: false, mines: false, detonated: false, meteors: false, struck: false, beamed: false, droned: false, daggered: false };
   run(seen);
-  assert.deepEqual(seen, { slow: true, burn: true, fire: true, mines: true, detonated: true, meteors: true, struck: true, beamed: true, droned: true });
+  assert.deepEqual(seen, { slow: true, burn: true, fire: true, mines: true, detonated: true, meteors: true, struck: true, beamed: true, droned: true, daggered: true });
 });

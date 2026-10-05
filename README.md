@@ -46,9 +46,9 @@ In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` first (or use PowerShell), beca
 
 ## Features
 
-- **Weapons** (Arena, levels 1 to 5, up to four held at once alongside the bow): Orbit Blade, Shockwave, Chain Lightning, Boomerang, Flame trail, Mines, Meteor, Beam and Drone; the bow with its Multishot, Piercing, Ricochet and Homing upgrades.
+- **Weapons** (Arena, levels 1 to 5, up to four held at once alongside the bow): Orbit Blade, Shockwave, Chain Lightning, Boomerang, Flame trail, Mines, Meteor, Beam, Drone and Daggers; the bow with its Multishot, Piercing, Ricochet and Homing upgrades.
 - **Modifiers** (Arena, levels 1 to 5): Crit, Knockback, Vampiric, Explosive, Frost and Ignite.
-- **Deterministic replays**: every run is its seed plus quantized inputs and picks, so it can be re-simulated exactly and verified (`SIM_VERSION` 10).
+- **Deterministic replays**: every run is its seed plus quantized inputs and picks, so it can be re-simulated exactly and verified (`SIM_VERSION` 11).
 - **Daily challenges, ghosts and share codes**, as described above.
 - **Rendering and polish**: WebGL2 renderer with a Canvas2D fallback (`?renderer=canvas2d`), motion trails, screen shake and hit effects, and WebAudio-synthesized sound with no audio files.
 
