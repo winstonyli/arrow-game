@@ -3,7 +3,7 @@
 Versioning and what counts as a release: see "Versioning and commits" in the README. Each entry names the
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
-## v0.3.0 (unreleased)
+## v0.3.0
 `SIM_VERSION` 11, `REPLAY_VERSION` 1 (replays and share codes from `SIM_VERSION` 2 to 10 stop verifying; the file format is unchanged). Ships after v0.2.0 (the migration), so v0.2.0 stays a pure no-sim-change release.
 
 - Weapons are levelled (5 levels) and held in up to 5 slots, the bow included. Orbit Blade moved onto the same mechanism (five levels, up to 8 blades); new arena weapons: Shockwave, Chain Lightning, Boomerang, Flame trail. Offer cards show NEW or the level step.

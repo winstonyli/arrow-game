@@ -1,6 +1,6 @@
 {
   "name": "arrow-game",
-  "version": "0.3.0-dev",
+  "version": "0.3.0",
   "private": true,
   "license": "MIT",
   "type": "module",
