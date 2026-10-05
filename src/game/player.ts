@@ -26,7 +26,7 @@ export function baseStats() {
     moveFireRate: 0, // fire-rate multiplier while moving; 0 = no shooting on the move (rooms), arena sets 0.5
     weapons: {} as Record<string, number>, // weapon id -> level (1..maxLevel); the bow is not listed and uses a slot
     damageMult: 1, // all weapons (Power Shot)
-    cooldownMult: 1, // all weapons: multiplies every interval (Rapid Fire divides it)
+    cooldownMult: 1, // multiplies every weapon interval except Beam, Flame trail and Orbit Blade, which have none (Rapid Fire divides it)
     bladeDps: BLADE_DPS, // per blade, set by the Orbit Blade level
     crit: 0, // modifier levels (0..5): chance, push, blast and heal per level, see game/modifiers.ts
     knockback: 0,

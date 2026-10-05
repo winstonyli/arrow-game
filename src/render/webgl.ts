@@ -10,6 +10,7 @@ import { FLAME_LEVELS, FIRE_CAP, FIRE_ALPHA, type FireState } from '../game/weap
 import { MINE_CAP, MINE_RADIUS, mineAlpha, type MineState } from '../game/weapons/mines.ts';
 import { METEOR_CAP, meteorRadius, meteorAlpha, type MeteorState } from '../game/weapons/meteor.ts';
 import { BEAM_MAX_DOTS, BEAM_ALPHA, beamDots, beamLength, type BeamState } from '../game/weapons/beam.ts';
+import { DRONE_MAX, DRONE_DOT_R, DRONE_TRACER, DRONE_TRACER_DOTS, DRONE_INSTANCES, droneAlpha, type DroneState } from '../game/weapons/drone.ts';
 import { TRAIL_MAX } from './trail.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World } from '../core/world.ts';
@@ -38,8 +39,8 @@ const RING_LINES = 3; // concentric one-pixel rings make the shockwave's visible
 const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
 const BOLT_DOT_R = 2.5;
 const MAX_BOLT_DOTS = 160; // a full-length level-5 zap is about 120 dots
-// Instances the buffer reserves for weapon visuals: the rings, the zap's dots, the boomerangs, the fire patches, the mines, the meteor strike rings, the beam's dots.
-export const WEAPON_INSTANCES = RING_LINES + MAX_BOLT_DOTS + MAX_BOOMS + FIRE_CAP + MINE_CAP + METEOR_CAP + BEAM_MAX_DOTS;
+// Instances the buffer reserves for weapon visuals: the rings, the zap's dots, the boomerangs, the fire patches, the mines, the meteor strike rings, the beam's dots, the drones' bodies and tracers.
+export const WEAPON_INSTANCES = RING_LINES + MAX_BOLT_DOTS + MAX_BOOMS + FIRE_CAP + MINE_CAP + METEOR_CAP + BEAM_MAX_DOTS + DRONE_INSTANCES;
 const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));
 
 const LAYERS = [KIND.GEM, KIND.ENEMY, KIND.ENEMY_PROJECTILE, KIND.PROJECTILE];
@@ -59,7 +60,7 @@ function put(out: Float32Array, o: number, x: number, y: number, r: number, pal:
 }
 
 // Layers, bottom to top (canvas.ts uses the same order): gems, fire patches (low alpha, under everything that moves), mines,
-// enemies, enemy projectiles, player projectiles, fx particles, blades, weapon effects (shockwave, zap, boomerangs, meteor strike rings, beam), player. The background and grid
+// enemies, enemy projectiles, player projectiles, fx particles, blades, weapon effects (shockwave, zap, boomerangs, meteor strike rings, beam, drones), player. The background and grid
 // are on a canvas below; the HP bar, vignette and HUD text on one above. Within a layer instances draw in
 // slot order. Entities carry their tail's bend and tip (see trail.ts); zero without fx.
 // Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
@@ -89,6 +90,21 @@ function packBeam(bm: BeamState, player: Player, length: number, out: Float32Arr
   for (let i = 0; i < dots; i++) {
     const d = ((i + 1) / dots) * length;
     put(out, n++ * STRIDE, player.x + ux * d, player.y + uy * d, BOLT_DOT_R, P_WEAPON, BEAM_ALPHA, 0, 0, 0, 0);
+  }
+  return n;
+}
+
+// The drones: a body each, plus a fading tracer of dots to the last shot's target while it is fresh (above enemies).
+function packDrones(dr: DroneState, out: Float32Array, n: number): number {
+  for (let k = 0; k < DRONE_MAX; k++) {
+    if (!dr.on[k]) continue;
+    put(out, n++ * STRIDE, dr.x[k], dr.y[k], DRONE_DOT_R, P_WEAPON, SOLID, 0, 0, 0, 0);
+    if (dr.age[k] >= DRONE_TRACER) continue;
+    const a = droneAlpha(dr.age[k]);
+    for (let i = 0; i < DRONE_TRACER_DOTS; i++) {
+      const f = (i + 1) / DRONE_TRACER_DOTS;
+      put(out, n++ * STRIDE, dr.x[k] + (dr.tx[k] - dr.x[k]) * f, dr.y[k] + (dr.ty[k] - dr.y[k]) * f, BOLT_DOT_R, P_WEAPON, a, 0, 0, 0, 0);
+    }
   }
   return n;
 }
@@ -177,6 +193,7 @@ export function packInstances(world: World, player: Player, game: Pick<RenderGam
     for (const b of ws.boom.b) if (b.phase !== 0) put(out, n++ * STRIDE, b.x, b.y, BOOM_RADIUS, P_WEAPON, SOLID, 0, 0, 0, 0);
     n = packMeteors(ws.meteors, meteorRadius(player.stats.weapons.meteor ?? 1), out, n);
     n = packBeam(ws.beam, player, beamLength(player.stats.weapons.beam ?? 1), out, n);
+    n = packDrones(ws.drones, out, n);
   }
   tv.mx = tv.my = tv.ex = tv.ey = 0;
   if (fx) fx.trackTail(0, player.x, player.y, player.radius, tv);

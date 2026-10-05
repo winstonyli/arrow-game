@@ -76,6 +76,16 @@ export function stateHash(g: Game): number {
   mix(bm.live);
   num(bm.angle);
   num(bm.cd);
+  const dr = g.wstate.drones;
+  for (let k = 0; k < dr.on.length; k++) {
+    mix(dr.on[k]);
+    num(dr.x[k]);
+    num(dr.y[k]);
+    num(dr.cd[k]);
+    num(dr.tx[k]);
+    num(dr.ty[k]);
+    num(dr.age[k]);
+  }
   num(g.time);
   num(g.xp);
   mix(g.kills);

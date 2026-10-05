@@ -102,7 +102,7 @@ export function updateMines(game: Game, level: number, dt: number): number {
       m.y[f] = player.y;
       m.age[f] = 0;
       m.on[f] = 1;
-      m.cd = L.interval;
+      m.cd = L.interval * player.stats.cooldownMult;
     }
   }
   return kills;

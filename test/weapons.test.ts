@@ -19,6 +19,7 @@ import { updateFlame, FLAME_LEVELS, FIRE_CAP, FIRE_SPACING, FIRE_TICK } from '..
 import { updateMines, MINE_LEVELS, MINE_CAP, MINE_SPACING, MINE_LIFE, MINE_ARM } from '../src/game/weapons/mines.ts';
 import { updateMeteors, METEOR_LEVELS, METEOR_CAP, METEOR_RANGE, METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 import { updateBeam, BEAM_LEVELS, BEAM_TICK } from '../src/game/weapons/beam.ts';
+import { updateDrone, DRONE_LEVELS, DRONE_OFFSETS, DRONE_TRACER, droneAlpha } from '../src/game/weapons/drone.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import type { Game } from '../src/game/game.ts';
 
@@ -1068,4 +1069,239 @@ test('Beam is a levelled arena-only weapon offer that takes a slot, with an icon
   assert.equal(Object.keys(full.weapons).length + 1, MAX_WEAPONS);
   assert.equal(beam.available!(full), false);
   assert.ok(!SKILLS.filter((k) => !k.arena).some((k) => k.id === 'beam')); // the Rooms pool is unchanged
+});
+
+const runD = (g: Game, level: number, secs: number) => {
+  let kills = 0;
+  for (let t = 0; t < Math.round(secs * 60); t++) { settle(g); kills += updateDrone(g, level, 1 / 60); }
+  return kills;
+};
+const tough = (g: Game, j: number) => { g.world.hp[j] = 1e6; return j; }; // a target that survives every shot
+const lost = (g: Game, j: number) => 1e6 - g.world.hp[j];
+
+test('a drone snaps to its offset on activation, then eases toward it without overshoot and lags a moving player', () => {
+  const g = arenaGame();
+  const d = g.wstate.drones;
+  runD(g, 1, 1 / 60);
+  assert.equal(d.on[0], 1);
+  assert.equal(d.on[1], 0);
+  assert.ok(Math.abs(d.x[0] - (g.player.x + DRONE_OFFSETS[0][0])) < 1e-3);
+  assert.ok(Math.abs(d.y[0] - (g.player.y + DRONE_OFFSETS[0][1])) < 1e-3);
+  const x0 = d.x[0];
+  g.player.x += 100; // the target jumps 100 px: one update closes min(1, 6/60) = 10% of the gap
+  runD(g, 1, 1 / 60);
+  assert.ok(Math.abs(d.x[0] - (x0 + 10)) < 1e-3);
+  const tx = g.player.x + DRONE_OFFSETS[0][0];
+  for (let t = 0; t < 300; t++) { runD(g, 1, 1 / 60); assert.ok(d.x[0] <= tx + 1e-3); } // never past the target
+  assert.ok(Math.abs(d.x[0] - tx) < 1e-3); // converged
+});
+
+test('range is measured from the drone: one the drone reaches but the player cannot is shot, one the player reaches but the drone cannot is not', () => {
+  const L = DRONE_LEVELS[0];
+  const g = arenaGame();
+  const a = tough(g, at(g, -242, -32)); // 210 px from the drone at (-32, -32), about 244 from the player
+  runD(g, 1, 1 / 60);
+  assert.ok(Math.abs(lost(g, a) - L.dmg * g.player.stats.damageMult) < 1e-3);
+  const g2 = arenaGame();
+  const b = tough(g2, at(g2, 190, 0)); // 190 px from the player, about 224 from the drone (range 220)
+  runD(g2, 1, 1 / 60);
+  assert.equal(lost(g2, b), 0);
+});
+
+test('with no target nothing fires and the timer holds at 0; the first update with a target fires', () => {
+  const g = arenaGame();
+  const d = g.wstate.drones;
+  runD(g, 1, 1);
+  assert.equal(d.cd[0], 0);
+  assert.equal(d.age[0], Math.fround(DRONE_TRACER)); // no tracer yet
+  const j = tough(g, at(g, -100, -32));
+  runD(g, 1, 1 / 60);
+  assert.ok(lost(g, j) > 0);
+});
+
+test('a shot is exactly dmg * damageMult at crit 0, crits at crit chance 1, never pushes, and applies Frost and Ignite', () => {
+  const g = arenaGame();
+  const s = g.player.stats;
+  s.damageMult = 2; s.frost = 1; s.ignite = 1; s.knockback = 3;
+  const j = tough(g, at(g, -132, -32));
+  const x0 = g.world.x[j];
+  runD(g, 1, 1 / 60);
+  assert.ok(Math.abs(lost(g, j) - DRONE_LEVELS[0].dmg * 2) < 1e-3);
+  assert.ok(g.world.slowT[j] > 0 && g.world.burnT[j] > 0);
+  assert.equal(g.world.x[j], x0); // no push even with Knockback
+  const g2 = arenaGame();
+  g2.player.stats.crit = 1000; // chance 1
+  const k = tough(g2, at(g2, -132, -32));
+  runD(g2, 1, 1 / 60);
+  assert.ok(lost(g2, k) > DRONE_LEVELS[0].dmg * g2.player.stats.damageMult);
+});
+
+test('a drone shoots once per interval, not more often, and the second drone fires a little later than the first', () => {
+  const g = arenaGame();
+  const j = tough(g, at(g, -100, -32));
+  runD(g, 1, 1 / 60); // first shot on the activation update
+  const one = lost(g, j);
+  runD(g, 1, 0.5); // 0.5167 s since the first update: not yet due again (interval 0.6)
+  assert.equal(lost(g, j), one);
+  runD(g, 1, 0.2); // 0.7167 s: the second shot has landed, a third is not due before 1.2 s
+  assert.ok(Math.abs(lost(g, j) - 2 * one) < 1e-3);
+  const g2 = arenaGame();
+  const e = tough(g2, at(g2, 0, -100)); // within range of both level-3 drones
+  const dmg = DRONE_LEVELS[2].dmg * g2.player.stats.damageMult;
+  runD(g2, 3, 1 / 60);
+  assert.ok(Math.abs(lost(g2, e) - dmg) < 1e-3); // only slot 0 has fired
+  runD(g2, 3, 0.1); // 0.1167 s: slot 1 (stagger 0.15 s) is still waiting
+  assert.ok(Math.abs(lost(g2, e) - dmg) < 1e-3);
+  runD(g2, 3, 0.2); // 0.3167 s: slot 1 has fired, slot 0 (interval 0.5) has not yet
+  assert.ok(Math.abs(lost(g2, e) - 2 * dmg) < 1e-3);
+});
+
+test('a shot sets the tracer to the target and age 0; age advances and caps at DRONE_TRACER; droneAlpha fades from 1 to 0', () => {
+  const g = arenaGame();
+  const d = g.wstate.drones;
+  const j = tough(g, at(g, -100, -32));
+  runD(g, 1, 1 / 60);
+  assert.equal(d.age[0], 0);
+  assert.ok(Math.abs(d.tx[0] - g.world.x[j]) < 1e-3 && Math.abs(d.ty[0] - g.world.y[j]) < 1e-3);
+  runD(g, 1, 1 / 60);
+  assert.ok(Math.abs(d.age[0] - 1 / 60) < 1e-6);
+  runD(g, 1, 0.3); // still before the second shot at 0.6 s
+  assert.equal(d.age[0], Math.fround(DRONE_TRACER));
+  assert.equal(droneAlpha(0), 1);
+  assert.ok(Math.abs(droneAlpha(DRONE_TRACER / 2) - 0.5) < 1e-9);
+  assert.equal(droneAlpha(DRONE_TRACER), 0);
+  assert.equal(droneAlpha(DRONE_TRACER * 2), 0);
+});
+
+test('a drone kill counts once, heals and queues an explosion; over a crowd kills equal onKill calls, splitters split, no double kill', () => {
+  const g = arenaGame();
+  g.player.stats.vamp = 2;
+  g.player.stats.explode = 1;
+  g.player.hp = g.player.maxHp - 10;
+  const j = at(g, -100, -32);
+  g.world.hp[j] = 0.001;
+  const killed: number[] = [];
+  g.onKill = (x) => killed.push(g.world.gen[x] * 100000 + x);
+  const kills = runD(g, 1, 1 / 60);
+  assert.equal(kills, 1);
+  assert.equal(killed.length, 1);
+  assert.equal(g.player.hp, g.player.maxHp - 8);
+  assert.equal(g.blasts.n, 1);
+  const g2 = arenaGame();
+  for (let n = 0; n < 40; n++) {
+    const e = spawnEnemy(g2.world, n % 3 === 0 ? ENEMY.SPLITTER : ENEMY.CHASER, g2.player.x - 40 - (n % 8) * 12, g2.player.y - 32 + ((n % 3) - 1) * 3);
+    g2.world.hp[e] = 0.01;
+  }
+  const seen: number[] = [];
+  let maxSwarm = 0; // the most swarmers alive at once: the drones kill the nearest enemy first, so children can die before the end
+  const orig = g2.onKill!;
+  g2.onKill = (x) => {
+    seen.push(g2.world.gen[x] * 100000 + x);
+    orig(x);
+    let n = 0;
+    for (let i = 0; i < g2.world.high; i++) if (g2.world.kind[i] === KIND.ENEMY && g2.world.type[i] === ENEMY.SWARMER) n++;
+    maxSwarm = Math.max(maxSwarm, n);
+  };
+  const k2 = runD(g2, 5, 1);
+  assert.ok(k2 > 0 && maxSwarm > 0, 'enemies died and splitters split');
+  assert.equal(k2, seen.length);
+  assert.equal(new Set(seen).size, seen.length);
+});
+
+test('the active drone count follows the level and a level-up snaps only the new drone', () => {
+  const g = arenaGame();
+  const d = g.wstate.drones;
+  const counts = (level: number) => { runD(g, level, 1 / 60); return Array.from(d.on).reduce((n, v) => n + v, 0); };
+  assert.equal(counts(1), 1);
+  assert.equal(counts(2), 1);
+  g.player.x += 100;
+  runD(g, 2, 1 / 60); // drone 0 eases: it is now behind its target
+  const behind = d.x[0];
+  assert.ok(behind < g.player.x + DRONE_OFFSETS[0][0] - 1);
+  assert.equal(counts(3), 2);
+  assert.ok(Math.abs(d.x[1] - (g.player.x + DRONE_OFFSETS[1][0])) < 1e-3); // the new drone is exactly on its target
+  assert.ok(d.x[0] > behind); // the first kept easing, it was not snapped
+  assert.ok(d.x[0] < g.player.x + DRONE_OFFSETS[0][0] - 1e-3);
+  assert.equal(counts(5), 3);
+});
+
+test('stateHash changes with a drone position, its timer, its active flag and its tracer', () => {
+  const g = arenaGame();
+  at(g, -100, -32);
+  settle(g);
+  const empty = stateHash(g);
+  updateDrone(g, 1, 1 / 60);
+  const d = g.wstate.drones;
+  const on = stateHash(g);
+  assert.notEqual(on, empty);
+  for (const f of ['x', 'y', 'cd', 'tx', 'ty', 'age'] as const) {
+    d[f][0] += 1;
+    assert.notEqual(stateHash(g), on, f);
+    d[f][0] -= 1;
+  }
+  d.on[0] = 0;
+  assert.notEqual(stateHash(g), on);
+  d.on[0] = 1;
+  d.on[2] = 1; // an inactive-by-level slot still changes the hash when its flag does
+  assert.notEqual(stateHash(g), on);
+});
+
+test('Drone is a levelled arena-only weapon offer that takes a slot, with an icon', () => {
+  const drone = SKILLS.find((k) => k.id === 'drone')!;
+  assert.ok(drone.arena);
+  assert.ok(WEAPONS.some((w) => w.id === 'drone'));
+  const s = baseStats();
+  assert.equal(drone.tag!(s), 'NEW');
+  for (let n = 0; n < 5; n++) applySkill(s, 'drone');
+  assert.equal(s.weapons.drone, 5);
+  assert.equal(drone.available!(s), false);
+  const full = baseStats();
+  full.weapons = { blade: 1, shockwave: 1, chain: 1, boomerang: 1 };
+  assert.equal(Object.keys(full.weapons).length + 1, MAX_WEAPONS);
+  assert.equal(drone.available!(full), false);
+  assert.ok(!SKILLS.filter((k) => !k.arena).some((k) => k.id === 'drone')); // the Rooms pool is unchanged
+});
+
+test('a drone follows by at most the whole gap even in one long update (the follow factor is clamped at 1)', () => {
+  const g = arenaGame();
+  const d = g.wstate.drones;
+  runD(g, 1, 1 / 60);
+  g.player.x += 100;
+  settle(g);
+  updateDrone(g, 1, 0.5); // unclamped, 6 * 0.5 = 3 would throw the drone 200 px past its target
+  assert.ok(Math.abs(d.x[0] - (g.player.x + DRONE_OFFSETS[0][0])) < 1e-3);
+});
+
+test('a drone shot is a full hit, not a quiet tick: it never tells fx.soft', () => {
+  const g = arenaGame();
+  const soft: number[] = [];
+  g.fx = { kill: () => {}, burst: () => {}, shake: () => {}, sample: () => {}, crit: () => {}, push: () => {}, soft: (j) => soft.push(j) };
+  tough(g, at(g, -100, -32));
+  runD(g, 1, 1 / 60);
+  assert.deepEqual(soft, []);
+});
+
+test('Rapid Fire (cooldownMult) scales the Mines drop interval', () => {
+  const g = arenaGame();
+  g.player.stats.cooldownMult = 0.5;
+  run(g, 1, 1 / 60);
+  assert.equal(liveMines(g), 1);
+  assert.ok(Math.abs(g.wstate.mines.cd - MINE_LEVELS[0].interval * 0.5) < 1e-9);
+});
+
+test('Rapid Fire (cooldownMult) scales the Meteor volley interval', () => {
+  const g = arenaGame();
+  g.player.stats.cooldownMult = 0.5;
+  at(g, METEOR_RANGE - 20, 0);
+  runM(g, 1, 1 / 60);
+  assert.equal(pending(g), 1);
+  assert.ok(Math.abs(g.wstate.meteors.cd - METEOR_LEVELS[0].interval * 0.5) < 1e-9);
+});
+
+test('Rapid Fire (cooldownMult) scales the Drone shot interval', () => {
+  const g = arenaGame();
+  g.player.stats.cooldownMult = 0.5;
+  tough(g, at(g, -100, -32));
+  runD(g, 1, 1 / 60); // first shot on the activation update
+  assert.ok(Math.abs(g.wstate.drones.cd[0] - DRONE_LEVELS[0].interval * 0.5) < 1e-6); // cd is a Float32Array
 });
