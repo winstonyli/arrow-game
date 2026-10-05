@@ -39,7 +39,7 @@ Plan 2 benchmarks done (see below); WebGL renderer implemented (default; `?rende
 ## Versioning and commits
 Three separate versions, each with one job:
 - **Release version** (`version` in `package.json`, git tags `vX.Y.Z`): `0.MINOR.PATCH` while unstable, `1.0.0` at the first public release. Minor = new content or features (a mode, an enemy, a skill), patch = fixes and tuning. Named prereleases use SemVer tags, `v0.1.0-alpha.1`, `-beta.1`, `-rc.1`; the `package.json` version reads the next version with `-dev` between tags (now `0.3.0-dev`).
-- **`SIM_VERSION`** (`src/replay/version.ts`, integer): bump on ANY change to sim behaviour, balance tuning included, because old replays and share codes stop verifying. Regenerate the goldens with `bun scripts/make-golden.ts --force` and say so in the commit body. It is independent of the release version: a patch release that tunes gem speed still bumps it.
+- **`SIM_VERSION`** (`src/replay/version.ts`, integer): bump on the FIRST change to sim behaviour after a release (balance tuning included), because old replays and share codes stop verifying. Further sim changes before the next release share that bump: nobody holds replays from an unreleased build, so only your own dev replays break, and they fail verification instead of showing as stale. Whenever the sim changes, still regenerate the goldens with `bun scripts/make-golden.ts --force`, repin the determinism hashes and say so in the commit body. It is independent of the release version: a patch release that tunes gem speed still bumps it. After a release, even a number change needs the bump; batch such changes into the next release.
 - **`REPLAY_VERSION`** (`src/replay/codec.ts`): bump only when the replay file format changes.
 
 Commits are Conventional Commits, `type: summary`, scope optional. Types in use: `feat`, `fix`, `docs`, `test`, `perf`, `chore`, plus `tune` for balance and feel changes. Mark a breaking change with `!` (`feat!:`) or a `BREAKING CHANGE:` footer. Commit bodies explain why, and name any `SIM_VERSION` bump.
@@ -65,7 +65,7 @@ Every run is recorded as its seed plus quantized per-tick inputs and skill picks
 - **Challenges** (title screen): Daily Arena / Daily Rooms (seed derived from the local date), or any text or number as a seed. A run on a seed you have a best for races it as a translucent ghost with a live comparison line.
 - **Watch replay**: from the game over screen or the Challenges list; 1x or 4x, Esc to exit.
 - **Share codes**: Copy code on the game over screen or in the list; paste into Import. Codes are `AG1.` plus base64url of deflated JSON; imports are re-simulated and rejected if they do not reproduce.
-- **Versioning**: `SIM_VERSION` in `src/replay/version.ts`. Changing sim behaviour makes `test/replay-golden.test.ts` fail: bump the version, then `bun scripts/make-golden.ts`. Old-version replays stay listed as stale and cannot be watched or raced.
+- **Versioning**: `SIM_VERSION` in `src/replay/version.ts`. Changing sim behaviour makes `test/replay-golden.test.ts` fail: bump the version once per release cycle (see the `SIM_VERSION` entry above), then `bun scripts/make-golden.ts --force`. Old-version replays stay listed as stale and cannot be watched or raced.
 - **Caveat**: determinism is proven within one JS engine only. A replay recorded in another browser engine may drift (trig functions); the viewer warns.
 - `?mode=arena&seed=123` starts a direct run on a fixed seed (direct runs keep the finished run in memory for Watch replay / Copy code but never write it to the store).
 
