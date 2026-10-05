@@ -5,7 +5,7 @@ A browser archer roguelite in the style of Archero and arrow.io. You steer a lon
 ![Gameplay: the archer fighting a crowd of enemies](docs/img/gameplay.jpg)
 ![Level-up screen offering three upgrade cards](docs/img/level-up.jpg)
 
-**Live demo:** <!-- TODO: live demo link once deployed -->
+**Live demo:** https://winstonyli.github.io/arrow-game/
 
 ## How to play
 
