@@ -71,6 +71,11 @@ export function stateHash(g: Game): number {
     num(mt.y[k]);
     num(mt.age[k]);
   }
+  const bm = g.wstate.beam;
+  mix(bm.started);
+  mix(bm.live);
+  num(bm.angle);
+  num(bm.cd);
   num(g.time);
   num(g.xp);
   mix(g.kills);

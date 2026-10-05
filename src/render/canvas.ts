@@ -8,6 +8,7 @@ import { BOOM_RADIUS } from '../game/weapons/boomerang.ts';
 import { FLAME_LEVELS, FIRE_CAP, FIRE_ALPHA } from '../game/weapons/flame.ts';
 import { MINE_CAP, MINE_RADIUS, mineAlpha } from '../game/weapons/mines.ts';
 import { METEOR_CAP, meteorRadius, meteorAlpha } from '../game/weapons/meteor.ts';
+import { BEAM_ALPHA, beamLength } from '../game/weapons/beam.ts';
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
@@ -156,7 +157,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     drawWorldGrid(ctx, cam, view, bounds);
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
-    // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs, meteor strike rings), player.
+    // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs, meteor strike rings, beam), player.
     if (fx) tails(world, KIND.GEM, -1, GEM_COLOR, fx);
     circles(world, KIND.GEM, -1, GEM_COLOR);
     // Fire patches sit above the gems but below enemies and shots (opaque ones hid them), at a capped alpha.
@@ -237,6 +238,17 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       ctx.globalAlpha = meteorAlpha(mt.age[k]);
       ctx.beginPath();
       ctx.arc(mt.x[k], mt.y[k], mr, 0, TAU);
+      ctx.stroke();
+    }
+    // The live beam: one line from the player to its end.
+    if (ws.beam.live) {
+      const bl = beamLength(player.stats.weapons.beam ?? 1);
+      ctx.strokeStyle = '#ffa657';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = BEAM_ALPHA;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(player.x + Math.cos(ws.beam.angle) * bl, player.y + Math.sin(ws.beam.angle) * bl);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
