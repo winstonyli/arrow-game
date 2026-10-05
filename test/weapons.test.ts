@@ -17,6 +17,7 @@ import { updateChain, CHAIN_LEVELS, CHAIN_LIFE, CHAIN_FALLOFF } from '../src/gam
 import { updateBoomerang, BOOM_LEVELS, BOOM_RADIUS } from '../src/game/weapons/boomerang.ts';
 import { updateFlame, FLAME_LEVELS, FIRE_CAP, FIRE_SPACING, FIRE_TICK } from '../src/game/weapons/flame.ts';
 import { updateMines, MINE_LEVELS, MINE_CAP, MINE_SPACING, MINE_LIFE, MINE_ARM } from '../src/game/weapons/mines.ts';
+import { updateMeteors, METEOR_LEVELS, METEOR_CAP, METEOR_RANGE, METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import type { Game } from '../src/game/game.ts';
 
@@ -688,4 +689,203 @@ test('Mines is a levelled arena-only weapon offer that takes a slot, with an ico
   full.weapons = { blade: 1, shockwave: 1, chain: 1, boomerang: 1 }; // the bow plus four fill the five slots
   assert.equal(Object.keys(full.weapons).length + 1, MAX_WEAPONS);
   assert.equal(mines.available!(full), false);
+});
+
+const pending = (g: Game) => g.wstate.meteors.on.reduce((n, v) => n + v, 0);
+const runM = (g: Game, level: number, secs: number) => {
+  let kills = 0;
+  for (let t = 0; t < Math.round(secs * 60); t++) { settle(g); kills += updateMeteors(g, level, 1 / 60); }
+  return kills;
+};
+const firstPick = (g: Game) => { g.rng = () => 0; };
+
+test('meteor fires only at enemies within range, never at one outside, and draws no rng with nothing in range', () => {
+  const g = arenaGame();
+  let draws = 0;
+  g.rng = () => { draws++; return 0; };
+  at(g, METEOR_RANGE + 5, 0); // outside the range but inside the grid query (range + max radius), so only the range check rejects it
+  runM(g, 1, 1 / 60);
+  assert.equal(pending(g), 0);
+  assert.equal(draws, 0);
+  assert.ok(g.wstate.meteors.cd <= 0); // not reset: retries
+  const near = at(g, METEOR_RANGE - 20, 0);
+  runM(g, 1, 1 / 60);
+  assert.equal(pending(g), 1);
+  assert.equal(draws, 1);
+  const m = g.wstate.meteors;
+  const k = m.on.indexOf(1);
+  assert.ok(Math.abs(m.x[k] - g.world.x[near]) < 1e-3);
+  assert.ok(g.wstate.meteors.cd > 0);
+});
+
+test('a volley picks distinct targets and strikes only as many as there are candidates', () => {
+  const g = arenaGame();
+  firstPick(g);
+  at(g, 100, 0);
+  at(g, -100, 0);
+  runM(g, 5, 1 / 60); // volley of 3, two candidates
+  assert.equal(pending(g), 2);
+  const m = g.wstate.meteors;
+  const xs = [0, 1, 2].filter((k) => m.on[k]).map((k) => m.x[k]);
+  assert.notEqual(xs[0], xs[1]);
+  const g3 = arenaGame();
+  firstPick(g3);
+  at(g3, 100, 0); at(g3, -100, 0); at(g3, 0, 100); at(g3, 0, -100);
+  runM(g3, 5, 1 / 60);
+  assert.equal(pending(g3), 3);
+  const m3 = g3.wstate.meteors;
+  const pts = Array.from(m3.on.keys()).filter((k) => m3.on[k]).map((k) => `${m3.x[k]},${m3.y[k]}`);
+  assert.equal(new Set(pts).size, 3);
+});
+
+test('a strike keeps the position the target had when it was picked, even if the target moves or dies', () => {
+  const g = arenaGame();
+  firstPick(g);
+  const j = at(g, 100, 0);
+  const x0 = g.world.x[j];
+  runM(g, 1, 1 / 60);
+  const m = g.wstate.meteors;
+  const k = m.on.indexOf(1);
+  g.world.x[j] += 200;
+  g.world.hp[j] = 0.001; // dies of anything
+  const bystander = at(g, 100 + 1, 0); // standing at the old spot when it lands
+  runM(g, 1, METEOR_TELEGRAPH + 0.05);
+  assert.equal(m.on[k], 0);
+  assert.ok(damage(g, bystander) > 0);
+  assert.equal(Math.round(m.x[k]), Math.round(x0)); // the stored spot did not follow the target
+});
+
+test('nothing lands before the telegraph ends, and the strike is consumed once it does', () => {
+  const g = arenaGame();
+  firstPick(g);
+  const j = at(g, 100, 0);
+  runM(g, 1, 1 / 60);
+  runM(g, 1, METEOR_TELEGRAPH - 0.1);
+  assert.equal(damage(g, j), 0);
+  assert.equal(pending(g), 1);
+  runM(g, 1, 0.2);
+  assert.equal(pending(g), 0);
+  const d = damage(g, j);
+  assert.ok(d > 0);
+  runM(g, 1, 0.3); // the next volley is seconds away: no second hit
+  assert.equal(damage(g, j), d);
+});
+
+test('a blast deals exactly level damage times damageMult, never crits, reaches the radius only, applies Frost and Ignite, and pushes with Knockback only', () => {
+  const g = arenaGame();
+  firstPick(g);
+  const s = g.player.stats;
+  s.damageMult = 2; s.crit = 10; s.frost = 1; s.ignite = 1; s.knockback = 0;
+  const L = METEOR_LEVELS[0];
+  const BR = ENEMY_TYPES[ENEMY.BRUISER].radius;
+  const j = at(g, 100, 0); // the only candidate in range: picked first
+  const edge = at(g, 100, L.radius + BR - 1);
+  const out = at(g, 100, L.radius + BR + 20);
+  const x0 = g.world.x[j];
+  runM(g, 1, 1 / 60 + METEOR_TELEGRAPH + 0.05);
+  assert.ok(Math.abs(damage(g, j) - L.dmg * 2) < 1e-3); // crit 10 is chance 1: any crit flag would show
+  assert.ok(damage(g, edge) > 0);
+  assert.equal(damage(g, out), 0);
+  assert.ok(g.world.slowT[j] > 0 && g.world.burnT[j] > 0);
+  assert.equal(g.world.x[j], x0);
+  const g2 = arenaGame();
+  firstPick(g2);
+  g2.player.stats.knockback = 3;
+  const k = at(g2, 100, 0);
+  const e = at(g2, 100 + 10, 0);
+  const x1 = g2.world.x[e];
+  runM(g2, 1, 1 / 60 + METEOR_TELEGRAPH + 0.05);
+  assert.ok(g2.world.x[e] > x1); // pushed away from the impact point (+x)
+  assert.ok(damage(g2, k) > 0);
+});
+
+test('the same seed picks the same targets', () => {
+  const pick = () => {
+    const g = arenaGame();
+    for (let n = 0; n < 12; n++) at(g, 60 + n * 15, (n % 3) * 20);
+    runM(g, 5, 1 / 60);
+    const m = g.wstate.meteors;
+    return Array.from(m.on.keys()).filter((k) => m.on[k]).map((k) => [m.x[k], m.y[k]]);
+  };
+  assert.deepEqual(pick(), pick());
+});
+
+test('a full pool skips the strike without overwriting a pending one', () => {
+  const g = arenaGame();
+  firstPick(g);
+  const m = g.wstate.meteors;
+  for (let k = 0; k < METEOR_CAP; k++) { m.on[k] = 1; m.x[k] = 100000 + k; m.y[k] = 100000; m.age[k] = 0; }
+  at(g, 100, 0);
+  runM(g, 1, 1 / 60);
+  assert.equal(pending(g), METEOR_CAP);
+  for (let k = 0; k < METEOR_CAP; k++) assert.equal(m.x[k], 100000 + k);
+  assert.ok(m.cd > 0); // the volley still fired
+});
+
+test('a meteor kill counts once, heals and queues an explosion; over a crowd kills equal onKill calls, splitters split, no double kill', () => {
+  const g = arenaGame();
+  firstPick(g);
+  g.player.stats.vamp = 2;
+  g.player.stats.explode = 1;
+  g.player.hp = g.player.maxHp - 10;
+  const j = at(g, 100, 0);
+  g.world.hp[j] = 0.001;
+  const killed: number[] = [];
+  g.onKill = (x) => killed.push(g.world.gen[x] * 100000 + x);
+  const kills = runM(g, 1, 1 / 60 + METEOR_TELEGRAPH + 0.05);
+  assert.equal(kills, 1);
+  assert.equal(killed.length, 1);
+  assert.equal(g.player.hp, g.player.maxHp - 8);
+  assert.equal(g.blasts.n, 1);
+  const g2 = arenaGame();
+  firstPick(g2);
+  for (let n = 0; n < 40; n++) {
+    const e = spawnEnemy(g2.world, n % 3 === 0 ? ENEMY.SPLITTER : ENEMY.CHASER, g2.player.x + 100 + (n % 8) * 3, g2.player.y + Math.floor(n / 8) * 3);
+    g2.world.hp[e] = 0.01;
+  }
+  const seen: number[] = [];
+  const orig = g2.onKill!; // keep the arena's own onKill so splitters split
+  g2.onKill = (x) => { seen.push(g2.world.gen[x] * 100000 + x); orig(x); };
+  const k2 = runM(g2, 5, 1 / 60 + METEOR_TELEGRAPH + 0.05);
+  let swarmers = 0;
+  for (let i = 0; i < g2.world.high; i++) if (g2.world.kind[i] === KIND.ENEMY && g2.world.type[i] === ENEMY.SWARMER) swarmers++;
+  assert.ok(swarmers > 0, 'splitters split');
+  assert.equal(k2, seen.length);
+  assert.equal(new Set(seen).size, seen.length);
+});
+
+test('stateHash changes with a strike age, a strike position and the fire timer', () => {
+  const g = arenaGame();
+  firstPick(g);
+  at(g, 100, 0);
+  settle(g);
+  const empty = stateHash(g);
+  updateMeteors(g, 1, 1 / 60);
+  const fired = stateHash(g);
+  assert.notEqual(fired, empty);
+  const m = g.wstate.meteors;
+  const k = m.on.indexOf(1);
+  m.age[k] += 0.1;
+  assert.notEqual(stateHash(g), fired);
+  m.age[k] -= 0.1;
+  m.x[k] += 1;
+  assert.notEqual(stateHash(g), fired);
+  m.x[k] -= 1;
+  m.cd += 1;
+  assert.notEqual(stateHash(g), fired);
+});
+
+test('Meteor is a levelled arena-only weapon offer that takes a slot, with an icon', () => {
+  const meteor = SKILLS.find((k) => k.id === 'meteor')!;
+  assert.ok(meteor.arena);
+  assert.ok(WEAPONS.some((w) => w.id === 'meteor'));
+  const s = baseStats();
+  assert.equal(meteor.tag!(s), 'NEW');
+  for (let n = 0; n < 5; n++) applySkill(s, 'meteor');
+  assert.equal(s.weapons.meteor, 5);
+  assert.equal(meteor.available!(s), false);
+  const full = baseStats();
+  full.weapons = { blade: 1, shockwave: 1, chain: 1, boomerang: 1 };
+  assert.equal(Object.keys(full.weapons).length + 1, MAX_WEAPONS);
+  assert.equal(meteor.available!(full), false);
 });

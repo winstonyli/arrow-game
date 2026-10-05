@@ -62,6 +62,15 @@ export function stateHash(g: Game): number {
     num(mn.y[k]);
     num(mn.age[k]);
   }
+  const mt = g.wstate.meteors;
+  num(mt.cd);
+  for (let k = 0; k < mt.on.length; k++) {
+    mix(mt.on[k]);
+    if (!mt.on[k]) continue;
+    num(mt.x[k]);
+    num(mt.y[k]);
+    num(mt.age[k]);
+  }
   num(g.time);
   num(g.xp);
   mix(g.kills);

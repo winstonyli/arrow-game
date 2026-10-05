@@ -7,6 +7,7 @@ import { CHAIN_LIFE } from '../game/weapons/chain.ts';
 import { BOOM_RADIUS } from '../game/weapons/boomerang.ts';
 import { FLAME_LEVELS, FIRE_CAP, FIRE_ALPHA } from '../game/weapons/flame.ts';
 import { MINE_CAP, MINE_RADIUS, mineAlpha } from '../game/weapons/mines.ts';
+import { METEOR_CAP, meteorRadius, meteorAlpha } from '../game/weapons/meteor.ts';
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
@@ -155,7 +156,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     drawWorldGrid(ctx, cam, view, bounds);
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
-    // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs), player.
+    // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs, meteor strike rings), player.
     if (fx) tails(world, KIND.GEM, -1, GEM_COLOR, fx);
     circles(world, KIND.GEM, -1, GEM_COLOR);
     // Fire patches sit above the gems but below enemies and shots (opaque ones hid them), at a capped alpha.
@@ -226,6 +227,19 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       ctx.arc(b.x, b.y, BOOM_RADIUS, 0, TAU);
       ctx.fill();
     }
+    // Pending meteor strikes: a ring at the blast radius, brighter as impact nears.
+    const mt = ws.meteors;
+    const mr = meteorRadius(player.stats.weapons.meteor ?? 1);
+    ctx.strokeStyle = '#ffa657'; // the colour the boomerangs use
+    ctx.lineWidth = 3;
+    for (let k = 0; k < METEOR_CAP; k++) {
+      if (!mt.on[k]) continue;
+      ctx.globalAlpha = meteorAlpha(mt.age[k]);
+      ctx.beginPath();
+      ctx.arc(mt.x[k], mt.y[k], mr, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
     if (fx) trackTail(fx, 0, player.x, player.y, player.radius, '#3fb950');
     ctx.globalAlpha = player.invuln > 0 && Math.floor(game.time * 20) % 2 ? 0.4 : 1;
     ctx.fillStyle = '#3fb950';
