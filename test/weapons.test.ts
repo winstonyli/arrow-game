@@ -933,7 +933,7 @@ test('after the snap the beam turns at most turn * dt per tick toward the target
   assert.ok(Math.abs(b.angle - Math.PI / 2) < 1e-6); // arrived (π/2 / 1.2 = 1.31 s of turning needed after the snap tick, 1.4 s + 1 tick done) and did not overshoot
   const g2 = arenaGame();
   const b2 = g2.wstate.beam;
-  const t2 = at(g2, -100, 0.001 * 0); // behind: angle π
+  const t2 = at(g2, -100, 0); // behind: angle π
   runB(g2, 1, 1 / 60);
   assert.ok(Math.abs(Math.abs(b2.angle) - Math.PI) < 1e-6);
   g2.world.x[t2] = g2.player.x - 100; g2.world.y[t2] = g2.player.y - 100; // up-left: angle -3π/4, a short arc across ±π

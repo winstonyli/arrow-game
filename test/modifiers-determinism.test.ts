@@ -6,7 +6,8 @@ import { applySkill } from '../src/game/skills.ts';
 import { stateHash } from '../src/replay/hash.ts';
 import { seeded } from '../src/core/math.ts';
 import { MINE_LIFE } from '../src/game/weapons/mines.ts';
-import { BEAM_TICK } from '../src/game/weapons/beam.ts';
+import { BEAM } from '../src/game/weapons/beam.ts';
+import { KIND } from '../src/core/world.ts';
 import { METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 
 // Eight weapons (the bow aside) and all six modifiers at level 5 (applySkill does not check slots), an invulnerable drifting player, checkpoints every 20 s.
@@ -23,8 +24,16 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   const mt = g.wstate.meteors;
   const prevMOn = new Uint8Array(mt.on.length);
   const prevMAge = new Float32Array(mt.on.length);
-  const bm = g.wstate.beam;
-  let prevCd = bm.cd;
+  // Wrap the beam's update (delegating unchanged, so hashes are untouched) to see whether it really took enemy hp or killed.
+  const beamUpdate = BEAM.update!;
+  const enemyHp = () => { let h = 0; for (let i = 0; i < g.world.high; i++) if (g.world.kind[i] === KIND.ENEMY) h += g.world.hp[i]; return h; };
+  if (seen) BEAM.update = (game, level, dt) => {
+    const before = enemyHp();
+    const kills = beamUpdate(game, level, dt);
+    if (kills > 0 || enemyHp() < before - 1e-6) seen.beamed = true;
+    return kills;
+  };
+  try {
   for (let t = 1; t <= 3600; t++) {
     g.offer = null; // skip level-up pauses: the picks above are the build
     if (seen) { prevOn.set(mn.on); prevAge.set(mn.age); prevMOn.set(mt.on); prevMAge.set(mt.age); }
@@ -41,11 +50,6 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
         if (prevMOn[k] === 1 && (mt.on[k] === 0 || mt.age[k] < prevMAge[k]) && prevMAge[k] + 1 / 60 >= METEOR_TELEGRAPH) seen.struck = true;
       }
     }
-    if (seen) {
-      // The beam tick timer reloads by BEAM_TICK when a damage tick lands.
-      if (bm.cd - prevCd > BEAM_TICK / 2) seen.beamed = true;
-      prevCd = bm.cd;
-    }
     if (t % 1200 === 0) out.push(stateHash(g));
     if (seen && t % 60 === 0) {
       for (let i = 0; i < g.world.high; i++) {
@@ -56,6 +60,9 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
       for (let k = 0; k < g.wstate.mines.on.length; k++) if (g.wstate.mines.on[k] === 1) seen.mines = true;
       for (let k = 0; k < mt.on.length; k++) if (mt.on[k] === 1) seen.meteors = true;
     }
+  }
+  } finally {
+    BEAM.update = beamUpdate;
   }
   return out;
 }
