@@ -49,7 +49,7 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 .pause-btn { pointer-events: auto; background: transparent; border: 1px solid var(--muted); border-radius: calc(var(--u) * 6); color: var(--text); padding: calc(var(--u) * 3) calc(var(--u) * 6); cursor: pointer; }
 .pause-btn:hover, .pause-btn:focus-visible { border-color: var(--a); outline: none; }
 
-.skills { position: absolute; left: calc(var(--u) * 8); bottom: calc(var(--u) * 8); display: flex; gap: calc(var(--u) * 5); }
+.skills { position: absolute; left: calc(var(--u) * 8); right: calc(var(--u) * 120); bottom: calc(var(--u) * 8); display: flex; flex-wrap: wrap; gap: calc(var(--u) * 5); } /* wraps upward, clear of the sound hint */
 .skill { background: color-mix(in srgb, var(--panel) 93%, transparent); border: 1px solid var(--b); border-radius: calc(var(--u) * 6); padding: calc(var(--u) * 3) calc(var(--u) * 6); color: var(--b); text-shadow: 0 0 calc(var(--u) * 8) var(--b); }
 .sound-hint { position: absolute; right: calc(var(--u) * 8); bottom: calc(var(--u) * 8); color: var(--muted); }
 .foes { position: absolute; left: 50%; top: var(--under-hud); transform: translateX(-50%); color: var(--g); }
