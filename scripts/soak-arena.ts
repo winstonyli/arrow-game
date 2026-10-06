@@ -88,3 +88,5 @@ for (let m = 1; m <= minutes; m++) {
 }
 console.log('');
 for (const line of formatRunStats(g.stats)) console.log(line);
+// --json adds one machine-readable last line (scripts/balance-sweep.ts reads it): seconds survived, whether the bot died, picks, damage by source (SOURCE_IDS order), upgrade shares, healing and activity.
+if (arg('json', '') !== '') console.log('JSON ' + JSON.stringify({ secs: g.time, died: g.over, skills: g.skills, dmg: [...g.stats.dmg], up: [...g.stats.up], heal: [...g.stats.heal], act: [...g.stats.act] }));
