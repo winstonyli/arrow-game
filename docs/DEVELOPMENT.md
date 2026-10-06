@@ -8,7 +8,7 @@ Browser archer roguelite (Archero / arrow.io style). Strict TypeScript bundled b
 - Install: `bun install` (dev dependencies only: `typescript`, `vite`, `@types/bun`)
 - Run: `bun run dev` then open http://localhost:8000 (Vite dev server, port 8000, fails rather than drifting if the port is taken)
 - Build: `bun run build` writes the bundle to `dist/`; `bun run preview` serves it on http://localhost:8000
-- Test: `bun test`; `node --test test/*.test.ts` runs the same 393 tests on Node/V8 (type stripping) as a cross-engine check of the golden hashes
+- Test: `bun test`; `node --test test/*.test.ts` runs the same 401 tests on Node/V8 (type stripping) as a cross-engine check of the golden hashes
 - Typecheck: `bun run typecheck` (`tsc --noEmit`; `strict`, explicit `.ts` import specifiers, erasable syntax only)
 - Benchmarks: `bun run bench` (sim), `bun run soak` (arena soak), `bun run bench:render` (Chrome); `node scripts/<name>.ts` runs the same scripts on V8 (checked for `bench-sim`, `soak-arena`, `gem-timing`)
 - Design specs and plans are kept out of the published tree.
@@ -161,6 +161,9 @@ Known gap: the Quick Draw, Lucky Strike, Personal Space, Molasses and Cooked des
 | Magnet | 19/40 | not significant | -2.1 |
 
 Everything else (including Whirligig) is indistinguishable from the baseline at this size. Read it with care: the baseline already starts with Multishot, Rapid Fire and Power Shot, so a loser is worse than those picks, not necessarily weak; only about 45% of runs actually took each forced skill, which dilutes every effect; and the bot cannot use utility cards (Magnet, Molasses, Personal Space, Lucky Strike) well. Healing is the only family with a large survival gain. Whirligig alone, with a stationary bot, did about 0.3 to 2.4 damage/s against the bow's 10 to 16, so it looks weak, but the sweep cannot confirm it. Decision for v0.3.1: only the Popcorn trim (10 to 8); revisit the rest with a weaker baseline and more seeds in v0.4.0.
+
+## Quiet-machine benches (2026-10-06, SIM_VERSION 12)
+Machine CPU 10 to 12% busy before launch, Defender real-time protection off, no GPU leases, runs at BelowNormal. `bun run bench` (Bun 1.4.2), median ms per tick: sparse 0.04 / 0.20 / 0.41 / 0.84 at 1k / 5k / 10k / 20k, dense 0.07 / 0.77 / 2.71 / 9.49, converge 0.07 / 0.85 / 2.82 / 10.10 (budget 16.7; the 2026-10-03 table below was taken at about 100% load, so it reads about 2x higher). Soak, still bot, seed 1, 10 minutes, none dropped a spawn: the base run, and Beam, Drone and Daggers each forced first with `--picks=`, ended at 530, 540, 1047 and 557 slots in use (high-water mark), with median tick 0.03 / 0.03 / 0.05 / 0.03 ms and p95 at most 0.08 ms in minute 10 (Drone peaks at p95 0.15 ms in minute 8). `bun run bench:render` was not run for this release.
 
 ## Arena soak
 The soak bots were re-run on `SIM_VERSION` 3 (2026-10-04, Bun, machine about 49% busy, Defender real-time protection off, BelowNormal priority), so those numbers are contended; the pre-weapons numbers stay beside them for reference and are not directly comparable.
