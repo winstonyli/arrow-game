@@ -19,6 +19,7 @@ import { DAGGERS, createDaggerState } from './weapons/daggers.ts';
 import type { DaggerState } from './weapons/daggers.ts';
 import type { Game } from './game.ts';
 import type { PlayerStats } from './player.ts';
+import { SRC_OF } from './runstats.ts';
 
 // Weapon slots a run can hold, the bow (always held, never leveled: the stat passives level it) included.
 export const MAX_WEAPONS = 5;
@@ -46,7 +47,10 @@ export function weaponSystem(game: Game, dt: number): number {
   let kills = 0;
   for (const w of WEAPONS) {
     const level = game.player.stats.weapons[w.id];
-    if (level && w.update) kills += w.update(game, level, dt);
+    if (level && w.update) {
+      game.hitSrc = SRC_OF[w.id];
+      kills += w.update(game, level, dt);
+    }
   }
   return kills;
 }

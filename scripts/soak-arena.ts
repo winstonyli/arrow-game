@@ -5,12 +5,14 @@
 // --bot=kite makes the player mortal and steers it: flee nearby enemies, avoid walls, else drift to the nearest gem.
 // --bot=smart is the same plus: skill priority (damage/rate/multishot before speed), gems pulled in even with enemies near, and a sideways component so it circles instead of pinning itself on a wall.
 // It reports when the bot dies, which is the survival-time yardstick for balance changes.
+// At the end it prints the run's damage, healing and activity breakdown (damage share per weapon and upgrade; the upgrade rows are approximate), the balance data: run several --seed values to compare.
 // Usage: node scripts/soak-arena.ts [--minutes=10] [--bot=still|kite|smart] [--seed=1]
 import { createGame, tick, choose } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
 import { KIND } from '../src/core/world.ts';
 import type { Game } from '../src/game/game.ts';
+import { formatRunStats } from '../src/game/runstats-report.ts';
 
 const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
 const minutes = Number(arg('minutes', 10));
@@ -77,3 +79,5 @@ for (let m = 1; m <= minutes; m++) {
       .join('') + `   ${ms[TICKS_PER_MIN >> 1].toFixed(2)} / ${ms[Math.floor(TICKS_PER_MIN * 0.95)].toFixed(2)}`,
   );
 }
+console.log('');
+for (const line of formatRunStats(g.stats)) console.log(line);

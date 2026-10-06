@@ -1,6 +1,9 @@
 import { KIND } from '../core/world.ts';
 import type { World } from '../core/world.ts';
+import { BASE_PICKUP } from './player.ts';
 import type { Player } from './player.ts';
+import { ACT } from './runstats.ts';
+import type { RunStats } from './runstats.ts';
 
 export const GEM_RADIUS = 5;
 export const GEM_LIFE = 60; // seconds before an uncollected gem despawns
@@ -26,7 +29,7 @@ export function spawnGem(world: World, x: number, y: number, value: number): num
 // far fewer than enemies, so it needs no grid. A gem inside the pickup radius is captured (world.cd holds
 // the seconds since capture, 0 = free) and stays captured. This only sets the gem's velocity; moveSystem
 // moves it. Every gem is kicked the same way round, so a pile of them reads as a vortex. No RNG, no trig.
-export function gemSystem(world: World, player: Player, dt: number): number {
+export function gemSystem(world: World, player: Player, dt: number, stats?: RunStats): number {
   const reach = player.stats.pickupRadius;
   let xp = 0;
   for (let i = 0; i < world.high; i++) {
@@ -45,6 +48,7 @@ export function gemSystem(world: World, player: Player, dt: number): number {
     } else if (world.cd[i] > 0 || d <= reach) {
       let ux = world.vx[i] - player.vx; // velocity relative to the player
       let uy = world.vy[i] - player.vy;
+      if (stats && world.cd[i] === 0 && d > BASE_PICKUP) stats.act[ACT.MAGNET]++; // captured only thanks to Magnet
       const swing = SWING * PULL * d * Math.max(0, 1 - world.cd[i] / SWING_TIME); // sideways acceleration
       ux += ((-ry / d) * swing) * dt;
       uy += ((rx / d) * swing) * dt;

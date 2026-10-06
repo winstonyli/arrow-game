@@ -9,6 +9,8 @@ import { applySkill } from './skills.ts';
 import { gemSystem } from './gems.ts';
 import { orbitSystem } from './orbit.ts';
 import { createWeaponState, weaponSystem } from './weapons.ts';
+import { createRunStats, HEAL, ACT, SRC } from './runstats.ts';
+import type { RunStats } from './runstats.ts';
 import { createBlasts, createHits, explosionSystem, statusSystem } from './hit.ts';
 import type { Blasts, Hits } from './hit.ts';
 import type { WeaponState } from './weapons.ts';
@@ -70,6 +72,8 @@ export interface Game<M extends Mode = Mode, F extends GameFx = GameFx> {
   ticks: number;
   skills: Record<string, number>;
   wstate: WeaponState;
+  stats: RunStats; // damage, healing and activity tallies (presentation only: never hashed, never read by the sim)
+  hitSrc: number; // who is dealing the current hit, a SOURCE_IDS index (runstats.ts)
   hits: Hits;
   bossAt: number;
   onKill?: (enemyIndex: number) => void; // assigned right after construction (undefined when nothing listens)
@@ -126,6 +130,8 @@ export function createGame<M extends Mode, F extends GameFx = GameFx>({
     ticks: 0, // advancing ticks so far (replays refer to this)
     skills: {}, // skill id -> times chosen (the UI's owned-skills strip)
     wstate: createWeaponState(),
+    stats: createRunStats(),
+    hitSrc: SRC.OTHER,
     hits: {} as Hits, // set just below
     bossAt: -Infinity, // game time of the latest boss spawn (the UI's boss banner)
   };
@@ -147,18 +153,20 @@ export function tick(game: Game, dt: number): void {
   if (game.over || game.offer) return;
   const { world, grid, player, bounds } = game;
   movePlayer(player, game.input, dt, bounds);
-  player.hp = Math.min(player.maxHp, player.hp + player.stats.regen * dt);
+  const hp0 = player.hp;
+  player.hp = Math.min(player.maxHp, hp0 + player.stats.regen * dt);
+  if (player.stats.regen > 0) game.stats.heal[HEAL.REGEN] += player.hp - hp0;
   enemyAISystem(world, player, dt, game.enemyFireOnScreen ? game.camera : null, game.view, 1 - FROST_SLOW * player.stats.frost);
   moveSystem(world, dt);
   projectileSystem(world, dt, bounds, grid);
   grid.rebuild(world, KIND.ENEMY);
-  autoFire(player, world, grid, dt);
+  game.stats.act[ACT.ARROWS] += autoFire(player, world, grid, dt);
   game.kills += collisionSystem(world, grid, player, game.onKill, game.hits.arrow);
   game.kills += orbitSystem(world, grid, player, game.time + dt, dt, game.onKill, game.hits.blade); // the renderers draw at the post-tick time
   game.kills += weaponSystem(game, dt);
   game.kills += statusSystem(game, dt); // before explosionSystem, so burn-kill blasts drain this tick
   game.kills += explosionSystem(game);
-  game.xp += gemSystem(world, player, dt);
+  game.xp += gemSystem(world, player, dt, game.stats);
   if (player.hp <= 0) game.over = true;
   else game.mode.update(game, dt);
   game.time += dt;

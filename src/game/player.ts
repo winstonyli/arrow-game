@@ -5,6 +5,8 @@ import { clamp } from '../core/math.ts';
 import type { Vec, Size } from '../core/math.ts';
 import { BLADE_DPS } from './orbit.ts';
 
+export const BASE_PICKUP = 80; // px; Magnet multiplies it, and the run stats count gems captured beyond it
+
 export type PlayerStats = ReturnType<typeof baseStats>;
 export type Player = ReturnType<typeof createPlayer>;
 
@@ -19,7 +21,7 @@ export function baseStats() {
     bounce: 0,
     moveSpeed: 220,
     range: 600,
-    pickupRadius: 80,
+    pickupRadius: BASE_PICKUP,
     regen: 0, // hp per second
     homing: 0, // 1 = arrows steer toward the nearest enemy
     orbit: 0, // blades circling the player

@@ -2,6 +2,7 @@ import { KIND } from '../core/world.ts';
 import { clamp } from '../core/math.ts';
 import type { HitFn } from '../core/systems.ts';
 import type { Game } from './game.ts';
+import { creditDamage, ACT, HEAL, SRC } from './runstats.ts';
 import { BLAST_BASE, BLAST_CAP, BLAST_DMG, BLAST_PER, CRIT_CHANCE, CRIT_MULT, FROST_SECS, IGNITE_DPS, IGNITE_SECS, KNOCK_PX, VAMP_HP } from './modifiers.ts';
 
 // What a hit is, for the modifiers (Tasks 2-5): CRIT = may crit, KNOCK = may push, NOBLAST = its kills do not explode, STATUS = a surviving hit starts Frost and Ignite.
@@ -27,10 +28,13 @@ export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: 
   const { world } = game;
   if (world.kind[j] !== KIND.ENEMY || world.hp[j] <= 0) return 0;
   const s = game.player.stats;
+  let crit = false;
   if (flags & HIT_CRIT && s.crit > 0 && game.rng() < s.crit * CRIT_CHANCE) {
     dmg *= CRIT_MULT;
+    crit = true;
     game.fx?.crit(world.x[j], world.y[j]);
   }
+  creditDamage(game, Math.min(dmg, world.hp[j]), crit);
   world.hp[j] -= dmg;
   if (world.hp[j] > 0) {
     if (flags & HIT_KNOCK && s.knockback > 0) {
@@ -41,7 +45,10 @@ export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: 
         const oy = world.y[j];
         world.x[j] = clamp(ox + dx * push, world.radius[j], game.bounds.w - world.radius[j]);
         world.y[j] = clamp(oy + dy * push, world.radius[j], game.bounds.h - world.radius[j]);
-        if (world.x[j] !== ox || world.y[j] !== oy) game.fx?.push(ox, oy, world.x[j] - ox, world.y[j] - oy);
+        if (world.x[j] !== ox || world.y[j] !== oy) {
+          game.stats.act[ACT.PUSHED] += Math.hypot(world.x[j] - ox, world.y[j] - oy);
+          game.fx?.push(ox, oy, world.x[j] - ox, world.y[j] - oy);
+        }
       }
     }
     if (flags & HIT_STATUS) {
@@ -51,7 +58,11 @@ export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: 
     if (flags & HIT_TICK) game.fx?.soft(j, dmg);
     return 0;
   }
-  if (s.vamp > 0) game.player.hp = Math.min(game.player.maxHp, game.player.hp + s.vamp * VAMP_HP);
+  if (s.vamp > 0) {
+    const hp0 = game.player.hp;
+    game.player.hp = Math.min(game.player.maxHp, hp0 + s.vamp * VAMP_HP);
+    game.stats.heal[HEAL.VAMP] += game.player.hp - hp0;
+  }
   if (s.explode > 0 && !(flags & HIT_NOBLAST) && game.blasts.n < BLAST_CAP) {
     game.blasts.x[game.blasts.n] = world.x[j];
     game.blasts.y[game.blasts.n] = world.y[j];
@@ -66,8 +77,14 @@ export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: 
 export interface Hits { arrow: HitFn; blade: HitFn }
 export function createHits(game: Game): Hits {
   return {
-    arrow: (j, dmg, dx, dy) => hitEnemy(game, j, dmg, HIT_CRIT | HIT_KNOCK | HIT_STATUS, dx, dy),
-    blade: (j, dmg) => hitEnemy(game, j, dmg, 0, 0, 0),
+    arrow: (j, dmg, dx, dy) => {
+      game.hitSrc = SRC.BOW;
+      return hitEnemy(game, j, dmg, HIT_CRIT | HIT_KNOCK | HIT_STATUS, dx, dy);
+    },
+    blade: (j, dmg) => {
+      game.hitSrc = SRC.BLADE;
+      return hitEnemy(game, j, dmg, 0, 0, 0);
+    },
   };
 }
 
@@ -83,6 +100,7 @@ export function explosionSystem(game: Game): number {
   const radius = BLAST_BASE + BLAST_PER * s.explode;
   const dmg = BLAST_DMG * s.explode * s.damageMult;
   let kills = 0;
+  game.hitSrc = SRC.BLAST;
   for (let k = 0; k < b.n; k++) {
     const x = b.x[k];
     const y = b.y[k];
@@ -111,9 +129,15 @@ export function statusSystem(game: Game, dt: number): number {
   const { world } = game;
   const burn = IGNITE_DPS * s.ignite * s.damageMult * dt;
   let kills = 0;
+  let slowed = 0;
+  game.hitSrc = SRC.BURN;
   for (let i = 0; i < world.high; i++) {
     if (world.kind[i] !== KIND.ENEMY) continue;
-    if (world.slowT[i] > 0) world.slowT[i] = Math.max(0, world.slowT[i] - dt);
+    if (world.slowT[i] > 0) {
+      const t0 = world.slowT[i];
+      world.slowT[i] = Math.max(0, t0 - dt);
+      slowed += Math.min(t0, dt);
+    }
     if (world.burnT[i] > 0) {
       if (world.burnT[i] <= BURN_EPS) { // float32 countdown residue: expired, so a 3 s burn is exactly 180 ticks
         world.burnT[i] = 0;
@@ -123,5 +147,6 @@ export function statusSystem(game: Game, dt: number): number {
       kills += hitEnemy(game, i, burn, HIT_TICK, 0, 0);
     }
   }
+  game.stats.act[ACT.SLOWED] += slowed;
   return kills;
 }
