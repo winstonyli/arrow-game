@@ -6,7 +6,7 @@
 // --bot=smart is the same plus: skill priority (damage/rate/multishot before speed), gems pulled in even with enemies near, and a sideways component so it circles instead of pinning itself on a wall.
 // It reports when the bot dies, which is the survival-time yardstick for balance changes.
 // At the end it prints the run's damage, healing and activity breakdown (damage share per weapon and upgrade; the upgrade rows are approximate), the balance data: run several --seed values to compare.
-// Usage: node scripts/soak-arena.ts [--minutes=10] [--bot=still|kite|smart] [--seed=1]
+// Usage: node scripts/soak-arena.ts [--minutes=10] [--bot=still|kite|smart] [--seed=1] [--picks=random|id,id,...]
 import { createGame, tick, choose } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
@@ -25,7 +25,14 @@ if (bot === 'still') g.player.hp = g.player.maxHp = 1e9;
 
 // Smart bot skill priority, first wins: weapons, then the six modifiers, then the other upgrades. Unlisted ids sort first (indexOf -1), so list every id.
 const PRIORITY = ['multishot', 'rapid', 'power', 'shockwave', 'chain', 'blade', 'boomerang', 'flame', 'mines', 'meteor', 'beam', 'drone', 'daggers', 'crit', 'explode', 'vamp', 'frost', 'ignite', 'knockback', 'homing', 'pierce', 'regen', 'ricochet', 'magnet', 'swift'];
-const pick = (offer: string[]): string => (bot === 'smart' ? [...offer].sort((a, b) => PRIORITY.indexOf(a) - PRIORITY.indexOf(b))[0] : offer[0]);
+// --picks=random takes a random offered card (own seeded RNG, so the sim is untouched); --picks=a,b,c ranks the listed ids first (the rest keep the smart order). Default: smart bot uses PRIORITY, the others take the first card.
+const picks = arg('picks', '');
+const pickRng = seeded(Number(arg('seed', 1)) + 1000003);
+const rank = picks && picks !== 'random' ? [...picks.split(','), ...PRIORITY] : PRIORITY;
+const pick = (offer: string[]): string => {
+  if (picks === 'random') return offer[Math.floor(pickRng() * offer.length)];
+  return bot === 'smart' || picks ? [...offer].sort((a, b) => rank.indexOf(a) - rank.indexOf(b))[0] : offer[0];
+};
 
 // Flee enemies within FLEE px (1/d weighting), push off walls, and with nothing near, chase the nearest gem.
 function steer(g: Game): void {
