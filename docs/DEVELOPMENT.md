@@ -142,6 +142,26 @@ Known gap: the Quick Draw, Lucky Strike, Personal Space, Molasses and Cooked des
 - **Paired sweep:** `bun scripts/balance-sweep.ts [--seeds=40] [--minutes=6] [--jobs=4] [--builds=id,..]` runs the smart bot with each skill forced to the front of its pick order and compares it with the baseline build on the same seeds: mean paired change in survival and damage per second with a 95% bootstrap interval, over all runs (not only those that got the skill), plus how many runs picked it. An interval spanning 0 means no measurable effect. A short `--minutes` caps survival, so use 6 or more for the survival column. It reads the soak's `--json` line and runs children at BelowNormal.
 - **Not tracked:** Skewer and Pinball (they need per-arrow state or changes in core/systems.ts), Heat Seeker and Zoomies.
 
+## Balance sweep results (2026-10-05, SIM_VERSION 12, Popcorn at 8)
+`bun scripts/balance-sweep.ts --seeds=40 --minutes=6 --jobs=4` (25 skills, seeds 1 to 40, machine about 97% busy, Defender real-time protection off; results are deterministic, load only slowed it). Baseline: the smart bot's own priority, survival mean 193 s, 22.2 damage/s. Only rows whose 95% interval excludes 0:
+
+| Skill | picked | change in survival | change in damage/s |
+|---|---|---|---|
+| Chicken Soup | 19/40 | +29 s | +3.9 |
+| Vampiric | 17/40 | +26 s | +3.5 |
+| Popcorn | 20/40 | +13 s | +4.2 |
+| Breadcrumbs | 19/40 | +7 s | +0.7 |
+| Live Wire | 18/40 | not significant | +2.4 |
+| Incoming! | 18/40 | not significant | +1.1 |
+| Skewer | 18/40 | -12 s | -1.8 |
+| Pinball | 21/40 | not significant | -2.6 |
+| Lucky Strike | 20/40 | not significant | -2.7 |
+| Personal Space | 16/40 | not significant | -2.6 |
+| Molasses | 23/40 | not significant | -2.2 |
+| Magnet | 19/40 | not significant | -2.1 |
+
+Everything else (including Whirligig) is indistinguishable from the baseline at this size. Read it with care: the baseline already starts with Multishot, Rapid Fire and Power Shot, so a loser is worse than those picks, not necessarily weak; only about 45% of runs actually took each forced skill, which dilutes every effect; and the bot cannot use utility cards (Magnet, Molasses, Personal Space, Lucky Strike) well. Healing is the only family with a large survival gain. Whirligig alone, with a stationary bot, did about 0.3 to 2.4 damage/s against the bow's 10 to 16, so it looks weak, but the sweep cannot confirm it. Decision for v0.3.1: only the Popcorn trim (10 to 8); revisit the rest with a weaker baseline and more seeds in v0.4.0.
+
 ## Arena soak
 The soak bots were re-run on `SIM_VERSION` 3 (2026-10-04, Bun, machine about 49% busy, Defender real-time protection off, BelowNormal priority), so those numbers are contended; the pre-weapons numbers stay beside them for reference and are not directly comparable.
 
