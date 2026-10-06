@@ -10,7 +10,7 @@ import { updateShockwave } from '../src/game/weapons/shockwave.ts';
 import { updateChain } from '../src/game/weapons/chain.ts';
 import { orbitSystem, bladePos } from '../src/game/orbit.ts';
 import { hitEnemy, explosionSystem, statusSystem, HIT_CRIT, HIT_KNOCK, HIT_STATUS, HIT_TICK } from '../src/game/hit.ts';
-import { BLAST_CAP, FROST_TINT, IGNITE_TINT, FROST_SECS, IGNITE_SECS, IGNITE_DPS } from '../src/game/modifiers.ts';
+import { BLAST_CAP, BLAST_DMG, FROST_TINT, IGNITE_TINT, FROST_SECS, IGNITE_SECS, IGNITE_DPS } from '../src/game/modifiers.ts';
 import { applySkill, pickChoices, offerTag, SKILLS } from '../src/game/skills.ts';
 import { baseStats } from '../src/game/player.ts';
 import { seeded } from '../src/core/math.ts';
@@ -186,7 +186,7 @@ test('the vampiric modifier is a levelled arena skill', () => {
 
 test('an explosive kill damages neighbours inside the radius once the tick drains the queue', () => {
   const g = arenaGame();
-  g.player.stats.explode = 2; // radius 60, damage 20
+  g.player.stats.explode = 2; // radius 60
   const victim = at(g, 100);
   const near = at(g, 140); // 40 px away: inside
   const far = at(g, 400);
@@ -198,9 +198,9 @@ test('an explosive kill damages neighbours inside the radius once the tick drain
   assert.equal(g.blasts.n, 1);
   settle(g);
   assert.equal(explosionSystem(g), 0);
-  assert.equal(g.world.hp[near], hp - 20);
+  assert.equal(g.world.hp[near], hp - BLAST_DMG * 2);
   assert.equal(g.world.hp[far], hp);
-  assert.equal(g.world.hp[edge], hp - 20);
+  assert.equal(g.world.hp[edge], hp - BLAST_DMG * 2);
   assert.equal(g.world.hp[clear], hp);
   assert.equal(g.blasts.n, 0);
 });
