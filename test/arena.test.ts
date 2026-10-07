@@ -131,3 +131,19 @@ test('a boss spawn stamps bossAt with the game time', () => {
   g.mode.update(g, dt);
   assert.equal(g.bossAt, BOSS_EVERY);
 });
+
+test('shooters spawn on the closer ring; everything else spawns beyond it, mostly near the inner edge', () => {
+  const g = make(3);
+  const out = { x: 0, y: 0 };
+  const dist = () => Math.hypot(out.x - g.player.x, out.y - g.player.y);
+  for (let k = 0; k < 300; k++) {
+    assert.ok(spawnPoint(g, out, true));
+    assert.ok(dist() >= 380 - 1e-6 && dist() <= 480 + 1e-6, 'shooter ring');
+  }
+  let inner = 0;
+  for (let k = 0; k < 600; k++) {
+    assert.ok(spawnPoint(g, out));
+    if (dist() < 560 + 300 / 2) inner++; // u^2 < 0.5 for about 71% of draws
+  }
+  assert.ok(inner > 600 * 0.6 && inner < 600 * 0.8, `inner share ${inner / 600}`);
+});

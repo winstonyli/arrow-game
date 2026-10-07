@@ -26,7 +26,9 @@ const SPLIT_COUNT = 2;
 const PACK_SPREAD = 30; // px
 export const BOSS_EVERY = 120; // seconds
 const SPAWN_RING = 560; // px from the player: the sim view is square and each screen crops it, so the ring is not derived from it (the narrowest crop shows about 230 px each side)
-const SPAWN_DEPTH = 300; // spawn distances run from the ring to ring + depth
+const SPAWN_DEPTH = 300; // other enemies: distances run from the ring to ring + depth, skewed toward the inner edge (see spawnPoint)
+const SHOOTER_RING = 380; // shooters spawn closer, inside their fire range and the sim view, so they are in play when they start shooting
+const SHOOTER_DEPTH = 100;
 const WALL_PAD = 20;
 const TRIES = 32;
 
@@ -35,14 +37,16 @@ export const spawnRate = (t: number): number => BASE_RATE + RATE_PER_SEC * t;
 
 export const clock = (t: number): string => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-// Writes a spawn position to `out` and returns true. The point is on a ring around the player
-// (SPAWN_RING to SPAWN_RING + SPAWN_DEPTH) and inside the world; points that miss are rejected, not
-// clamped. Returns false if no point fits (the director retries next tick).
-export function spawnPoint(game: Game, out: Vec): boolean {
+// Writes a spawn position to `out` and returns true. The point is on a ring around the player and inside the world;
+// points that miss are rejected, not clamped. Shooters use the closer ring (SHOOTER_RING, uniform); everything else
+// SPAWN_RING plus SPAWN_DEPTH * u^2, so most arrive near the inner edge and a few from further out.
+// Returns false if no point fits (the director retries next tick).
+export function spawnPoint(game: Game, out: Vec, shooter = false): boolean {
   const { player, bounds, rng } = game;
   for (let k = 0; k < TRIES; k++) {
     const a = rng() * Math.PI * 2;
-    const d = SPAWN_RING + rng() * SPAWN_DEPTH;
+    const u = rng();
+    const d = shooter ? SHOOTER_RING + u * SHOOTER_DEPTH : SPAWN_RING + u * u * SPAWN_DEPTH;
     const x = player.x + Math.cos(a) * d;
     const y = player.y + Math.sin(a) * d;
     if (x < WALL_PAD || x > bounds.w - WALL_PAD || y < WALL_PAD || y > bounds.h - WALL_PAD) continue;
@@ -90,9 +94,9 @@ export function createArena() {
           this.debt = 0;
           break;
         }
-        if (!spawnPoint(game, pt)) break;
-        this.debt -= 1;
         const pick = pickMix(game.time, rng);
+        if (!spawnPoint(game, pt, pick?.type === ENEMY.SHOOTER)) break;
+        this.debt -= 1;
         const count = pick ? Math.max(1, Math.min(pick.pack, ENEMY_CAP - world.kindCount[KIND.ENEMY])) : 1;
         for (let k = 0; k < count; k++) {
           const dx = k === 0 ? 0 : (rng() - 0.5) * 2 * PACK_SPREAD;

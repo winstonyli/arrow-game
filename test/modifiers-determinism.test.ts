@@ -14,8 +14,8 @@ import { METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 
 // Daggers' level in the maxed build: the highest level at which every coverage flag below stays true.
 const DAGGER_LEVEL = 5;
-// Mines' level in the maxed build, found the same way (a scan over the weapon levels): only 4 keeps every flag below true on the square view.
-const MINES_LEVEL = 4;
+// Mines' level in the maxed build, found the same way (a scan over the weapon levels): only 2 keeps every flag below true with the closer shooter ring and the inner-skewed spawn distances.
+const MINES_LEVEL = 2;
 
 // Fork picks in the maxed build: [fork id, weapon id, ordinary picks after the fork]. A fork resets the weapon to level 3.
 const FORKS: [string, string, number][] = [['chain.b', 'chain', 2], ['shockwave.a', 'shockwave', 2], ['blade.b', 'blade', 2], ['drone.a', 'drone', 1]];
@@ -100,7 +100,7 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   return out;
 }
 
-const EXPECTED: number[] = [1211831440, 1353197697, 961033282];
+const EXPECTED: number[] = [300634178, 971884843, 2129162458];
 
 test('a maxed build hashes the same on every run and on both engines', () => {
   const a = run();
