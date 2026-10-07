@@ -16,20 +16,24 @@ export function createStepper(hz = 60, maxSteps = 5) {
       }
       return n;
     },
+    // How far the time between the last tick and the next has passed, 0 to 1 (for drawing between ticks).
+    alpha(): number {
+      return Math.min(1, Math.max(0, acc / dt));
+    },
   };
 }
 
 export function startLoop(
   stepper: Stepper,
   step: (dt: number) => void,
-  render: () => void,
+  render: (alpha: number) => void,
 ): void {
   let last = performance.now();
   function frame(now: number): void {
     const n = stepper.advance((now - last) / 1000);
     last = now;
     for (let i = 0; i < n; i++) step(stepper.dt);
-    render();
+    render(stepper.alpha());
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

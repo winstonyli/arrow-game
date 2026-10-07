@@ -23,3 +23,10 @@ test('caps steps after a long stall and drops the backlog', () => {
 test('the live loop steps at the replay tick rate (main.ts uses createStepper())', () => {
   assert.equal(createStepper().dt, TICK_DT); // replays are recorded per TICK_DT; changing the loop rate must bump SIM_VERSION
 });
+
+test('alpha is the fraction of a tick left over after advance', () => {
+  const s = createStepper(60);
+  assert.equal(s.alpha(), 0);
+  s.advance(1 / 60 + 1 / 120);
+  assert.ok(Math.abs(s.alpha() - 0.5) < 1e-9);
+});

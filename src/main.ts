@@ -137,6 +137,9 @@ if (!stressN) {
 const vignetteEl = document.getElementById('vignette')!;
 const drawCam = { x: 0, y: 0 }; // the eased camera the renderers draw with; the sim camera (game.camera) stays exact
 const camGoal = { x: 0, y: 0 };
+// The player is drawn between its last two tick positions, so the 60 Hz sim looks smooth at any frame rate (the sim and its hash are untouched).
+const prevPos = { x: 0, y: 0 };
+let prevOwner: object | null = null;
 // Where the draw camera aims: on the player, not clamped to the world, so each screen's crop of the square view keeps the player centred; the darkened void shows past an edge. A world that fits the view (rooms) uses the sim camera.
 function aimCamera(): Vec {
   const { bounds, view, player, camera } = shown;
@@ -369,6 +372,9 @@ startLoop(
   createStepper(TICK_HZ),
   (dt) => {
     const t0 = performance.now();
+    prevPos.x = shown.player.x;
+    prevPos.y = shown.player.y;
+    prevOwner = shown.player;
     if (screen === 'watch') stepWatch();
     else if (shown === attract?.game) {
       attract.step(dt);
@@ -376,7 +382,7 @@ startLoop(
     } else if (screen === 'play' || screen === 'none') session ? session.step(input.x, input.y) : tick(game, dt);
     simMs = simMs * 0.9 + (performance.now() - t0) * 0.1;
   },
-  () => {
+  (alpha) => {
     const t0 = performance.now();
     if (lastFrame) {
       frameMs = frameMs * 0.9 + (t0 - lastFrame) * 0.1;
@@ -401,6 +407,13 @@ startLoop(
     }
     if (shown === game) sfx?.observe(game);
     vignetteEl.style.opacity = shown.fx ? String(Math.min(1, shown.fx.vignette(shown.player))) : '0';
+    const pl = shown.player;
+    const simX = pl.x;
+    const simY = pl.y;
+    if (prevOwner === pl && Math.hypot(simX - prevPos.x, simY - prevPos.y) < 100) {
+      pl.x = prevPos.x + (simX - prevPos.x) * alpha;
+      pl.y = prevPos.y + (simY - prevPos.y) * alpha;
+    }
     easeCamera(drawCam, aimCamera(), frameDt, shown === game ? undefined : ATTRACT_CAMERA_RATE);
     render(
       shown,
@@ -412,6 +425,8 @@ startLoop(
         : [],
     drawCam,
     );
+    pl.x = simX;
+    pl.y = simY;
     drawMs = drawMs * 0.9 + (performance.now() - t0) * 0.1;
   },
 );
