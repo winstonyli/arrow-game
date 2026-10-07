@@ -94,7 +94,7 @@ export interface GameOptions<M extends Mode, F extends GameFx> {
 }
 
 export const BOUNDS = { w: 900, h: 600 };
-export const VIEW = { w: 900, h: 600 };
+export const VIEW = { w: 1000, h: 1000 };
 export const CAPACITY = 50000;
 
 export function createGame<M extends Mode, F extends GameFx = GameFx>({

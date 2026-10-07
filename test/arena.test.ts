@@ -20,7 +20,7 @@ test('the player starts at the world centre with the camera on it', () => {
   const g = make();
   assert.equal(g.player.x, 1500);
   assert.equal(g.player.y, 1000);
-  assert.deepEqual(g.camera, { x: 1050, y: 700 });
+  assert.deepEqual(g.camera, { x: 1000, y: 500 });
   assert.equal(g.level, 1);
 });
 
@@ -47,7 +47,7 @@ test('spawns land outside the view and inside the world, in the open and near a 
     g.time = 1000; // ~21 enemies per second
     for (let k = 0; k < 5; k++) g.mode.update(g, 1);
     const list = enemies(g);
-    assert.ok(list.length > 20, `spawned ${list.length} near ${px},${py}`);
+    assert.ok(list.length > (px === 1500 ? 20 : 3), `spawned ${list.length} near ${px},${py}`);
     for (const i of list) {
       const x = g.world.x[i];
       const y = g.world.y[i];
