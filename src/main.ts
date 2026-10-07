@@ -151,6 +151,9 @@ function newGame({ seed: s }: { seed?: number } = {}) {
     game = session.game;
   }
   shownOffer = undefined;
+  const stageView = document.getElementById('view')!;
+  stageView.style.setProperty('--ar', String(game.view.w / game.view.h));
+  stageView.classList.toggle('fit', game.bounds.w <= game.view.w && game.bounds.h <= game.view.h);
   const goal = aimCamera();
   drawCam.x = goal.x;
   drawCam.y = goal.y;

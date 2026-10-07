@@ -16,7 +16,9 @@ html, body { margin: 0; height: 100%; background: #0d0415; overflow: hidden; tou
 #stage { --u: calc(min(100vw, 150vh) / 900); --under-hud: max(calc(var(--u) * 52), calc(var(--u) * 32 + 20px)); position: absolute; inset: 0; color: var(--text); font-family: var(--body); font-size: calc(var(--u) * 14); }
 /* The sim view is square; the canvases are drawn at that size and cropped to the screen (cover), centred on the player. */
 /* The UI covers the whole screen. Landscape keeps the old unit (900 u across a 3:2 screen); portrait sizes it from the width and stacks the cards. */
-#view { position: absolute; left: 50%; top: 50%; width: max(100vw, 100vh); aspect-ratio: 1; transform: translate(-50%, -50%); }
+/* --ar is the sim view's aspect (set from game.view). The view covers the screen (the renderer crops it); .fit shows a whole fixed-size room instead (letterboxed). */
+#view { --ar: 1; position: absolute; left: 50%; top: 50%; width: max(100vw, calc(100vh * var(--ar))); aspect-ratio: var(--ar); transform: translate(-50%, -50%); }
+#view.fit { width: min(100vw, calc(100vh * var(--ar))); }
 #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #ui { position: absolute; inset: 0; pointer-events: none; }
 #ui button, #ui .overlay { pointer-events: auto; }
