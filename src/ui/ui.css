@@ -114,8 +114,8 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 
 /* Title screen: the self-playing run shows through (see main.ts showGame), the name pulses and gets a light sweep, and the panel's rows fade up one after another. */
 .overlay.backdrop { background: color-mix(in srgb, var(--bg) 40%, transparent); }
-.title-name { position: relative; overflow: hidden; animation: title-glow 4s ease-in-out infinite; }
-.title-name::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; background: linear-gradient(100deg, transparent, #ffffff30, transparent); transform: translateX(-150%) skewX(-20deg); animation: title-sweep 6s ease-in-out 1s infinite; }
+.title-name { position: relative; animation: title-glow 4s ease-in-out infinite; }
+.title-name::after { content: attr(data-text); position: absolute; inset: 0; color: transparent; text-shadow: none; background: linear-gradient(100deg, transparent 40%, #ffffffcc 50%, transparent 60%) 120% 0 / 250% 100% no-repeat; -webkit-background-clip: text; background-clip: text; animation: title-sweep 6s ease-in-out 1s infinite; }
 .title-panel > * { animation: rise 0.45s ease-out backwards; }
 .title-panel > :nth-child(2) { animation-delay: 0.08s; }
 .title-panel > :nth-child(3) { animation-delay: 0.16s; }
@@ -126,5 +126,5 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 .title-panel > :nth-child(8) { animation-delay: 0.46s; }
 @keyframes rise { from { opacity: 0; transform: translateY(calc(var(--u) * 8)); } }
 @keyframes title-glow { 50% { text-shadow: 0 0 calc(var(--u) * 12) currentColor, 0 0 calc(var(--u) * 30) currentColor; } }
-@keyframes title-sweep { 0%, 55% { transform: translateX(-150%) skewX(-20deg); } 85%, 100% { transform: translateX(400%) skewX(-20deg); } }
+@keyframes title-sweep { 0%, 55% { background-position: 120% 0; } 85%, 100% { background-position: -20% 0; } }
 @media (prefers-reduced-motion: reduce) { .title-name, .title-name::after, .title-panel > * { animation: none; } }

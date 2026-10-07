@@ -138,9 +138,12 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   // Overlays -------------------------------------------------------------
   const title = h('div', 'overlay backdrop');
   const titlePanel = h('div', 'panel title-panel');
+  const titleName = h('h1', 'title-name glow-text', 'Arrow game');
+  titleName.dataset.text = 'Arrow game'; // the light sweep is a copy of the text, clipped to the letters
+
   const bests = { arena: h('div', 'mu'), rooms: h('div', 'mu') };
   titlePanel.append(
-    h('h1', 'title-name glow-text', 'Arrow game'),
+    titleName,
     h('div', 'mu', 'One archer. Too many enemies.'),
     button('Arena', 'primary b', () => on.onPlay('arena')),
     bests.arena,
