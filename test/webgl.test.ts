@@ -436,3 +436,12 @@ test('packInstances draws each live dagger as a head dot and two fading trailing
   assert.equal(r.dots.length, 3);
   assert.equal(r.dots[0][0], 400);
 });
+
+test('five active drones with fresh tracers fit the instance budget', () => {
+  const w = new World(2);
+  const ws = createWeaponState();
+  ws.drones.on.fill(1);
+  ws.drones.age.fill(0);
+  const out = new Float32Array((2 + WEAPON_INSTANCES) * STRIDE);
+  assert.ok(packInstances(w, player(), G({ wstate: ws }), out) <= 1 + WEAPON_INSTANCES);
+});

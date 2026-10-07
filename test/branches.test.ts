@@ -16,6 +16,7 @@ import { updateShockwave, SHOCK_LEVELS, SHOCK_SPEED, AFTER_DELAY, AFTER_DMG, AFT
 import { SHOVE_PX } from '../src/game/hit.ts';
 import { bladePos, BLADE_ORBIT, BLADE_SPEED, BLADE_BRANCH } from '../src/game/orbit.ts';
 import { BLADE_LEVELS } from '../src/game/weapons/blade.ts';
+import { updateDrone, DRONE_LEVELS, DRONE_MAX } from '../src/game/weapons/drone.ts';
 import type { Game } from '../src/game/game.ts';
 
 const arenaGame = (): Game => createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
@@ -195,4 +196,27 @@ test('Carousel widens the orbit and Blender tightens and doubles the spin; both 
   assert.equal(s.orbit, BLADE_LEVELS[2].count);
   applySkill(s, 'blade'); // level 4 keeps the multiplier
   assert.ok(Math.abs(s.bladeDps - BLADE_LEVELS[3].dps * BLADE_BRANCH[2].dps) < 1e-9);
+});
+
+test('Hive Mind adds two drones at 70% damage each; Stinger reaches 1.6x farther, hits 1.5x harder, fires 1.3x slower', () => {
+  const L = DRONE_LEVELS[4];
+  const hive = arenaGame();
+  hive.player.stats.weapons.drone = 5;
+  hive.player.stats.branches.drone = 1;
+  const t = spawnEnemy(hive.world, ENEMY.BRUISER, hive.player.x + 150, hive.player.y);
+  settle(hive);
+  updateDrone(hive, 5, 1 / 60);
+  assert.equal(DRONE_MAX, 5);
+  assert.deepEqual([...hive.wstate.drones.on], [1, 1, 1, 1, 1]);
+  assert.ok(hive.world.hp[t] <= BRUISER_HP - L.dmg * 0.7 + 1e-2); // at least the first drone stung
+
+  const sting = arenaGame();
+  sting.player.stats.weapons.drone = 5;
+  sting.player.stats.branches.drone = 2;
+  const far = spawnEnemy(sting.world, ENEMY.BRUISER, sting.player.x + L.range * 1.4, sting.player.y); // beyond L.range, within 1.6x of the (-32,-32) drone
+  settle(sting);
+  updateDrone(sting, 5, 1 / 60);
+  assert.ok(Math.abs(sting.world.hp[far] - (BRUISER_HP - L.dmg * 1.5)) < 1e-2);
+  assert.ok(Math.abs(sting.wstate.drones.cd[0] - L.interval * 1.3) < 1e-3);
+  assert.deepEqual([...sting.wstate.drones.on], [1, 1, 1, 0, 0]); // level 5 holds 3 drones; Stinger adds none
 });
