@@ -349,3 +349,7 @@ The candidate search used a fixed boss-sized radius (36) for every projectile; i
 | sparse | 6.2 / 4.7 | 2.7 / 4.6 |
 
 Cell size re-swept at the new radius (16/32/64): 32 stays the default (64 is ~2x worse in dense and converge; 16 is similar in the crowded cases and worse when sparse). Run-to-run noise is about ±40% under the current machine load.
+
+## Square-view prototype sweep (branch `proto/square-view`, 2026-10-07)
+
+`bun scripts/balance-sweep.ts --seeds=30 --minutes=6 --jobs=3` (all 33 rows, seeds 1 to 30; machine about 100% busy from other programs, Defender real-time protection off; deterministic, so load only slowed it). View 1000x1000, spawn ring 560, arena still 3000x2000. Baseline: survival 194 s, 24.0 dmg/s (main: 190 s, 21.0). Branch rows, d dmg/s against that baseline, with main's tuned value in brackets: Aftershock +32.5 [+44.5], Fissure +25.0 [+26.3], Corona Wire +11.8 [+18.7], Daisy Chain +50.3 [+50.4], Hive Mind +44.4 [+53.2], Stinger +50.1 [+54.3]. Survival gains are 68 to 165 s. The ordering is unchanged and Daisy Chain is still about 4x Corona Wire. The area and aura branches (Aftershock, Corona, Hive Mind) lose most: enemies now arrive from 560 px and the screen shows less, so there are fewer targets in range at once. Not tuned; decide only if the square view is adopted. The baseline absolute dmg/s differs from main's, so deltas are only roughly comparable across the two sweeps.
