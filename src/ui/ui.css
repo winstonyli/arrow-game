@@ -22,6 +22,8 @@ html, body { margin: 0; height: 100%; background: #0d0415; overflow: hidden; tou
 #view.fit { width: min(100vw, calc(100vh * var(--ar))); overflow: hidden; }
 #view.fit canvas { inset: auto; left: 0; top: 0; width: calc(100% * var(--sx)); height: calc(100% * var(--sy)); }
 #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+/* The damage vignette is a screen-sized overlay (not drawn on the canvases, which each screen crops differently); main.ts sets its opacity. */
+#vignette { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(farthest-corner at 50% 50%, rgba(248,81,73,0) 40%, rgba(248,81,73,0.85) 100%); }
 #ui { position: absolute; inset: 0; pointer-events: none; }
 #ui button, #ui .overlay { pointer-events: auto; }
 #ui [inert] { pointer-events: none; }

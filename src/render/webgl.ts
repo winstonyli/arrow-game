@@ -63,7 +63,7 @@ function put(out: Float32Array, o: number, x: number, y: number, r: number, pal:
 
 // Layers, bottom to top (canvas.ts uses the same order): gems, fire patches (low alpha, under everything that moves), mines,
 // enemies, enemy projectiles, player projectiles, fx particles, blades, weapon effects (shockwave, zap, boomerangs, meteor strike rings, beam, drones, daggers), player. The background and grid
-// are on a canvas below; the HP bar, vignette and HUD text on one above. Within a layer instances draw in
+// are on a canvas below; the HP bar and HUD text on one above. Within a layer instances draw in
 // slot order. Entities carry their tail's bend and tip (see trail.ts); zero without fx.
 // Fills `out` with one instance per live entity at least partly inside the view in that order and returns the count.
 // Fire patches go below the enemies: opaque discs on top hid them. Alpha is FIRE_ALPHA fading with life.
@@ -316,7 +316,7 @@ function compile(gl: WebGL2RenderingContext, type: GLenum, src: string): WebGLSh
 
 // Same render(game, hud) contract as createCanvasRenderer. Throws if WebGL2 is unavailable.
 // `bgCanvas` (below) holds the background and world grid; `hudCanvas` (above) holds the player's HP bar,
-// the damage vignette and the HUD text, so the grid never draws over entities.
+// the HUD text, so the grid never draws over entities.
 export function createWebGLRenderer(canvas: HTMLCanvasElement, hudCanvas: HTMLCanvasElement, bgCanvas: HTMLCanvasElement, view: Size) {
   canvas.width = hudCanvas.width = bgCanvas.width = view.w;
   canvas.height = hudCanvas.height = bgCanvas.height = view.h;
@@ -363,9 +363,6 @@ export function createWebGLRenderer(canvas: HTMLCanvasElement, hudCanvas: HTMLCa
   gl.clearColor(0, 0, 0, 0);
 
   let data: Float32Array | null = null; // sized on first frame from the world's capacity
-  const vignette = hud2d.createRadialGradient(view.w / 2, view.h / 2, view.h * 0.35, view.w / 2, view.h / 2, Math.hypot(view.w, view.h) / 2);
-  vignette.addColorStop(0, 'rgba(248,81,73,0)');
-  vignette.addColorStop(1, 'rgba(248,81,73,0.85)');
   const cam = { x: 0, y: 0 }; // the camera plus the current shake offset
 
   function render(game: RenderGame, hud: string[], eased: Vec = game.camera): void {
@@ -395,13 +392,6 @@ export function createWebGLRenderer(canvas: HTMLCanvasElement, hudCanvas: HTMLCa
     hud2d.fillStyle = '#3fb950';
     hud2d.fillRect(bx, by, (bw * Math.max(0, player.hp)) / player.maxHp, 4);
     drawGhost(hud2d, game, cam.x, cam.y);
-    const v = fx ? fx.vignette(player) : 0;
-    if (v > 0.01) {
-      hud2d.globalAlpha = Math.min(1, v);
-      hud2d.fillStyle = vignette;
-      hud2d.fillRect(0, 0, view.w, view.h);
-      hud2d.globalAlpha = 1;
-    }
     hud2d.fillStyle = '#c9d1d9';
     hud2d.font = '14px monospace';
     hud2d.textAlign = 'center';

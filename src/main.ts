@@ -131,6 +131,7 @@ if (!stressN) {
   }
 }
 
+const vignetteEl = document.getElementById('vignette')!;
 const drawCam = { x: 0, y: 0 }; // the eased camera the renderers draw with; the sim camera (game.camera) stays exact
 const camGoal = { x: 0, y: 0 };
 // Where the draw camera aims: on the player, not clamped to the world, so each screen's crop of the square view keeps the player centred; the darkened void shows past an edge. A world that fits the view (rooms) uses the sim camera.
@@ -384,6 +385,7 @@ startLoop(
       game.fx.update((screen === 'play' || screen === 'none' || screen === 'watch') && !game.offer && !game.over ? frameDt : 0); // freeze effects while paused
     }
     sfx?.observe(game);
+    vignetteEl.style.opacity = game.fx ? String(Math.min(1, game.fx.vignette(game.player))) : '0';
     easeCamera(drawCam, aimCamera(), frameDt);
     render(
       game,

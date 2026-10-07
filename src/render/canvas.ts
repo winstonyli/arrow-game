@@ -32,9 +32,6 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
   // DOM boundary: a fresh canvas always yields a 2D context; a null (canvas already holding another context type)
   // still throws on the next line, as before.
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-  const vignette = ctx.createRadialGradient(view.w / 2, view.h / 2, view.h * 0.35, view.w / 2, view.h / 2, Math.hypot(view.w, view.h) / 2);
-  vignette.addColorStop(0, 'rgba(248,81,73,0)');
-  vignette.addColorStop(1, 'rgba(248,81,73,0.85)');
   const cam = { x: 0, y: 0 }; // the camera plus the current shake offset
 
   const tv = { mx: 0, my: 0, ex: 0, ey: 0 };
@@ -329,13 +326,6 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     drawGhost(ctx, game, 0, 0); // the context is still translated by the camera
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    const v = fx ? fx.vignette(player) : 0;
-    if (v > 0.01) {
-      ctx.globalAlpha = Math.min(1, v);
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, view.w, view.h);
-      ctx.globalAlpha = 1;
-    }
     ctx.fillStyle = '#c9d1d9';
     ctx.font = '14px monospace';
     ctx.textAlign = 'center';
