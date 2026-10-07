@@ -37,7 +37,7 @@ test('the director spawns about the integral of the rate over the first 5 s', ()
   assert.equal(enemies(g).length, Math.floor(BASE_RATE * 5 + (RATE_PER_SEC * 25) / 2));
 });
 
-test('spawns land outside the view and inside the world, in the open and near a corner', () => {
+test('spawns land on the ring around the player and inside the world, in the open and near a corner', () => {
   for (const [px, py] of [[1500, 1000], [50, 50], [2950, 1950]]) {
     const g = make(7);
     g.player.x = px;
@@ -47,13 +47,11 @@ test('spawns land outside the view and inside the world, in the open and near a 
     g.time = 1000; // ~21 enemies per second
     for (let k = 0; k < 5; k++) g.mode.update(g, 1);
     const list = enemies(g);
-    assert.ok(list.length > (px === 1500 ? 20 : 3), `spawned ${list.length} near ${px},${py}`);
+    assert.ok(list.length > (px === 1500 ? 20 : 8), `spawned ${list.length} near ${px},${py}`);
     for (const i of list) {
       const x = g.world.x[i];
       const y = g.world.y[i];
       assert.ok(x >= 0 && x <= ARENA_BOUNDS.w && y >= 0 && y <= ARENA_BOUNDS.h, 'inside the world');
-      const inView = x >= g.camera.x && x <= g.camera.x + g.view.w && y >= g.camera.y && y <= g.camera.y + g.view.h;
-      assert.equal(inView, false, 'outside the view');
     }
   }
 });
@@ -66,7 +64,7 @@ test('spawnPoint reports failure instead of spawning in view when nothing fits',
   assert.equal(spawnPoint(g, out), false);
 });
 
-test('spawnPoint keeps the whole enemy off screen when the camera is clamped at a wall', () => {
+test('spawnPoint puts the centre on the ring even when the player is at a wall', () => {
   const g = make();
   g.player.x = 50;
   g.player.y = 50;
@@ -75,7 +73,8 @@ test('spawnPoint keeps the whole enemy off screen when the camera is clamped at 
   const out = { x: 0, y: 0 };
   for (let k = 0; k < 300; k++) {
     if (!spawnPoint(g, out)) continue;
-    assert.ok(out.x > g.view.w + 40 || out.y > g.view.h + 40, 'centre is at least 40px past the view edge');
+    const d = Math.hypot(out.x - g.player.x, out.y - g.player.y);
+    assert.ok(d >= 560 - 1e-6 && d <= 860 + 1e-6, 'centre is on the ring');
   }
 });
 

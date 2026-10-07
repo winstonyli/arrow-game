@@ -13,8 +13,9 @@ html, body { margin: 0; height: 100%; background: #0d0415; overflow: hidden; tou
 
 /* --under-hud: just below the top bar. The bar is ~49u tall, but its pause button keeps the browser's default
    button font (it does not scale with --u), so on narrow screens the bar is ~32u + 19px: use whichever is further down. */
-#stage { --u: calc(min(100vw, 150vh) / 900); --under-hud: max(calc(var(--u) * 52), calc(var(--u) * 32 + 20px)); position: absolute; left: 50%; top: 50%; width: min(100vw, 150vh); aspect-ratio: 3 / 2; transform: translate(-50%, -50%); color: var(--text); font-family: var(--body); font-size: calc(var(--u) * 14); }
+#stage { --u: calc(min(100vw, 150vh) / 900); --under-hud: max(calc(var(--u) * 52), calc(var(--u) * 32 + 20px)); position: absolute; inset: 0; color: var(--text); font-family: var(--body); font-size: calc(var(--u) * 14); }
 /* The sim view is square; the canvases are drawn at that size and cropped to the screen (cover), centred on the player. */
+/* The UI covers the whole screen. Landscape keeps the old unit (900 u across a 3:2 screen); portrait sizes it from the width and stacks the cards. */
 #view { position: absolute; left: 50%; top: 50%; width: max(100vw, 100vh); aspect-ratio: 1; transform: translate(-50%, -50%); }
 #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #ui { position: absolute; inset: 0; pointer-events: none; }
@@ -40,7 +41,7 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 .stat { display: flex; justify-content: space-between; width: 100%; }
 .stat span:first-child { color: var(--muted); }
 
-.hud-top { position: absolute; left: calc(var(--u) * 8); right: calc(var(--u) * 8); top: calc(var(--u) * 8); display: flex; align-items: center; gap: calc(var(--u) * 10); padding: calc(var(--u) * 6) calc(var(--u) * 10); font: 500 calc(var(--u) * 12) var(--display); letter-spacing: calc(var(--u) * 1); text-transform: uppercase; }
+.hud-top { white-space: nowrap; position: absolute; left: calc(var(--u) * 8); right: calc(var(--u) * 8); top: calc(var(--u) * 8); display: flex; align-items: center; gap: calc(var(--u) * 10); padding: calc(var(--u) * 6) calc(var(--u) * 10); font: 500 calc(var(--u) * 12) var(--display); letter-spacing: calc(var(--u) * 1); text-transform: uppercase; }
 .hud-top .ic { color: var(--x); }
 .bar { width: calc(var(--u) * 80); height: calc(var(--u) * 9); background: var(--card); border: 1px solid currentColor; border-radius: calc(var(--u) * 4); overflow: hidden; }
 .bar i { display: block; height: 100%; background: currentColor; box-shadow: 0 0 calc(var(--u) * 8) currentColor; }
@@ -102,3 +103,4 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 .entry.stale { opacity: 0.55; }
 .entry .btn { width: auto; padding: calc(var(--u) * 4) calc(var(--u) * 8); font-size: calc(var(--u) * 11); }
 .status { min-height: 1.2em; color: var(--b); }
+@media (orientation: portrait) { #stage { --u: min(calc(100vw / 330), calc(100vh / 620)); } .bar { width: calc(var(--u) * 30); flex: none; } .hud-top { gap: calc(var(--u) * 6); } .cards { grid-template-columns: calc(var(--u) * 290); } .overlay .panel.wide { width: calc(var(--u) * 310); } }
