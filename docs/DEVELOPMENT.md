@@ -52,7 +52,7 @@ Prereleases are tagged on `main` at points the owner picks. `v0.1.0` is the firs
 5. Tag the release commit on `main`, then bump `package.json` to the next `-dev` version in a follow-up commit.
 
 ## UI
-`/` opens a title screen (Pit or Keep); `/?mode=arena` and `/?mode=rooms` skip it, as does `?stress=N` (those never auto-pause, so benchmarks run unfocused). Esc or P pauses (also on tab blur when started from the title); M mutes; 1-3 or a click picks a skill. Personal bests are kept in `localStorage` (`arrow-best-arena`, `arrow-best-rooms`). `?debug` shows the entity and frame-time line at the bottom.
+`/` opens a title screen (Arena or Rooms); `/?mode=arena` and `/?mode=rooms` skip it, as does `?stress=N` (those never auto-pause, so benchmarks run unfocused). Esc or P pauses (also on tab blur when started from the title); M mutes; 1-3 or a click picks a skill. Personal bests are kept in `localStorage` (`arrow-best-arena`, `arrow-best-rooms`). `?debug` shows the entity and frame-time line at the bottom.
 
 The screens and HUD are DOM overlays (`src/ui/`): `model.ts` holds the pure view-models, `ui.ts` the DOM controller, `ui.css` the Synthwave theme (tokens as custom properties). Fonts are self-hosted in `assets/fonts/` (Orbitron, Share Tech Mono; SIL OFL). The sim only exposes `game.skills` (owned-skill counts) and `game.bossAt` (last boss spawn time) for the UI.
 
@@ -62,7 +62,7 @@ Parked: a volume slider and settings screen, a real icon set (the glyphs are sim
 
 Every run is recorded as its seed plus quantized per-tick inputs and skill picks (`src/replay/`), so it can be re-simulated exactly. The best run per mode and seed is kept in `localStorage` (cap 40; random-seed runs are dropped first, then the oldest).
 
-- **Echoes** (title screen): Daily Pit / Daily Keep (seed derived from the local date), or any text or number as a seed. A run on a seed you have a best for races it as a translucent ghost with a live comparison line.
+- **Challenges** (title screen): Daily Arena / Daily Rooms (seed derived from the local date), or any text or number as a seed. A run on a seed you have a best for races it as a translucent ghost with a live comparison line.
 - **Watch replay**: from the game over screen or the Challenges list; 1x or 4x, Esc to exit.
 - **Share codes**: Copy code on the game over screen or in the list; paste into Import. Codes are `AG1.` plus base64url of deflated JSON; imports are re-simulated and rejected if they do not reproduce.
 - **Versioning**: `SIM_VERSION` in `src/replay/version.ts`. Changing sim behaviour makes `test/replay-golden.test.ts` fail: bump the version once per release cycle (see the `SIM_VERSION` entry above), then `bun scripts/make-golden.ts --force`. Old-version replays stay listed as stale and cannot be watched or raced.
@@ -153,11 +153,11 @@ Task 8 tuned two of these away from the spec's starting values: Corona Wire's ra
 
 ## Display names
 Only `name` and `desc` (and the UI strings) are display text; ids, files and constants keep the old names, and replays store skill ids, so a rename never touches the sim. v0.3.1 names (id: display):
-- Modes: arena: Pit; rooms: Keep. Title-screen Challenges: Echoes (the replay bar says Echo; Daily labels and error messages are unchanged).
+- Modes and the Challenges screen keep their original names (Arena, Rooms, Challenges, Replay): the v0.3.1 renames to Pit, Keep and Echoes were reverted before the v0.4.0 release.
 - Weapons: blade: Whirligig; shockwave: Quake; chain: Live Wire; boomerang: Yo-Yo; flame: Hot Heels; mines: Breadcrumbs; meteor: Incoming!; beam: Lighthouse; drone: Hornets; daggers: Pincushion.
 - Skills: rapid: Quick Draw; power: Big Numbers; pierce: Skewer; ricochet: Pinball; swift: Zoomies; regen: Chicken Soup; homing: Heat Seeker (multishot and magnet are unchanged).
 - Modifiers: crit: Lucky Strike; knockback: Personal Space; explode: Popcorn; frost: Molasses; ignite: Cooked (vamp stays Vampiric).
-- Boss: the Keep-mode pill reads Showdown; the spawn banner reads Knock Knock / Guess who's here.
+- Boss: the Rooms-mode pill reads Showdown; the spawn banner reads Knock Knock / Guess who's here.
 Branches (v0.4.0; ids `<weapon>.a` and `<weapon>.b`): chain.a: Corona Wire; chain.b: Daisy Chain; shockwave.a: Aftershock; shockwave.b: Fissure; blade.a: Carousel; blade.b: Blender; drone.a: Hive Mind; drone.b: Stinger. The fork cards carry a `FORK` tag. Since v0.4.0 the Quick Draw, Lucky Strike, Personal Space, Molasses and Cooked descriptions no longer list weapons or exclusions (the level-up glow shows coverage), so they cannot go stale when a weapon gains a modifier. The enemy type names (chaser, shooter and so on) are internal and never shown.
 
 ## Run stats
@@ -223,7 +223,7 @@ For a later release. Items marked (sim) need a `SIM_VERSION` bump.
 - Verify on hardware: a short real-touch drag that ends past a card edge may still pick (native click semantics; fix = `pointerup` plus `document.elementFromPoint`). Five drones have had no browser check, and the WebGL Fissure crack colour reads faint and brownish.
 - Parked minors (sim unless noted): negative `cd` while idle for Mines and Meteor; a splitter child hit by the blast that killed its parent; the duplicated `#ffa657` canvas literal (presentation); a missing blank line before the `packDrones` comment (presentation); the keyboard-focused card loses its glow on mouse leave, and lit/dim is lost if the HUD chips re-render while the picker is open (UI, sim paused); no test that drones 4 and 5 fire, no direct Yo-Yo or Breadcrumbs crit tests, Carousel damage is not unit-tested, `BLADE_BRANCH` is an unchecked index, and some `modifiers-determinism.test.ts` comments still say two drones.
 - Final-review minors (v0.4.0): (sim) Aftershock's second ring is cut short when a pulse restarts before it ends (6 or more Quick Draw picks at level 5: arm `d2` only when `!s.on2`); the Fissure crack is drawn 2.5 to 6 px wide but hits a 60 px band, so the visual understates the reach; picking `shockwave.a`/`.b` mid-pulse changes that pulse's damage or echo for one pulse; `pickChoices` can offer 2 cards when a fork pair shuffles into the last slot near the end of very long runs; the coverage guard test checks only that some `HIT_FLAGS.<id>` is on each `hitEnemy` line, not that it is the file's own weapon.
-- Naming: the game-over "Watch replay" button against the "Echo" name used elsewhere; the repo/project name.
+- Naming: the repo/project name.
 - Housekeeping: the stale local branches `publish-prep` and `spike/multiplayer`.
 
 ## Quiet-machine benches (2026-10-06, SIM_VERSION 12)

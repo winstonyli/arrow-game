@@ -11,17 +11,17 @@ A browser archer roguelite in the style of Archero and arrow.io. You steer a lon
 
 Pick a mode on the title screen.
 
-- **Pit**: endless survival. Enemies keep coming and get tougher (shooters, swarmers, bruisers, splitters, bosses); last as long as you can. Killed enemies drop gems, and collecting enough of them levels you up.
-- **Keep**: clear one room of enemies at a time. Clearing a room offers a card, restores 15 HP and moves you to the next room; every 10th room has a boss.
+- **Arena**: endless survival. Enemies keep coming and get tougher (shooters, swarmers, bruisers, splitters, bosses); last as long as you can. Killed enemies drop gems, and collecting enough of them levels you up.
+- **Rooms**: clear one room of enemies at a time. Clearing a room offers a card, restores 15 HP and moves you to the next room; every 10th room has a boss.
 
 Controls:
 
 - **Move**: WASD or the arrow keys. On touch screens, drag anywhere to get a virtual stick.
-- **Shooting is automatic**: the archer fires at the nearest enemy in range. In the Pit it keeps firing while you move, at half rate; in the Keep it only fires while standing still.
-- **Level-up**: the game pauses and offers 3 cards. Press **1**, **2** or **3**, or click a card. The Pit also offers weapons and modifiers (see Features).
+- **Shooting is automatic**: the archer fires at the nearest enemy in range. In Arena it keeps firing while you move, at half rate; in Rooms it only fires while standing still.
+- **Level-up**: the game pauses and offers 3 cards. Press **1**, **2** or **3**, or click a card. Arena also offers weapons and modifiers (see Features).
 - **Pause**: **Esc** or **P** (the game also pauses when the tab loses focus). **M** mutes sound.
 
-Echoes (title screen): play a Daily Pit or Daily Keep run (the seed comes from the date), or type any text or number as a seed. If you have a previous best on that seed, it races you as a translucent ghost with a live comparison. Finished runs can be watched back as replays (1x or 4x) and shared as a code that others can import.
+Challenges (title screen): play a Daily Arena or Daily Rooms run (the seed comes from the date), or type any text or number as a seed. If you have a previous best on that seed, it races you as a translucent ghost with a live comparison. Finished runs can be watched back as replays (1x or 4x) and shared as a code that others can import.
 
 ## Quick start
 
@@ -46,9 +46,9 @@ In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` first (or use PowerShell), beca
 
 ## Features
 
-- **Weapons** (Pit, levels 1 to 5, up to four held at once alongside the bow): Whirligig, Quake, Live Wire, Yo-Yo, Hot Heels, Breadcrumbs, Incoming!, Lighthouse, Hornets and Pincushion; the bow with its Multishot, Piercing, Ricochet and Homing upgrades. Whirligig, Quake, Live Wire and Hornets fork at level 2 into a choice of two branches (Corona Wire or Daisy Chain, Aftershock or Fissure, Carousel or Blender, Hive Mind or Stinger).
+- **Weapons** (Arena, levels 1 to 5, up to four held at once alongside the bow): Whirligig, Quake, Live Wire, Yo-Yo, Hot Heels, Breadcrumbs, Incoming!, Lighthouse, Hornets and Pincushion; the bow with its Multishot, Piercing, Ricochet and Homing upgrades. Whirligig, Quake, Live Wire and Hornets fork at level 2 into a choice of two branches (Corona Wire or Daisy Chain, Aftershock or Fissure, Carousel or Blender, Hive Mind or Stinger).
 - **Level-up glow**: hover, focus or press a card and the HUD weapon chips it affects light up while the rest dim.
-- **Modifiers** (Pit, levels 1 to 5): Lucky Strike, Personal Space, Vampiric, Popcorn, Molasses and Cooked.
+- **Modifiers** (Arena, levels 1 to 5): Lucky Strike, Personal Space, Vampiric, Popcorn, Molasses and Cooked.
 - **Deterministic replays**: every run is its seed plus quantized inputs and picks, so it can be re-simulated exactly and verified (`SIM_VERSION` 13).
 - **Daily challenges, ghosts and share codes**, as described above.
 - **Rendering and polish**: WebGL2 renderer with a Canvas2D fallback (`?renderer=canvas2d`), motion trails, screen shake and hit effects, and WebAudio-synthesized sound with no audio files.

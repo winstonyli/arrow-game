@@ -138,7 +138,7 @@ export const challengeRows = (entries: ChallengeEntry[]): ChallengeRow[] =>
   entries.map((e) => ({
     mode: e.mode,
     seed: e.seed,
-    title: `${e.mode === 'rooms' ? 'Keep' : 'Pit'} · ${e.label || `Seed ${e.seed}`}`,
+    title: `${e.mode === 'rooms' ? 'Rooms' : 'Arena'} · ${e.label || `Seed ${e.seed}`}`,
     line: e.mode === 'rooms' ? `Room ${e.room} · ${e.kills} kills` : `${clock(e.time)} · ${e.kills} kills`,
     stale: e.stale,
   }));
