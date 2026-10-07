@@ -10,6 +10,7 @@
 import { createGame, tick, choose } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
+import { applySkill } from '../src/game/skills.ts';
 import { KIND } from '../src/core/world.ts';
 import type { Game } from '../src/game/game.ts';
 import { formatRunStats } from '../src/game/runstats-report.ts';
@@ -22,6 +23,8 @@ const TICKS_PER_MIN = 3600;
 
 const g = createGame({ capacity: 50000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(Number(arg('seed', 1))), input: { x: 0, y: 0 } });
 if (bot === 'still') g.player.hp = g.player.maxHp = 1e9;
+// --grant=a,b,c applies those skills before the first tick (counted in g.skills): the balance sweep uses it to start a run with a weapon or branch, since a random offer rarely reaches a level-2 fork before the bot dies.
+for (const id of arg('grant', '').split(',').filter(Boolean)) { applySkill(g.player.stats, id); g.skills[id] = (g.skills[id] ?? 0) + 1; }
 
 // Smart bot skill priority, first wins: weapons, then the six modifiers, then the other upgrades. Unlisted ids sort first (indexOf -1), so list every id.
 const PRIORITY = ['multishot', 'rapid', 'power', 'shockwave', 'shockwave.a', 'shockwave.b', 'chain', 'chain.a', 'chain.b', 'blade', 'blade.a', 'blade.b', 'boomerang', 'flame', 'mines', 'meteor', 'beam', 'drone', 'drone.a', 'drone.b', 'daggers', 'crit', 'explode', 'vamp', 'frost', 'ignite', 'knockback', 'homing', 'pierce', 'regen', 'ricochet', 'magnet', 'swift'];

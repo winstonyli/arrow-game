@@ -162,6 +162,32 @@ Known gap: the Quick Draw, Lucky Strike, Personal Space, Molasses and Cooked des
 
 Everything else (including Whirligig) is indistinguishable from the baseline at this size. Read it with care: the baseline already starts with Multishot, Rapid Fire and Power Shot, so a loser is worse than those picks, not necessarily weak; only about 45% of runs actually took each forced skill, which dilutes every effect; and the bot cannot use utility cards (Magnet, Molasses, Personal Space, Lucky Strike) well. Healing is the only family with a large survival gain. Whirligig alone, with a stationary bot, did about 0.3 to 2.4 damage/s against the bow's 10 to 16, so it looks weak, but the sweep cannot confirm it. Decision for v0.3.1: only the Popcorn trim (10 to 8); revisit the rest with a weaker baseline and more seeds in v0.4.0.
 
+### v0.4.0 branch sweep (2026-10-07, SIM_VERSION 13)
+
+`bun scripts/balance-sweep.ts --seeds=30 --minutes=6 --jobs=3 --builds=<weapon>.0,<weapon>.a,<weapon>.b ...` (smart bot; 3 jobs at BelowNormal). The machine was about 95% busy with other programs (games) and Defender real-time protection was off; the sim is deterministic in game time, so load only slowed the runs. Dotted rows do not rely on random offers (the bot dies near 170 s, so it rarely reaches a level-2 fork: the first smoke run picked 0/4). `soak-arena.ts --grant=a,b,c` applies skills before the first tick: `chain.a` = chain, chain, chain.a (level 3 with the branch); `chain.0` = chain, chain (level 2, no branch, the reference row). So these rows measure "start the run with it". Baseline: survival 190 s, 21.0 dmg/s. Values are the change from baseline (d dmg/s, 95% interval).
+
+| Row | First pass | Tuned |
+|---|---|---|
+| Live Wire level 2 (reference) | +20.7 (14.3, 27.5) | |
+| Corona Wire | +1.6 (-3.0, 6.4) | +18.7 (13.3, 24.9) |
+| Daisy Chain | +50.4 (45.7, 54.7) | unchanged |
+| Quake level 2 (reference) | +19.5 (11.8, 27.6) | |
+| Aftershock | +44.5 (38.8, 50.2) | unchanged |
+| Fissure | +20.9 (14.1, 27.7) | +26.3 (19.2, 33.3) |
+| Whirligig level 2 (reference) | +1.5 (-3.2, 6.4) | |
+| Carousel | +3.3 (-0.3, 7.2) | unchanged |
+| Blender | +2.2 (-1.8, 6.0) | unchanged |
+| Hornets level 2 (reference) | +34.2 (27.7, 40.8) | |
+| Hive Mind | +53.2 (49.5, 56.7) | unchanged |
+| Stinger | +54.3 (48.7, 59.6) | unchanged |
+
+Decisions:
+- Corona Wire was no better than nothing: the bot flees anything within 260 px, so a 90 px aura almost never had a target. `CORONA_RADIUS` 90 to 220 (the spec's "about 90 px" is superseded). Doubling its per-hit damage changed nothing (+18.1), so the level table stays.
+- Fissure: range x1.8 to x2.4, damage x1.4 to x1.8, crack 40 to 60 px wide.
+- Daisy Chain stays 2.7x Corona Wire. Trimming it to 2 jumps at x0.75 changed nothing (+49.1): strong builds survive almost the whole 6 minutes (190 + 160 s of a 360 s cap), so the metric saturates and cannot rank them. Known imbalance. A later pass needs a harder arena or longer runs, not more seeds.
+- Whirligig rows are all noise (the stationary bot under-credits a contact weapon); Carousel and Blender are left at their starting numbers and need a play test.
+- The Aftershock and Stinger/Hive Mind gaps over their references come mostly from survival (knock-back and more drones keep the bot alive), so their damage numbers are inflated relative to Fissure.
+
 ## Quiet-machine benches (2026-10-06, SIM_VERSION 12)
 Machine CPU 10 to 12% busy before launch, Defender real-time protection off, no GPU leases, runs at BelowNormal. `bun run bench` (Bun 1.4.2), median ms per tick: sparse 0.04 / 0.20 / 0.41 / 0.84 at 1k / 5k / 10k / 20k, dense 0.07 / 0.77 / 2.71 / 9.49, converge 0.07 / 0.85 / 2.82 / 10.10 (budget 16.7; the 2026-10-03 table below was taken at about 100% load, so it reads about 2x higher). Soak, still bot, seed 1, 10 minutes, none dropped a spawn: the base run, and Beam, Drone and Daggers each forced first with `--picks=`, ended at 530, 540, 1047 and 557 slots in use (high-water mark), with median tick 0.03 / 0.03 / 0.05 / 0.03 ms and p95 at most 0.08 ms in minute 10 (Drone peaks at p95 0.15 ms in minute 8). `bun run bench:render` (2026-10-07, background mode, Chrome on the Radeon 780M iGPU via ANGLE D3D11, not the eGPU; exclusive lease held, no other GPU users, machine CPU about 30% busy, Defender off), median frame ms: WebGL dense 16.7 / 16.7 / 16.6 / 154.5 and converge 16.7 / 16.7 / 16.6 / 185.0 at 1k / 5k / 10k / 20k; Canvas2D dense 16.7 / 49.4 / 81.1 / 154.6 and converge 16.7 / 58.4 / 116.7 / 273.0 (WebGL holds 60 fps to 10k; the sim, 8.7 to 12.5 ms at 10k, is the limit at 20k). In line with the earlier tables below.
 

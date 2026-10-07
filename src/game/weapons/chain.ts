@@ -18,7 +18,7 @@ export const CHAIN_LEVELS = [
 export const DAISY_JUMPS = 3; // Daisy Chain: extra jumps
 export const DAISY_FALLOFF = 0.9; // and the per-jump damage multiplier (instead of CHAIN_FALLOFF)
 export const DAISY_DMG = 0.85; // and its damage multiplier
-export const CORONA_RADIUS = 90; // Corona Wire: the aura's reach in px
+export const CORONA_RADIUS = 220; // Corona Wire: the aura's reach in px
 // Corona Wire per level (3..5, the levels a branch can have): enemies zapped per pulse, damage each, pulse interval.
 export const CORONA_LEVELS = [
   { n: 3, damage: 18, interval: 1.25 },

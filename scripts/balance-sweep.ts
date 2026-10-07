@@ -22,7 +22,9 @@ interface Run { secs: number; picked: boolean; dps: number }
 function runOne(seed: number, force: string): Promise<Run> {
   return new Promise((resolve, reject) => {
     const args = ['scripts/soak-arena.ts', `--minutes=${minutes}`, '--bot=smart', `--seed=${seed}`, '--json=1'];
-    if (force) args.push(`--picks=${force}`);
+    // Dotted rows are granted at the start, since a random offer rarely reaches a level-2 fork before the bot dies: chain.a = chain, chain, chain.a (level 3 with the branch); chain.0 = chain, chain (level 2, no branch: the reference row). Other rows are forced to the front of the pick order.
+    const [weapon] = force.split('.');
+    if (force) args.push(force.includes('.') ? `--grant=${weapon},${weapon}${force.endsWith('.0') ? '' : `,${force}`}` : `--picks=${force}`);
     const p = spawn('bun', args, { stdio: ['ignore', 'pipe', 'inherit'] });
     try { os.setPriority(p.pid!, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch { /* best effort */ }
     let out = '';
@@ -32,7 +34,7 @@ function runOne(seed: number, force: string): Promise<Run> {
       if (!line) return reject(new Error(`no JSON from seed ${seed} build "${force}"`));
       const j = JSON.parse(line.slice(5));
       const dealt = (j.dmg as number[]).reduce((a, b) => a + b, 0) + (j.up as number[]).reduce((a, b) => a + b, 0);
-      resolve({ secs: j.secs, picked: force === '' || (j.skills[force] ?? 0) > 0, dps: dealt / j.secs });
+      resolve({ secs: j.secs, picked: force === '' || force.includes('.') || (j.skills[force] ?? 0) > 0, dps: dealt / j.secs });
     });
   });
 }
