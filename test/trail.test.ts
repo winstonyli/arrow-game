@@ -28,7 +28,7 @@ const run = (game: FxGame, i: number, n: number, dx: number, dy: number) => {
 const rig = () => {
   const world = new World(50);
   const fx = createFx(50, () => 0.5);
-  const player = { x: 100, y: 100, radius: 12, invuln: 0, hp: 100, maxHp: 100, stats: { orbit: 0 } };
+  const player = { x: 100, y: 100, radius: 12, invuln: 0, hp: 100, maxHp: 100, stats: { orbit: 0, branches: {} } };
   // Cast: a stub game with only the fields fx sampling and packInstances read (player is a stub too).
   const game = { world, player, fx, time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 } } as FxGame;
   return { world, fx, player, game };

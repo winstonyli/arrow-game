@@ -12,11 +12,19 @@ export const BLADE_SPEED = 3; // rad/s
 export const MAX_BLADES = 8; // the renderers' buffers assume this cap
 export const BLADE_DPS = 30; // base per-blade damage rate (a level's dps lives in weapons/blade.ts and is written to stats.bladeDps)
 
+// Per branch (0 = none, 1 = Carousel, 2 = Blender): orbit radius, spin multiplier, dps multiplier (applied in blade.ts).
+export const BLADE_BRANCH = [
+  { r: BLADE_ORBIT, spin: 1, dps: 1 },
+  { r: 100, spin: 1, dps: 0.85 },
+  { r: 40, spin: 2, dps: 1.3 },
+];
+
 // Writes blade k's centre to `out`. Shared by the sim and the renderers so they cannot disagree.
 export function bladePos(player: Player, time: number, k: number, out: Vec): void {
-  const a = time * BLADE_SPEED + (k / player.stats.orbit) * Math.PI * 2;
-  out.x = player.x + Math.cos(a) * BLADE_ORBIT;
-  out.y = player.y + Math.sin(a) * BLADE_ORBIT;
+  const b = BLADE_BRANCH[player.stats.branches.blade ?? 0];
+  const a = time * BLADE_SPEED * b.spin + (k / player.stats.orbit) * Math.PI * 2;
+  out.x = player.x + Math.cos(a) * b.r;
+  out.y = player.y + Math.sin(a) * b.r;
 }
 
 const pos = { x: 0, y: 0 };

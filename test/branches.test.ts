@@ -14,6 +14,8 @@ import { updateChain, CHAIN_LEVELS, CHAIN_RANGE, CHAIN_JUMP, MAX_JUMPS, CORONA_L
 import { MAX_BOLT_DOTS, BOLT_DOT_GAP } from '../src/render/webgl.ts';
 import { updateShockwave, SHOCK_LEVELS, SHOCK_SPEED, AFTER_DELAY, AFTER_DMG, AFTER_ECHO, FISSURE_RANGE, FISSURE_DMG, FISSURE_HALF } from '../src/game/weapons/shockwave.ts';
 import { SHOVE_PX } from '../src/game/hit.ts';
+import { bladePos, BLADE_ORBIT, BLADE_SPEED, BLADE_BRANCH } from '../src/game/orbit.ts';
+import { BLADE_LEVELS } from '../src/game/weapons/blade.ts';
 import type { Game } from '../src/game/game.ts';
 
 const arenaGame = (): Game => createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
@@ -171,4 +173,26 @@ test('a ring hits each enemy once even when a push carries it ahead of the ring'
   g.world.hp[j] = 10000;
   run(g, L.radius / SHOCK_SPEED + 0.1);
   assert.equal(g.world.hp[j], 10000 - L.damage);
+});
+
+test('Carousel widens the orbit and Blender tightens and doubles the spin; both change dps', () => {
+  const at = (branch: number, time: number) => {
+    const g = arenaGame();
+    g.player.stats.orbit = 1;
+    g.player.stats.branches.blade = branch;
+    const out = { x: 0, y: 0 };
+    bladePos(g.player, time, 0, out);
+    return { r: Math.hypot(out.x - g.player.x, out.y - g.player.y), a: Math.atan2(out.y - g.player.y, out.x - g.player.x) };
+  };
+  assert.ok(Math.abs(at(0, 0.1).r - BLADE_ORBIT) < 1e-3);
+  assert.ok(Math.abs(at(1, 0.1).r - 100) < 1e-3);
+  assert.ok(Math.abs(at(2, 0.1).r - 40) < 1e-3);
+  assert.ok(Math.abs(at(2, 0.1).a - 2 * BLADE_SPEED * 0.1) < 1e-6);
+  const s = baseStats();
+  s.weapons.blade = 2;
+  applySkill(s, 'blade.b');
+  assert.ok(Math.abs(s.bladeDps - BLADE_LEVELS[2].dps * BLADE_BRANCH[2].dps) < 1e-9);
+  assert.equal(s.orbit, BLADE_LEVELS[2].count);
+  applySkill(s, 'blade'); // level 4 keeps the multiplier
+  assert.ok(Math.abs(s.bladeDps - BLADE_LEVELS[3].dps * BLADE_BRANCH[2].dps) < 1e-9);
 });

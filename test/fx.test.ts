@@ -15,7 +15,7 @@ const mk = () => {
   const world = new World(20);
   const fx = createFx(20, () => 0.5);
   // Stubs: observe and vignette read only these fields, so the full Player/Game are not built (one cast each).
-  const player = { hp: 100, maxHp: 100, x: 0, y: 0, stats: { orbit: 0 } } as Player;
+  const player = { hp: 100, maxHp: 100, x: 0, y: 0, stats: { orbit: 0, branches: {} } } as Player;
   return { world, fx, player, game: { world, player, time: 0 } as Game };
 };
 const live = (fx: Fx) => {

@@ -19,11 +19,11 @@ import { DRONE_DOT_R, DRONE_TRACER, DRONE_TRACER_DOTS, droneAlpha } from '../src
 import { DAGGER_DOT_R } from '../src/game/weapons/daggers.ts';
 import { IGNITE_TINT } from '../src/game/modifiers.ts';
 
-type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons'> };
+type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons' | 'branches'> };
 type PackGame = Pick<RenderGame, 'time' | 'camera' | 'view' | 'fx'> & Partial<Pick<RenderGame, 'wstate'>>;
 
 // Casts: packInstances reads only these player fields, and `fx` may be left out of a game (it reads undefined).
-const player = (over: Partial<PlayerStub> = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0, weapons: {} }, ...over }) as Player;
+const player = (over: Partial<PlayerStub> = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0, branches: {}, weapons: {} }, ...over }) as Player;
 const G = (o: Partial<PackGame> = {}) => ({ time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 }, ...o }) as PackGame;
 
 test('packInstances writes live entities by layer, player last, skipping free slots', () => {
@@ -90,7 +90,7 @@ test('a flashing enemy packs the flash palette entry', () => {
   const w = new World(10);
   const a = spawnEnemy(w, ENEMY.CHASER, 100, 100);
   const fx = createFx(10, () => 0.5);
-  const sim = { world: w, player: { hp: 100, x: 0, y: 0, stats: { orbit: 0 } }, time: 0 } as Game; // cast: observe reads only these
+  const sim = { world: w, player: { hp: 100, x: 0, y: 0, stats: { orbit: 0, branches: {} } }, time: 0 } as Game; // cast: observe reads only these
   const game = G({ fx });
   const out = new Float32Array(20 * STRIDE);
   const T = ENEMY_TYPES.length;
@@ -119,7 +119,7 @@ test('slowed and burning enemies pack the ice and fire palette entries, burning 
   w.burnT[a] = 1;
   assert.equal(pack(), P_WEAPON + 2); // P_BURN
   const fx = createFx(10, () => 0.5);
-  const sim = { world: w, player: { hp: 100, x: 0, y: 0, stats: { orbit: 0 } }, time: 0 } as Game; // cast: observe reads only these
+  const sim = { world: w, player: { hp: 100, x: 0, y: 0, stats: { orbit: 0, branches: {} } }, time: 0 } as Game; // cast: observe reads only these
   fx.observe(sim);
   w.hp[a] -= 1;
   fx.observe(sim);
@@ -156,7 +156,7 @@ test('layers draw gems, enemies, enemy projectiles, arrows, then particles, blad
   const fx = createFx(20, () => 0.5);
   fx.burst(5, 0); // 5 particles
   const out = new Float32Array(30 * STRIDE);
-  const pl = player({ x: 7, stats: { orbit: 1, weapons: {} } });
+  const pl = player({ x: 7, stats: { orbit: 1, branches: {}, weapons: {} } });
   const n = packInstances(w, pl, G({ fx }), out);
   assert.equal(n, 4 + 5 + 1 + 1); // entities, particles, one blade, player
   const T = ENEMY_TYPES.length;
@@ -258,7 +258,7 @@ test('packInstances draws each live fire patch as a burn-coloured disc at most F
   f.x[1] = 150; f.y[1] = 100; f.life[1] = L.life / 2; // half
   f.x[2] = 200; f.y[2] = 100; f.life[2] = 0; // dead
   const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
-  const pl = player({ stats: { orbit: 0, weapons: { flame: 3 } } });
+  const pl = player({ stats: { orbit: 0, branches: {}, weapons: { flame: 3 } } });
   const n = packInstances(w, pl, G({ wstate: ws }), out);
   const burn = COLORS.lastIndexOf(IGNITE_TINT); // P_BURN
   const discs: number[][] = [];
@@ -313,7 +313,7 @@ test('packInstances draws each pending meteor strike as a weapon-coloured ring a
   set(1, 150, METEOR_TELEGRAPH / 2); // half way
   set(2, 200, 0, 0); // dead slot
   const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
-  const pl = player({ stats: { orbit: 0, weapons: { meteor: 3 } } });
+  const pl = player({ stats: { orbit: 0, branches: {}, weapons: { meteor: 3 } } });
   const n = packInstances(w, pl, G({ wstate: ws }), out);
   const pw = TT + 7; // P_WEAPON, as in the boomerang test
   const rings: number[][] = [];
@@ -336,7 +336,7 @@ test('packInstances draws the live beam as evenly spaced weapon-coloured dots to
   const ws = createWeaponState();
   ws.beam.live = 1; ws.beam.started = 1; ws.beam.angle = Math.PI / 2; // straight down
   const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
-  const pl = player({ x: 50, y: 60, stats: { orbit: 0, weapons: { beam: 3 } } });
+  const pl = player({ x: 50, y: 60, stats: { orbit: 0, branches: {}, weapons: { beam: 3 } } });
   const L = BEAM_LEVELS[2];
   const dots = beamDots(L.length);
   const n = packInstances(w, pl, G({ wstate: ws }), out);
@@ -365,7 +365,7 @@ test('packInstances draws each active drone as a weapon-coloured body and a fadi
   dr.on[0] = 1; dr.x[0] = 100; dr.y[0] = 200; dr.tx[0] = 160; dr.ty[0] = 200; dr.age[0] = DRONE_TRACER / 2;
   dr.on[1] = 1; dr.x[1] = 400; dr.y[1] = 100; dr.age[1] = DRONE_TRACER; // active, tracer spent
   const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
-  const pl = player({ x: 50, y: 60, stats: { orbit: 0, weapons: { drone: 3 } } });
+  const pl = player({ x: 50, y: 60, stats: { orbit: 0, branches: {}, weapons: { drone: 3 } } });
   const pw = TT + 7; // P_WEAPON, as in the beam test
   const scan = () => {
     const n = packInstances(w, pl, G({ wstate: ws }), out);
@@ -407,7 +407,7 @@ test('packInstances draws each live dagger as a head dot and two fading trailing
   dg.on[0] = 1; dg.x[0] = 100; dg.y[0] = 200; dg.dx[0] = 1; dg.dy[0] = 0; // flying +x: trail toward -x
   dg.on[5] = 1; dg.x[5] = 400; dg.y[5] = 100; dg.dx[5] = 0; dg.dy[5] = 1; // flying +y: trail toward -y
   const out = new Float32Array((4 + WEAPON_INSTANCES) * STRIDE);
-  const pl = player({ x: 50, y: 60, stats: { orbit: 0, weapons: { daggers: 5, drone: 1 } } });
+  const pl = player({ x: 50, y: 60, stats: { orbit: 0, branches: {}, weapons: { daggers: 5, drone: 1 } } });
   const pw = TT + 7; // P_WEAPON, as in the beam and drone tests
   const scan = () => {
     const n = packInstances(w, pl, G({ wstate: ws }), out);

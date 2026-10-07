@@ -18,7 +18,7 @@ const DAGGER_LEVEL = 5;
 const MINES_LEVEL = 3;
 
 // Fork picks in the maxed build: [fork id, weapon id, ordinary picks after the fork]. A fork resets the weapon to level 3.
-const FORKS: [string, string, number][] = [['chain.b', 'chain', 2], ['shockwave.a', 'shockwave', 2]];
+const FORKS: [string, string, number][] = [['chain.b', 'chain', 2], ['shockwave.a', 'shockwave', 2], ['blade.b', 'blade', 2]];
 
 // Ten weapons (the bow aside) and all six modifiers at level 5, except Mines at MINES_LEVEL and the Drone at level 4 (at 5 it kills the few enemies before the beam or a meteor reaches one; applySkill does not check slots); Daggers at level 5 kept every coverage flag true, an invulnerable drifting player, checkpoints every 20 s.
 function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean; detonated: boolean; meteors: boolean; struck: boolean; beamed: boolean; droned: boolean; daggered: boolean }): number[] {
@@ -100,7 +100,7 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   return out;
 }
 
-const EXPECTED: number[] = [1150432102, 1884327207, 2945811327];
+const EXPECTED: number[] = [804161008, 1211975881, 2111609637];
 
 test('a maxed build hashes the same on every run and on both engines', () => {
   const a = run();
