@@ -1,5 +1,6 @@
 import { icon } from './icons.ts';
 import { SKILLS_BY_ID } from '../game/skills.ts';
+import { affects } from '../game/coverage.ts';
 import { ReplayError } from '../replay/codec.ts';
 import type { ModeName } from '../game/game.ts';
 import type { HudModel, OverModel, ChallengeRow } from './model.ts';
@@ -277,11 +278,21 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     else (document.activeElement as HTMLElement | null)?.blur(); // DOM boundary: activeElement is typed Element, which has no blur
   }
 
+  // Coverage glow: while a card is hovered, focused or pressed, the HUD chips it changes light up and the rest dim; no card text.
+  function glow(id: string | null) {
+    for (const chip of el.skills.children as HTMLCollectionOf<HTMLElement>) {
+      const on = id !== null && affects(id, chip.dataset.skill ?? '');
+      chip.classList.toggle('lit', on);
+      chip.classList.toggle('dim', id !== null && !on);
+    }
+  }
+
   function setOffer(ids: string[] | null, header = '', tags: string[] = []) {
     offer = ids;
     picker.hidden = !ids;
     hud.inert = screen !== 'play' || !!ids;
     if (!ids) {
+      glow(null);
       (document.activeElement as HTMLElement | null)?.blur(); // DOM boundary: as above
       return;
     }
@@ -293,6 +304,8 @@ export function createUi(root: ParentNode, on: UiHandlers) {
         const c = h('button', 'card', `<span class="key">[${i + 1}]</span>${icon(id)}<span class="name">${s.name}</span>${tag}<span class="desc">${s.desc}</span>`);
         c.type = 'button';
         c.onclick = () => on.onPick(id);
+        c.onpointerenter = c.onfocus = () => glow(id); // a touch press fires pointerenter too; the pick still fires on release
+        c.onpointerleave = c.onblur = () => glow(null);
         return c;
       }),
     );
@@ -331,7 +344,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     const key = m.skills.map((s) => s.id + s.count).join();
     if (el.skills._k !== key) {
       el.skills._k = key;
-      el.skills.innerHTML = m.skills.map((s) => `<div class="skill">${icon(s.id)} ${s.count}</div>`).join('');
+      el.skills.innerHTML = m.skills.map((s) => `<div class="skill" data-skill="${s.id}">${icon(s.id)} ${s.count}</div>`).join('');
     }
     if (el.banner._on !== m.boss) {
       el.banner._on = m.boss;

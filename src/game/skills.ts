@@ -16,7 +16,7 @@ export interface Skill {
 
 const PASSIVES: Skill[] = [
   { id: 'multishot', name: 'Multishot', desc: '+1 arrow per volley (bow)', apply: (s) => { s.projectileCount += 1; } },
-  { id: 'rapid', name: 'Quick Draw', desc: 'The bow and your timed weapons attack 30% faster (not Lighthouse, Hot Heels, Whirligig)', apply: (s) => { s.cooldownMult /= 1.3; } },
+  { id: 'rapid', name: 'Quick Draw', desc: 'The bow and your timed weapons attack 30% faster', apply: (s) => { s.cooldownMult /= 1.3; } },
   { id: 'power', name: 'Big Numbers', desc: 'Every hit does 40% more damage', apply: (s) => { s.damageMult *= 1.4; } },
   { id: 'pierce', name: 'Skewer', desc: 'Arrows go through 1 more enemy before they stop', apply: (s) => { s.pierce += 1; } },
   { id: 'ricochet', name: 'Pinball', desc: 'Arrows bounce off walls 2 more times', apply: (s) => { s.bounce += 2; } },

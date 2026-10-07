@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { COVERAGE, HIT_FLAGS, covers } from '../src/game/coverage.ts';
+import { COVERAGE, HIT_FLAGS, covers, affects } from '../src/game/coverage.ts';
 import { HIT_CRIT, HIT_KNOCK, HIT_STATUS, HIT_TICK } from '../src/game/hitflags.ts';
 import { WEAPONS } from '../src/game/weapons.ts';
 import { MODS, KNOCK_PX, FROST_SECS } from '../src/game/modifiers.ts';
@@ -84,4 +84,22 @@ test('Yo-Yo hits start Molasses', () => {
   const j = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 80, g.player.y);
   for (let k = 0; k < 120 && g.world.slowT[j] === 0; k++) { settle(g); updateBoomerang(g, 1, 1 / 60); }
   assert.equal(g.world.slowT[j], FROST_SECS);
+});
+
+test('affects() is symmetric, ignores branch suffixes, and follows the table', () => {
+  assert.equal(affects('crit', 'shockwave'), true);
+  assert.equal(affects('shockwave', 'crit'), true);
+  assert.equal(affects('crit', 'shockwave.a'), true);
+  assert.equal(affects('crit', 'blade'), false); // Whirligig is tick damage
+  assert.equal(affects('knockback', 'shockwave'), true); // Task 2 closed this gap
+  assert.equal(affects('frost', 'blade'), true);
+  assert.equal(affects('vamp', 'beam'), true);
+  assert.equal(affects('power', 'beam'), true);
+  assert.equal(affects('rapid', 'beam'), false);
+  assert.equal(affects('rapid', 'blade'), false);
+  assert.equal(affects('rapid', 'chain'), true);
+  assert.equal(affects('multishot', 'chain'), false); // bow-only
+  assert.equal(affects('swift', 'chain'), false);
+  assert.equal(affects('chain', 'shockwave'), false); // two weapons
+  assert.equal(affects('crit', 'power'), false); // two upgrades
 });

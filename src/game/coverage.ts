@@ -35,3 +35,24 @@ export function covers(id: CoverageId, key: ModKey): boolean {
     default: return true;
   }
 }
+
+const NO_TIMER = new Set(['blade', 'flame', 'beam']); // Quick Draw does not speed these
+const baseOf = (id: string): string => id.split('.')[0];
+
+// Does upgrade or modifier `up` change weapon `w`'s hits? Symmetric; ids may carry a branch suffix. The bow has no chip, so bow-only
+// upgrades (Multishot, Skewer, Pinball, Heat Seeker) and the run upgrades (Zoomies, Chicken Soup, Magnet) affect no weapon.
+export function affects(a: string, b: string): boolean {
+  const x = baseOf(a);
+  const y = baseOf(b);
+  const xw = x in COVERAGE && x !== 'bow';
+  const yw = y in COVERAGE && y !== 'bow';
+  if (xw === yw) return false;
+  const w = (xw ? x : y) as CoverageId;
+  const up = xw ? y : x;
+  switch (up) {
+    case 'crit': case 'knockback': case 'frost': case 'ignite': case 'vamp': case 'explode': return covers(w, up);
+    case 'power': return true;
+    case 'rapid': return !NO_TIMER.has(w);
+    default: return false;
+  }
+}

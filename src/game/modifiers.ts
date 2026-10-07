@@ -20,10 +20,10 @@ export type ModKey = 'crit' | 'knockback' | 'explode' | 'vamp' | 'frost' | 'igni
 export interface ModDef { id: string; name: string; desc: string; key: ModKey }
 
 export const MODS: ModDef[] = [
-  { id: 'crit', name: 'Lucky Strike', desc: '+10% chance for a hit to do double damage (bow, Quake, Live Wire, Hornets, Pincushion)', key: 'crit' },
-  { id: 'knockback', name: 'Personal Space', desc: 'Hits push enemies away from you (+10 px per level) (bow, Live Wire, Breadcrumbs, Incoming!)', key: 'knockback' },
+  { id: 'crit', name: 'Lucky Strike', desc: '+10% chance for a hit to do double damage', key: 'crit' },
+  { id: 'knockback', name: 'Personal Space', desc: 'Hits push enemies away from you (+10 px per level)', key: 'knockback' },
   { id: 'vamp', name: 'Vampiric', desc: 'Kills heal you (+1 HP per level)', key: 'vamp' },
   { id: 'explode', name: 'Popcorn', desc: 'Dead enemies pop and hurt the ones around them', key: 'explode' },
-  { id: 'frost', name: 'Molasses', desc: 'Hits make enemies drag their feet (-12% speed per level, 2 s) (not Whirligig, Yo-Yo)', key: 'frost' },
-  { id: 'ignite', name: 'Cooked', desc: 'Hits set enemies on fire (6 damage per second per level, 3 s) (not Whirligig, Yo-Yo)', key: 'ignite' },
+  { id: 'frost', name: 'Molasses', desc: 'Hits make enemies drag their feet (-12% speed per level, 2 s)', key: 'frost' },
+  { id: 'ignite', name: 'Cooked', desc: 'Hits set enemies on fire (6 damage per second per level, 3 s)', key: 'ignite' },
 ];
