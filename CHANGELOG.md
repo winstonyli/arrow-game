@@ -3,8 +3,8 @@
 Versioning and what counts as a release: see "Versioning and commits" in the README. Each entry names the
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
-## Unreleased (v0.3.1)
-`SIM_VERSION` 12, `REPLAY_VERSION` 1 (replays and share codes from v0.3.0 stop verifying; the file format is unchanged). The naming pass is display text only and ids stay fixed; the sim change is the dagger pool below.
+## v0.3.1
+`SIM_VERSION` 12, `REPLAY_VERSION` 1 (replays and share codes from v0.3.0 stop verifying; the file format is unchanged). The naming pass is display text only and ids stay fixed; the sim changes are the dagger pool and the Popcorn trim below; the run stats are presentation only.
 
 - A naming pass over every weapon, skill and modifier (name and description), the two modes (Arena is now Pit, Rooms is now Keep), the Challenges screen (now Echoes), the title tagline, the boss pill and banner, and the replay bar. The old-to-new map is in docs/DEVELOPMENT.md ("Display names").
 - Balance: Popcorn blast damage 10 to 8 per level. In 100 random-pick soaks on the same seeds its median damage fell from 22.8 to 10.0 per second (still the top source after the bow); survival barely moved. Goldens and pinned hashes are unchanged (no replay uses Popcorn).
