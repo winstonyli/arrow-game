@@ -4,7 +4,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
 ## v0.4.0
-`SIM_VERSION` 13, `REPLAY_VERSION` 1 (replays and echoes from v0.3.1 are flagged stale and cannot be watched or raced; the file format is unchanged). Build depth: more to choose between within a run. Details in docs/DEVELOPMENT.md ("Build depth").
+`SIM_VERSION` 13, `REPLAY_VERSION` 1 (replays from v0.3.1 are flagged stale and cannot be watched or raced; the file format is unchanged). Build depth: more to choose between within a run. Details in docs/DEVELOPMENT.md ("Build depth").
 
 - Branches: Whirligig, Quake, Live Wire and Hornets each fork at level 2. The two branch cards are offered together (the ordinary card is withheld until you choose), carry a FORK tag, and put the weapon at level 3 on the chosen branch. Live Wire: Corona Wire (a pulse zaps the closest enemies around you) or Daisy Chain (3 more jumps, fades less, 15% softer). Quake: Aftershock (a second ring, both shove) or Fissure (a narrow crack, 2.4x reach, 1.8x damage). Whirligig: Carousel (wide orbit, 15% softer) or Blender (tight, twice the spin, 30% harder). Hornets: Hive Mind (2 more hornets at 70% damage) or Stinger (1.6x range, 1.5x damage, 1.3x slower). The chosen branch is hashed.
 - Hornets: the drone cap grows from 3 to 5 (Hive Mind).
@@ -16,7 +16,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 ## v0.3.1
 `SIM_VERSION` 12, `REPLAY_VERSION` 1 (replays and share codes from v0.3.0 stop verifying; the file format is unchanged). The naming pass is display text only and ids stay fixed; the sim changes are the dagger pool and the Popcorn trim below; the run stats are presentation only.
 
-- A naming pass over every weapon, skill and modifier (name and description), the two modes (Arena is now Pit, Rooms is now Keep), the Challenges screen (now Echoes), the title tagline, the boss pill and banner, and the replay bar. The old-to-new map is in docs/DEVELOPMENT.md ("Display names").
+- A naming pass over every weapon, skill and modifier (name and description), the title tagline and the boss pill and banner (the modes, the Challenges screen and the replay bar keep their original names). The old-to-new map is in docs/DEVELOPMENT.md ("Display names").
 - Balance: Popcorn blast damage 10 to 8 per level. In 100 random-pick soaks on the same seeds its median damage fell from 22.8 to 10.0 per second (still the top source after the bow); survival barely moved. Goldens and pinned hashes are unchanged (no replay uses Popcorn).
 - Run stats: every run now tallies damage per source (bow, each weapon, Cooked burn, Popcorn blasts), healing (Vampiric, Chicken Soup) and activity (enemy-seconds slowed, px pushed, Magnet gems, arrows fired). Presentation only: not hashed, so no sim change. The soak prints the breakdown at the end. The Big Numbers, Lucky Strike, Quick Draw and Multishot rows are approximate first-order shares, labelled so in the output.
 - Daggers: the pool grows from 14 to 28 slots, so stacked Rapid Fire keeps full fans up to 7 picks at level 5 (it was 4); `DAGGER_CAP` also sizes the WebGL buffer share.

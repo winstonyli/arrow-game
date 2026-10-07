@@ -142,11 +142,11 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   titlePanel.append(
     h('h1', 'title-name glow-text', 'Arrow game'),
     h('div', 'mu', 'One archer. Too many enemies.'),
-    button('Pit', 'primary b', () => on.onPlay('arena')),
+    button('Arena', 'primary b', () => on.onPlay('arena')),
     bests.arena,
-    button('Keep', '', () => on.onPlay('rooms')),
+    button('Rooms', '', () => on.onPlay('rooms')),
     bests.rooms,
-    button('Echoes', 'g', () => on.onChallenges()),
+    button('Challenges', 'g', () => on.onChallenges()),
     h('div', 'mu', 'WASD or arrows to move. Aim is automatic.'),
   );
   title.append(titlePanel);
@@ -177,8 +177,8 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   seedField.setAttribute('aria-label', 'Seed');
   const importField = h('input', 'field');
   importField.type = 'text';
-  importField.placeholder = 'Paste an echo code';
-  importField.setAttribute('aria-label', 'Echo code');
+  importField.placeholder = 'Paste a replay code';
+  importField.setAttribute('aria-label', 'Replay code');
   const list = h('div', 'list');
   const status = h('div', 'status');
   status.setAttribute('role', 'status');
@@ -190,9 +190,9 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     return r;
   };
   chPanel.append(
-    h('h2', 'glow-text', 'Echoes'),
-    row(button('Daily Pit', 'primary', () => on.onDaily('arena')), button('Daily Keep', 'primary b', () => on.onDaily('rooms'))),
-    row(seedField, button('Pit', 'g', () => on.onSeed('arena', seedField.value)), button('Keep', 'g', () => on.onSeed('rooms', seedField.value))),
+    h('h2', 'glow-text', 'Challenges'),
+    row(button('Daily Arena', 'primary', () => on.onDaily('arena')), button('Daily Rooms', 'primary b', () => on.onDaily('rooms'))),
+    row(seedField, button('Arena', 'g', () => on.onSeed('arena', seedField.value)), button('Rooms', 'g', () => on.onSeed('rooms', seedField.value))),
     h('div', 'mu', 'Past you is waiting. Race them.'),
     list,
     row(importField, importBtn),
@@ -247,7 +247,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   watchbar.append(watchStatus, speedBtn, button('Exit', 'b', () => on.onQuit()), watchNote);
   function setWatch(s: WatchState) {
     watchState = s;
-    setText(watchStatus, s.done ? 'Echo finished' : 'Echo');
+    setText(watchStatus, s.done ? 'Replay finished' : 'Replay');
     setText(speedBtn, `Speed ${s.speed}x`);
     setText(watchNote, s.note);
   }
@@ -379,8 +379,8 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   }
 
   function setBests(b: { arena: string; rooms: string }) {
-    bests.arena.textContent = `Pit: ${b.arena}`;
-    bests.rooms.textContent = `Keep: ${b.rooms}`;
+    bests.arena.textContent = `Arena: ${b.arena}`;
+    bests.rooms.textContent = `Rooms: ${b.rooms}`;
   }
 
   return { show, update, setOffer, showOver, setBests, setWatch, setChallenges, setStatus, setImportBusy };
