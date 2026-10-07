@@ -136,8 +136,8 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   q('.pause-btn').onclick = () => on.onPause();
 
   // Overlays -------------------------------------------------------------
-  const title = h('div', 'overlay');
-  const titlePanel = h('div', 'panel');
+  const title = h('div', 'overlay backdrop');
+  const titlePanel = h('div', 'panel title-panel');
   const bests = { arena: h('div', 'mu'), rooms: h('div', 'mu') };
   titlePanel.append(
     h('h1', 'title-name glow-text', 'Arrow game'),
@@ -169,7 +169,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   const overPanel = h('div', 'panel');
   over.append(overPanel);
 
-  const challenges = h('div', 'overlay');
+  const challenges = h('div', 'overlay backdrop');
   const chPanel = h('div', 'panel wide');
   const seedField = h('input', 'field');
   seedField.type = 'text';

@@ -2,6 +2,7 @@ import { createInput } from './input/input.ts';
 import { createGame, tick, VIEW, CAPACITY } from './game/game.ts';
 import { createStepper, startLoop } from './core/loop.ts';
 import { easeCamera } from './core/camera.ts';
+import { createAttract, ATTRACT_CAPACITY, ATTRACT_RESTART } from './game/attract.ts';
 import type { Vec } from './core/math.ts';
 import { createCanvasRenderer } from './render/canvas.ts';
 import { createWebGLRenderer } from './render/webgl.ts';
@@ -49,6 +50,8 @@ interface Challenge {
 const input = createInput();
 
 let game: RenderGame;
+let shown: RenderGame; // what is drawn: the run, or the title-screen backdrop while the title (or Challenges) is up
+let attract: ReturnType<typeof createAttract<Fx>> | null = null;
 let shownOffer: string[] | null | undefined = null;
 let simMs = 0;
 let drawMs = 0;
@@ -136,7 +139,7 @@ const drawCam = { x: 0, y: 0 }; // the eased camera the renderers draw with; the
 const camGoal = { x: 0, y: 0 };
 // Where the draw camera aims: on the player, not clamped to the world, so each screen's crop of the square view keeps the player centred; the darkened void shows past an edge. A world that fits the view (rooms) uses the sim camera.
 function aimCamera(): Vec {
-  const { bounds, view, player, camera } = game;
+  const { bounds, view, player, camera } = shown;
   if (bounds.w <= view.w && bounds.h <= view.h) return camera;
   camGoal.x = player.x - view.w / 2;
   camGoal.y = player.y - view.h / 2;
@@ -152,11 +155,19 @@ function newGame({ seed: s }: { seed?: number } = {}) {
     game = session.game;
   }
   shownOffer = undefined;
+  showGame();
+}
+
+// Chooses what is drawn and sizes the view to it (cover for the arena's square view, fit for a fixed room). The title and Challenges screens show a self-playing arena run behind the panel; it starts afresh after ATTRACT_RESTART seconds.
+function showGame() {
+  const backdrop = !stressN && (screen === 'title' || screen === 'challenges');
+  if (backdrop && (!attract || attract.game.time > ATTRACT_RESTART)) attract = createAttract(createFx(ATTRACT_CAPACITY));
+  shown = backdrop && attract ? attract.game : game;
   const stageView = document.getElementById('view')!;
-  stageView.style.setProperty('--ar', String(game.view.w / game.view.h));
-  stageView.style.setProperty('--sx', String(VIEW.w / game.view.w));
-  stageView.style.setProperty('--sy', String(VIEW.h / game.view.h));
-  stageView.classList.toggle('fit', game.bounds.w <= game.view.w && game.bounds.h <= game.view.h);
+  stageView.style.setProperty('--ar', String(shown.view.w / shown.view.h));
+  stageView.style.setProperty('--sx', String(VIEW.w / shown.view.w));
+  stageView.style.setProperty('--sy', String(VIEW.h / shown.view.h));
+  stageView.classList.toggle('fit', shown.bounds.w <= shown.view.w && shown.bounds.h <= shown.view.h);
   const goal = aimCamera();
   drawCam.x = goal.x;
   drawCam.y = goal.y;
@@ -168,6 +179,7 @@ function setScreen(next: Screen) {
     ui.setImportBusy(false);
   }
   screen = next;
+  showGame();
   ui.show(next);
 }
 function play(k: ModeName, opts?: Challenge) {
@@ -358,7 +370,10 @@ startLoop(
   (dt) => {
     const t0 = performance.now();
     if (screen === 'watch') stepWatch();
-    else if (screen === 'play' || screen === 'none') session ? session.step(input.x, input.y) : tick(game, dt);
+    else if (shown === attract?.game) {
+      attract.step(dt);
+      if (attract.game.time > ATTRACT_RESTART) showGame();
+    } else if (screen === 'play' || screen === 'none') session ? session.step(input.x, input.y) : tick(game, dt);
     simMs = simMs * 0.9 + (performance.now() - t0) * 0.1;
   },
   () => {
@@ -380,15 +395,15 @@ startLoop(
         game.ghost = null;
       }
     }
-    if (game.fx) {
-      game.fx.observe(game);
-      game.fx.update((screen === 'play' || screen === 'none' || screen === 'watch') && !game.offer && !game.over ? frameDt : 0); // freeze effects while paused
+    if (shown.fx) {
+      shown.fx.observe(shown);
+      shown.fx.update((screen === 'play' || screen === 'none' || screen === 'watch' || shown !== game) && !shown.offer && !shown.over ? frameDt : 0); // freeze effects while paused
     }
-    sfx?.observe(game);
-    vignetteEl.style.opacity = game.fx ? String(Math.min(1, game.fx.vignette(game.player))) : '0';
+    if (shown === game) sfx?.observe(game);
+    vignetteEl.style.opacity = shown.fx ? String(Math.min(1, shown.fx.vignette(shown.player))) : '0';
     easeCamera(drawCam, aimCamera(), frameDt);
     render(
-      game,
+      shown,
       debug
         ? [
             `${game.mode.hud?.(game) ?? ''}  HP ${Math.max(0, Math.ceil(game.player.hp))}  Kills ${game.kills}`,
