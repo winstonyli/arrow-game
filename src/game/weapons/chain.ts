@@ -1,5 +1,6 @@
 import { KIND } from '../../core/world.ts';
-import { hitEnemy, HIT_CRIT, HIT_KNOCK, HIT_STATUS } from '../hit.ts';
+import { hitEnemy } from '../hit.ts';
+import { HIT_FLAGS } from '../coverage.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -51,7 +52,7 @@ export function updateChain(game: Game, level: number, dt: number): number {
     s.px[s.n] = cx;
     s.py[s.n] = cy;
     s.n++;
-    kills += hitEnemy(game, cur, dmg, HIT_CRIT | HIT_KNOCK | HIT_STATUS, hx, hy);
+    kills += hitEnemy(game, cur, dmg, HIT_FLAGS.chain, hx, hy);
     dmg *= CHAIN_FALLOFF;
     if (k === L.jumps) break;
     let best = -1;

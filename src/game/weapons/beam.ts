@@ -1,5 +1,6 @@
 import { KIND } from '../../core/world.ts';
-import { hitEnemy, HIT_STATUS, HIT_TICK } from '../hit.ts';
+import { hitEnemy } from '../hit.ts';
+import { HIT_FLAGS } from '../coverage.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -27,7 +28,7 @@ export const beamLength = (level: number): number => BEAM_LEVELS[Math.min(BEAM_L
 export const beamDots = (length: number): number => Math.min(BEAM_MAX_DOTS, Math.floor(length / BEAM_DOT_GAP));
 
 // Points the beam at the nearest enemy in range, turning at the level's capped rate along the shorter arc, and every
-// BEAM_TICK damages each enemy on the segment through hitEnemy (HIT_STATUS | HIT_TICK: quiet, never a crit or a push).
+// BEAM_TICK damages each enemy on the segment through hitEnemy (flags from the coverage table: quiet, never a crit or a push).
 // With no target nothing changes except live = 0 (the timer holds). Returns kills. grid must be rebuilt this tick.
 export function updateBeam(game: Game, level: number, dt: number): number {
   const L = BEAM_LEVELS[level - 1];
@@ -68,7 +69,7 @@ export function updateBeam(game: Game, level: number, dt: number): number {
     const dy = ey - uy * p;
     const r = L.halfWidth + world.radius[j];
     if (dx * dx + dy * dy > r * r) continue;
-    kills += hitEnemy(game, j, dmg, HIT_STATUS | HIT_TICK, 0, 0);
+    kills += hitEnemy(game, j, dmg, HIT_FLAGS.beam, 0, 0);
   }
   return kills;
 }

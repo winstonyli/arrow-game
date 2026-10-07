@@ -1,5 +1,6 @@
 import { KIND } from '../../core/world.ts';
-import { hitEnemy, HIT_STATUS, HIT_KNOCK } from '../hit.ts';
+import { hitEnemy } from '../hit.ts';
+import { HIT_FLAGS } from '../coverage.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -35,7 +36,7 @@ export function meteorAlpha(age: number): number {
 }
 
 // Resolves each strike that reached the telegraph time (the strike is cleared first, then every enemy in the blast takes
-// the level's damage through hitEnemy, HIT_STATUS | HIT_KNOCK, never a crit), then fires a volley when the timer allows:
+// the level's damage through hitEnemy, flags from the coverage table), then fires a volley when the timer allows:
 // up to the level's count of distinct random enemies within METEOR_RANGE of the player, each stored at its current
 // position. Returns kills. grid must be rebuilt for KIND.ENEMY this tick.
 export function updateMeteors(game: Game, level: number, dt: number): number {
@@ -60,7 +61,7 @@ export function updateMeteors(game: Game, level: number, dt: number): number {
       const ey = world.y[j] - my;
       const r = L.radius + world.radius[j];
       if (ex * ex + ey * ey > r * r) continue;
-      kills += hitEnemy(game, j, dmg, HIT_STATUS | HIT_KNOCK, ex, ey);
+      kills += hitEnemy(game, j, dmg, HIT_FLAGS.meteor, ex, ey);
     }
   }
   m.cd -= dt;

@@ -1,4 +1,5 @@
-import { hitEnemy, HIT_CRIT, HIT_STATUS } from '../hit.ts';
+import { hitEnemy } from '../hit.ts';
+import { HIT_FLAGS } from '../coverage.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -36,7 +37,7 @@ export const droneAlpha = (age: number): number => Math.max(0, Math.min(1, 1 - a
 
 // Each active drone (slots below the level's count, in index order) eases toward player + its offset (a newly active one
 // snaps there), then, when its timer allows, hits the nearest enemy within the level's range of the DRONE through
-// hitEnemy (HIT_CRIT | HIT_STATUS: no push, no HIT_TICK) and starts its interval and tracer. With no target it waits with
+// hitEnemy (its flags come from the coverage table) and starts its interval and tracer. With no target it waits with
 // the timer at 0. Returns kills. grid must be rebuilt for KIND.ENEMY this tick.
 export function updateDrone(game: Game, level: number, dt: number): number {
   const L = DRONE_LEVELS[level - 1];
@@ -67,7 +68,7 @@ export function updateDrone(game: Game, level: number, dt: number): number {
     d.ty[k] = world.y[t];
     d.cd[k] = L.interval * player.stats.cooldownMult;
     d.age[k] = 0;
-    kills += hitEnemy(game, t, dmg, HIT_CRIT | HIT_STATUS, 0, 0);
+    kills += hitEnemy(game, t, dmg, HIT_FLAGS.drone, 0, 0);
   }
   return kills;
 }

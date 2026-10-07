@@ -1,5 +1,6 @@
 import { KIND } from '../../core/world.ts';
-import { hitEnemy, HIT_CRIT, HIT_STATUS } from '../hit.ts';
+import { hitEnemy } from '../hit.ts';
+import { HIT_FLAGS } from '../coverage.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -39,7 +40,7 @@ export const createDaggerState = (): DaggerState => ({
 // When the volley timer allows and there is an aim (the player's velocity above DAGGER_MOVE_MIN, else the nearest enemy
 // within range), launches a fan of the level's daggers from the player into free slots (a full pool skips the rest).
 // Then every older live dagger flies DAGGER_SPEED, is freed once it has flown its range, and hits each enemy it
-// overlaps through hitEnemy (HIT_CRIT | HIT_STATUS: no push, no HIT_TICK), skipping the one it hit last and spending a
+// overlaps through hitEnemy (its flags come from the coverage table), skipping the one it hit last and spending a
 // pierce per hit (freed on the hit after its last pierce). Draws no rng. Returns kills. grid must be rebuilt for
 // KIND.ENEMY this tick.
 export function updateDaggers(game: Game, level: number, dt: number): number {
@@ -110,7 +111,7 @@ export function updateDaggers(game: Game, level: number, dt: number): number {
       const spent = d.pierce[k] === 0;
       if (spent) d.on[k] = 0;
       else d.pierce[k]--;
-      kills += hitEnemy(game, j, dmg, HIT_CRIT | HIT_STATUS, d.dx[k], d.dy[k]);
+      kills += hitEnemy(game, j, dmg, HIT_FLAGS.daggers, d.dx[k], d.dy[k]);
       if (spent) break;
     }
   }

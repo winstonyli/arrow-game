@@ -6,11 +6,9 @@ import { creditDamage, ACT, HEAL, SRC } from './runstats.ts';
 import { BLAST_BASE, BLAST_CAP, BLAST_DMG, BLAST_PER, CRIT_CHANCE, CRIT_MULT, FROST_SECS, IGNITE_DPS, IGNITE_SECS, KNOCK_PX, VAMP_HP } from './modifiers.ts';
 
 // What a hit is, for the modifiers (Tasks 2-5): CRIT = may crit, KNOCK = may push, NOBLAST = its kills do not explode, STATUS = a surviving hit starts Frost and Ignite.
-export const HIT_CRIT = 1;
-export const HIT_KNOCK = 2;
-export const HIT_NOBLAST = 4;
-export const HIT_STATUS = 8; // applies Frost / Ignite to a survivor
-export const HIT_TICK = 16; // a slice of continuous damage (burn, fire): the hit-flash and hit audio ignore it
+import { HIT_CRIT, HIT_KNOCK, HIT_NOBLAST, HIT_STATUS, HIT_TICK } from './hitflags.ts';
+import { HIT_FLAGS } from './coverage.ts';
+export { HIT_CRIT, HIT_KNOCK, HIT_NOBLAST, HIT_STATUS, HIT_TICK }; // existing importers keep working
 const BLAST_PAL = -1; // render/fx PAL_GEM (gold); the sim does not import render code
 
 // Positions of kills that explode this tick, drained by explosionSystem. Fixed size; empty between ticks, so it is
@@ -79,11 +77,11 @@ export function createHits(game: Game): Hits {
   return {
     arrow: (j, dmg, dx, dy) => {
       game.hitSrc = SRC.BOW;
-      return hitEnemy(game, j, dmg, HIT_CRIT | HIT_KNOCK | HIT_STATUS, dx, dy);
+      return hitEnemy(game, j, dmg, HIT_FLAGS.bow, dx, dy);
     },
     blade: (j, dmg) => {
       game.hitSrc = SRC.BLADE;
-      return hitEnemy(game, j, dmg, 0, 0, 0);
+      return hitEnemy(game, j, dmg, HIT_FLAGS.blade, 0, 0);
     },
   };
 }

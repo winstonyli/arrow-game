@@ -1,5 +1,6 @@
 import { KIND } from '../../core/world.ts';
 import { hitEnemy } from '../hit.ts';
+import { HIT_FLAGS } from '../coverage.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -74,7 +75,7 @@ export function updateBoomerang(game: Game, level: number, dt: number): number {
       if (world.kind[j] !== KIND.ENEMY) continue;
       const rr = BOOM_RADIUS + world.radius[j];
       if ((world.x[j] - b.x) ** 2 + (world.y[j] - b.y) ** 2 > rr * rr) continue;
-      kills += hitEnemy(game, j, dmg, 0, 0, 0);
+      kills += hitEnemy(game, j, dmg, HIT_FLAGS.boomerang, 0, 0);
     }
   }
   return kills;

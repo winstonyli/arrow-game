@@ -1,5 +1,6 @@
 import { KIND } from '../../core/world.ts';
-import { hitEnemy, HIT_STATUS, HIT_KNOCK } from '../hit.ts';
+import { hitEnemy } from '../hit.ts';
+import { HIT_FLAGS } from '../coverage.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -56,7 +57,7 @@ function tripped(game: Game, x: number, y: number): boolean {
 }
 
 // Ages every mine (expiring the old), detonates each armed mine an enemy has tripped (the mine is cleared first, then
-// every enemy in the blast takes the level's damage through hitEnemy, HIT_STATUS | HIT_KNOCK, never a crit), then
+// every enemy in the blast takes the level's damage through hitEnemy, flags from the coverage table), then
 // drops a new mine at the player when the timer and spacing allow. grid must be rebuilt for KIND.ENEMY this tick.
 // Returns kills.
 export function updateMines(game: Game, level: number, dt: number): number {
@@ -86,7 +87,7 @@ export function updateMines(game: Game, level: number, dt: number): number {
       const ey = world.y[j] - my;
       const r = L.radius + world.radius[j];
       if (ex * ex + ey * ey > r * r) continue;
-      kills += hitEnemy(game, j, dmg, HIT_STATUS | HIT_KNOCK, ex, ey);
+      kills += hitEnemy(game, j, dmg, HIT_FLAGS.mines, ex, ey);
     }
   }
   m.cd -= dt;

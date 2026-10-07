@@ -1,5 +1,6 @@
 import { KIND } from '../../core/world.ts';
-import { hitEnemy, HIT_STATUS, HIT_TICK } from '../hit.ts';
+import { hitEnemy } from '../hit.ts';
+import { HIT_FLAGS } from '../coverage.ts';
 import type { Game } from '../game.ts';
 import type { WeaponDef } from '../weapons.ts';
 
@@ -30,7 +31,7 @@ export const createFireState = (): FireState => ({
 });
 
 // Ages every patch, ticks each one whose timer is up (every enemy it overlaps takes dps * FIRE_TICK through hitEnemy,
-// HIT_STATUS | HIT_TICK: Frost and Ignite apply, no crit, no push, no flash), then drops a new patch at the player when
+// flags from the coverage table: Frost and Ignite apply, no crit, no push, no flash), then drops a new patch at the player when
 // they have moved FIRE_SPACING from the last drop. grid must be rebuilt for KIND.ENEMY this tick. Returns kills.
 export function updateFlame(game: Game, level: number, dt: number): number {
   const L = FLAME_LEVELS[level - 1];
@@ -52,7 +53,7 @@ export function updateFlame(game: Game, level: number, dt: number): number {
       const ey = world.y[j] - f.y[k];
       const r = L.radius + world.radius[j];
       if (ex * ex + ey * ey > r * r) continue;
-      kills += hitEnemy(game, j, dmg, HIT_STATUS | HIT_TICK, 0, 0);
+      kills += hitEnemy(game, j, dmg, HIT_FLAGS.flame, 0, 0);
     }
   }
   const dx = player.x - f.lx;
