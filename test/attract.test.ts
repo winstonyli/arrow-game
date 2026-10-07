@@ -6,7 +6,7 @@ import { createFx } from '../src/render/fx.ts';
 test('the title backdrop plays on by itself: never dies, moves, kills and levels up', () => {
   const a = createAttract(createFx(ATTRACT_CAPACITY), 7, 0);
   const start = { x: a.game.player.x, y: a.game.player.y };
-  for (let i = 0; i < 60 * 120; i++) a.step(1 / 60);
+  for (let i = 0; i < 60 * 240; i++) a.step(1 / 60);
   assert.equal(a.game.over, false);
   assert.ok(a.game.kills > 5);
   assert.ok(a.game.level > 1);

@@ -2,7 +2,7 @@ import { createInput } from './input/input.ts';
 import { createGame, tick, VIEW, CAPACITY } from './game/game.ts';
 import { createStepper, startLoop } from './core/loop.ts';
 import { easeCamera } from './core/camera.ts';
-import { createAttract, ATTRACT_CAPACITY, ATTRACT_RESTART } from './game/attract.ts';
+import { createAttract, ATTRACT_CAPACITY, ATTRACT_CAMERA_RATE, ATTRACT_RESTART } from './game/attract.ts';
 import type { Vec } from './core/math.ts';
 import { createCanvasRenderer } from './render/canvas.ts';
 import { createWebGLRenderer } from './render/webgl.ts';
@@ -401,7 +401,7 @@ startLoop(
     }
     if (shown === game) sfx?.observe(game);
     vignetteEl.style.opacity = shown.fx ? String(Math.min(1, shown.fx.vignette(shown.player))) : '0';
-    easeCamera(drawCam, aimCamera(), frameDt);
+    easeCamera(drawCam, aimCamera(), frameDt, shown === game ? undefined : ATTRACT_CAMERA_RATE);
     render(
       shown,
       debug

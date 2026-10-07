@@ -6,12 +6,14 @@ import type { Game, GameFx } from './game.ts';
 import type { Vec } from '../core/math.ts';
 
 export const ATTRACT_CAPACITY = 5000;
+export const ATTRACT_SPEED = 0.5; // the backdrop runs at this fraction of real time: calmer behind the menu
+export const ATTRACT_CAMERA_RATE = 2.5; // draw-camera ease rate (per second) while it is shown; play uses the default 12
 export const ATTRACT_RESTART = 90; // seconds of game time before the title screen starts a fresh run, so it stays lively and cheap
 
 const FLEE = 260; // px: enemies closer than this push the bot away (1/d weighting)
 const WALL = 250; // px: the walls push it back from this far
 
-// The title-screen backdrop: a real arena run, invulnerable and steered by a small bot (flee, avoid walls, else drift to the nearest gem), picking the first card at every level-up; the first `warmup` seconds are played before it is shown. Never recorded or heard; main.ts only ticks and draws it while the title is up.
+// The title-screen backdrop: a real arena run, invulnerable and steered by a small bot (flee, avoid walls, else drift to the nearest gem), picking the first card at every level-up; the first `warmup` game-seconds are played before it is shown. Never recorded or heard; main.ts only ticks and draws it while the title is up.
 export function createAttract<F extends GameFx>(fx: F, seed = Math.floor(Math.random() * 2 ** 31), warmup = 30) {
   const input: Vec = { x: 0, y: 0 };
   const game = createGame({ capacity: ATTRACT_CAPACITY, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(seed), input, fx });
@@ -19,9 +21,9 @@ export function createAttract<F extends GameFx>(fx: F, seed = Math.floor(Math.ra
   const step = (dt: number): void => {
     if (game.offer) choose(game, game.offer[0]);
     steer(game);
-    tick(game, dt);
+    tick(game, dt * ATTRACT_SPEED);
   };
-  for (let t = 0; t < warmup; t += 1 / 60) step(1 / 60); // start with enemies already on the field
+  for (let t = 0; t < warmup / ATTRACT_SPEED; t += 1 / 60) step(1 / 60); // start with enemies already on the field
   return { game, step };
 }
 
