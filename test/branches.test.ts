@@ -128,6 +128,7 @@ test('Daisy Chain jumps three more times, weaker per hit but with less falloff',
 test('the bolt and path buffers hold a full-length Daisy Chain zap', () => {
   assert.ok(Math.ceil((CHAIN_RANGE + MAX_JUMPS * CHAIN_JUMP) / BOLT_DOT_GAP) + MAX_JUMPS + 1 <= MAX_BOLT_DOTS);
   const g = arenaGame();
+  assert.ok((2 * CORONA_LEVELS[CORONA_LEVELS.length - 1].n - 1) * Math.ceil(CORONA_RADIUS / BOLT_DOT_GAP) <= MAX_BOLT_DOTS); // the Corona star fits the dot budget too
   assert.ok(g.wstate.chain.px.length >= MAX_JUMPS + 2);
   assert.ok(g.wstate.chain.px.length >= 2 * CORONA_LEVELS[CORONA_LEVELS.length - 1].n);
 });
