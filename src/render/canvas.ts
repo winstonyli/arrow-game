@@ -156,7 +156,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#161b22';
     ctx.fillRect(0, 0, view.w, view.h);
-    drawWorldGrid(ctx, cam, view, bounds);
+    drawWorldGrid(ctx, cam, view, bounds, player);
 
     ctx.setTransform(1, 0, 0, 1, -cam.x, -cam.y);
     // Same layer order as webgl.ts: gems, fire patches, mines, enemies (then their status tint, then their flash), enemy projectiles, arrows, particles, orbit blades, weapon effects (shockwave ring, lightning, boomerangs, meteor strike rings, beam, drones, daggers), player.

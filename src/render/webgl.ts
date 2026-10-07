@@ -384,7 +384,7 @@ export function createWebGLRenderer(canvas: HTMLCanvasElement, hudCanvas: HTMLCa
 
     bg2d.fillStyle = '#161b22';
     bg2d.fillRect(0, 0, view.w, view.h);
-    drawWorldGrid(bg2d, cam, view, bounds);
+    drawWorldGrid(bg2d, cam, view, bounds, player);
 
     hud2d.clearRect(0, 0, view.w, view.h);
     const bw = 40;

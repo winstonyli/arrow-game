@@ -2,6 +2,7 @@ import { createInput } from './input/input.ts';
 import { createGame, tick, VIEW, CAPACITY } from './game/game.ts';
 import { createStepper, startLoop } from './core/loop.ts';
 import { easeCamera } from './core/camera.ts';
+import type { Vec } from './core/math.ts';
 import { createCanvasRenderer } from './render/canvas.ts';
 import { createWebGLRenderer } from './render/webgl.ts';
 import { createFx } from './render/fx.ts';
@@ -131,6 +132,15 @@ if (!stressN) {
 }
 
 const drawCam = { x: 0, y: 0 }; // the eased camera the renderers draw with; the sim camera (game.camera) stays exact
+const camGoal = { x: 0, y: 0 };
+// Where the draw camera aims: on the player, not clamped to the world, so each screen's crop of the square view keeps the player centred; the darkened void shows past an edge. A world that fits the view (rooms) uses the sim camera.
+function aimCamera(): Vec {
+  const { bounds, view, player, camera } = game;
+  if (bounds.w <= view.w && bounds.h <= view.h) return camera;
+  camGoal.x = player.x - view.w / 2;
+  camGoal.y = player.y - view.h / 2;
+  return camGoal;
+}
 function newGame({ seed: s }: { seed?: number } = {}) {
   seed = s ?? randomSeed();
   if (stressN) {
@@ -141,8 +151,9 @@ function newGame({ seed: s }: { seed?: number } = {}) {
     game = session.game;
   }
   shownOffer = undefined;
-  drawCam.x = game.camera.x;
-  drawCam.y = game.camera.y;
+  const goal = aimCamera();
+  drawCam.x = goal.x;
+  drawCam.y = goal.y;
 }
 
 function setScreen(next: Screen) {
@@ -368,7 +379,7 @@ startLoop(
       game.fx.update((screen === 'play' || screen === 'none' || screen === 'watch') && !game.offer && !game.over ? frameDt : 0); // freeze effects while paused
     }
     sfx?.observe(game);
-    easeCamera(drawCam, game.camera, frameDt);
+    easeCamera(drawCam, aimCamera(), frameDt);
     render(
       game,
       debug
