@@ -14,7 +14,7 @@ import { DAGGER_CAP, DAGGER_DOT_R, DAGGER_TRAIL } from '../game/weapons/daggers.
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
-import type { Size } from '../core/math.ts';
+import type { Size, Vec } from '../core/math.ts';
 import type { Game, Mode } from '../game/game.ts';
 import type { Fx } from './fx.ts';
 
@@ -24,7 +24,7 @@ const GEM_COLOR = '#f2cc60';
 // The game as the renderers see it: fx (when present) is the render fx from createFx.
 export type RenderGame = Game<Mode, Fx>;
 // The render(game, hud) contract both renderers return: draws one frame, `hud` lines at the bottom.
-export type Renderer = (game: RenderGame, hud: string[]) => void;
+export type Renderer = (game: RenderGame, hud: string[], camera?: Vec) => void;
 
 export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Renderer {
   canvas.width = view.w;
@@ -149,10 +149,10 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
   // The fallback renderer does not cull and draws no outline or shadow; the WebGL renderer is the one
   // built for large counts and depth.
   const bp = { x: 0, y: 0 };
-  return function render(game: RenderGame, hud: string[]): void {
-    const { world, player, camera, bounds, fx } = game;
-    cam.x = camera.x + (fx ? fx.sx : 0);
-    cam.y = camera.y + (fx ? fx.sy : 0);
+  return function render(game: RenderGame, hud: string[], eased: Vec = game.camera): void {
+    const { world, player, bounds, fx } = game;
+    cam.x = eased.x + (fx ? fx.sx : 0);
+    cam.y = eased.y + (fx ? fx.sy : 0);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#161b22';
     ctx.fillRect(0, 0, view.w, view.h);

@@ -15,7 +15,7 @@ import { DAGGER_CAP, DAGGER_DOT_R, DAGGER_TRAIL, DAGGER_INSTANCES, type DaggerSt
 import { TRAIL_MAX } from './trail.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World } from '../core/world.ts';
-import type { Size } from '../core/math.ts';
+import type { Size, Vec } from '../core/math.ts';
 import type { Player } from '../game/player.ts';
 import type { RenderGame } from './canvas.ts';
 
@@ -131,8 +131,8 @@ function packMeteors(mt: MeteorState, radius: number, out: Float32Array, n: numb
   return n;
 }
 
-export function packInstances(world: World, player: Player, game: Pick<RenderGame, 'camera' | 'view' | 'fx' | 'time'> & Partial<Pick<RenderGame, 'wstate'>>, out: Float32Array): number {
-  const { camera, view, fx } = game;
+export function packInstances(world: World, player: Player, game: Pick<RenderGame, 'camera' | 'view' | 'fx' | 'time'> & Partial<Pick<RenderGame, 'wstate'>>, out: Float32Array, camera: Vec = game.camera): number {
+  const { view, fx } = game;
   const pad = fx ? SHAKE_PAD + TRAIL_MAX : 0;
   const x0 = camera.x - pad;
   const x1 = camera.x + view.w + pad;
@@ -368,15 +368,15 @@ export function createWebGLRenderer(canvas: HTMLCanvasElement, hudCanvas: HTMLCa
   vignette.addColorStop(1, 'rgba(248,81,73,0.85)');
   const cam = { x: 0, y: 0 }; // the camera plus the current shake offset
 
-  function render(game: RenderGame, hud: string[]): void {
-    const { world, player, camera, bounds, fx } = game;
+  function render(game: RenderGame, hud: string[], eased: Vec = game.camera): void {
+    const { world, player, bounds, fx } = game;
     if (!data) {
       data = new Float32Array((world.capacity + 1 + POOL + MAX_BLADES + WEAPON_INSTANCES) * STRIDE);
       gl.bufferData(gl.ARRAY_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
     }
-    cam.x = camera.x + (fx ? fx.sx : 0);
-    cam.y = camera.y + (fx ? fx.sy : 0);
-    const n = packInstances(world, player, game, data);
+    cam.x = eased.x + (fx ? fx.sx : 0);
+    cam.y = eased.y + (fx ? fx.sy : 0);
+    const n = packInstances(world, player, game, data, eased);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, n * STRIDE);
     gl.uniform2f(uCam, cam.x, cam.y);
     gl.clear(gl.COLOR_BUFFER_BIT);

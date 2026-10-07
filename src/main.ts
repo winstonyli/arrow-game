@@ -1,6 +1,7 @@
 import { createInput } from './input/input.ts';
 import { createGame, tick, VIEW, CAPACITY } from './game/game.ts';
 import { createStepper, startLoop } from './core/loop.ts';
+import { easeCamera } from './core/camera.ts';
 import { createCanvasRenderer } from './render/canvas.ts';
 import { createWebGLRenderer } from './render/webgl.ts';
 import { createFx } from './render/fx.ts';
@@ -129,6 +130,7 @@ if (!stressN) {
   }
 }
 
+const drawCam = { x: 0, y: 0 }; // the eased camera the renderers draw with; the sim camera (game.camera) stays exact
 function newGame({ seed: s }: { seed?: number } = {}) {
   seed = s ?? randomSeed();
   if (stressN) {
@@ -139,6 +141,8 @@ function newGame({ seed: s }: { seed?: number } = {}) {
     game = session.game;
   }
   shownOffer = undefined;
+  drawCam.x = game.camera.x;
+  drawCam.y = game.camera.y;
 }
 
 function setScreen(next: Screen) {
@@ -364,6 +368,7 @@ startLoop(
       game.fx.update((screen === 'play' || screen === 'none' || screen === 'watch') && !game.offer && !game.over ? frameDt : 0); // freeze effects while paused
     }
     sfx?.observe(game);
+    easeCamera(drawCam, game.camera, frameDt);
     render(
       game,
       debug
@@ -372,6 +377,7 @@ startLoop(
             `entities ${game.world.count}  dropped ${game.world.dropped}  sim ${simMs.toFixed(2)} ms  draw ${drawMs.toFixed(2)} ms  frame ${frameMs.toFixed(1)} ms`,
           ]
         : [],
+    drawCam,
     );
     drawMs = drawMs * 0.9 + (performance.now() - t0) * 0.1;
   },
