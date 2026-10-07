@@ -184,8 +184,9 @@ Everything else (including Whirligig) is indistinguishable from the baseline at 
 Decisions:
 - Corona Wire was no better than nothing: the bot flees anything within 260 px, so a 90 px aura almost never had a target. `CORONA_RADIUS` 90 to 220 (the spec's "about 90 px" is superseded). Doubling its per-hit damage changed nothing (+18.1), so the level table stays.
 - Fissure: range x1.8 to x2.4, damage x1.4 to x1.8, crack 40 to 60 px wide.
-- Daisy Chain stays 2.7x Corona Wire. Trimming it to 2 jumps at x0.75 changed nothing (+49.1): strong builds survive almost the whole 6 minutes (190 + 160 s of a 360 s cap), so the metric saturates and cannot rank them. Known imbalance. A later pass needs a harder arena or longer runs, not more seeds.
-- Whirligig rows are all noise (the stationary bot under-credits a contact weapon); Carousel and Blender are left at their starting numbers and need a play test.
+- Corona Wire (+18.7, level 3) is still no better than plain level-2 Live Wire (+20.7); the reference rows are level 2 and the branch rows level 3, so the branches are not level-matched to them.
+- Daisy Chain stays 2.7x Corona Wire on the change from baseline (about 1.8x in absolute dmg/s: 71.4 against 39.7). Hive Mind and Stinger are about 2.9x Corona on the same delta metric. Trimming it to 2 jumps at x0.75 changed nothing (+49.1): strong builds survive almost the whole 6 minutes (190 + 160 s of a 360 s cap), so the metric saturates and cannot rank them. Known imbalance. A later pass needs a harder arena or longer runs, not more seeds.
+- Whirligig rows are all noise (the smart bot under-credits a contact weapon, as the stationary and kite bots do); Carousel and Blender are left at their starting numbers and need a play test.
 - The Aftershock and Stinger/Hive Mind gaps over their references come mostly from survival (knock-back and more drones keep the bot alive), so their damage numbers are inflated relative to Fissure.
 
 ## Quiet-machine benches (2026-10-06, SIM_VERSION 12)

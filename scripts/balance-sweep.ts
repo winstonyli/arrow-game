@@ -2,6 +2,7 @@
 // and compares it with the baseline build on the SAME seeds. Reports, per skill, the change in survival time and in damage
 // per second (mean paired difference with a 95% bootstrap interval), over all runs (not just those that got the skill, so
 // there is no selection bias), plus how many runs actually picked it. An interval that spans 0 means "no measurable effect".
+// Dotted ids are granted at the start instead (weapon.a / weapon.b = branch at level 3, weapon.0 = the weapon at level 2 as the reference): see soak-arena --grant.
 // Usage: bun scripts/balance-sweep.ts [--seeds=40] [--minutes=6] [--jobs=4] [--builds=id,id,...] [--base=1]
 // Runs soak-arena.ts as child processes at BelowNormal priority; at most --jobs at once (keep it <= a quarter of the cores free).
 import { spawn } from 'node:child_process';

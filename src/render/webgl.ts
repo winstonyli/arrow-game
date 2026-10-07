@@ -39,7 +39,7 @@ export const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff',
 const RING_LINES = 3; // concentric one-pixel rings make the shockwave's visible width
 export const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
 const BOLT_DOT_R = 2.5;
-const FISSURE_DOTS = 60; // a 576 px crack, one dot per 10 px
+const FISSURE_DOTS = 80; // a 768 px crack (level 5: 320 x FISSURE_RANGE 2.4), one dot per 10 px
 export const MAX_BOLT_DOTS = 200; // a full-length level-5 Daisy Chain zap is about 175 dots (tested)
 // Instances the buffer reserves for weapon visuals: the rings, the zap's dots, the boomerangs, the fire patches, the mines, the meteor strike rings, the beam's dots, the drones' bodies and tracers, the daggers' heads and trails.
 export const WEAPON_INSTANCES = 2 * RING_LINES + FISSURE_DOTS + MAX_BOLT_DOTS + MAX_BOOMS + FIRE_CAP + MINE_CAP + METEOR_CAP + BEAM_MAX_DOTS + DRONE_INSTANCES + DAGGER_INSTANCES;

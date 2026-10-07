@@ -6,7 +6,7 @@
 // --bot=smart is the same plus: skill priority (damage/rate/multishot before speed), gems pulled in even with enemies near, and a sideways component so it circles instead of pinning itself on a wall.
 // It reports when the bot dies, which is the survival-time yardstick for balance changes.
 // At the end it prints the run's damage, healing and activity breakdown (damage share per weapon and upgrade; the upgrade rows are approximate), the balance data: run several --seed values to compare.
-// Usage: node scripts/soak-arena.ts [--minutes=10] [--bot=still|kite|smart] [--seed=1] [--picks=random|id,id,...]
+// Usage: node scripts/soak-arena.ts [--minutes=10] [--bot=still|kite|smart] [--seed=1] [--picks=random|id,id,...] [--grant=id,id,...]
 import { createGame, tick, choose } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';

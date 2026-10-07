@@ -97,6 +97,16 @@ test('Corona Wire zaps the N nearest enemies inside the aura at once and nothing
   assert.ok(g.wstate.chain.life > 0);
 });
 
+test('Corona Wire reaches an enemy well past the old 90 px aura', () => {
+  const g = arenaGame();
+  g.player.stats.weapons.chain = 3;
+  g.player.stats.branches.chain = 1;
+  const far = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 150, g.player.y);
+  settle(g);
+  updateChain(g, 3, 1 / 60);
+  assert.ok(CORONA_RADIUS > 150 && hurt(g, far));
+});
+
 test('Daisy Chain jumps three more times, weaker per hit but with less falloff', () => {
   const line = (branch: number) => {
     const g = arenaGame();
@@ -145,7 +155,7 @@ test('Aftershock sends a second ring 0.4 s later at 60% damage, and both rings s
   assert.ok(g.world.x[j] - x0 > 2 * SHOVE_PX - 1, 'shoved twice');
 });
 
-test('Fissure is a narrow crack toward the nearest enemy that reaches 1.8x farther and hits 40% harder', () => {
+test('Fissure is a narrow crack toward the nearest enemy that reaches FISSURE_RANGE farther and hits FISSURE_DMG harder', () => {
   const L = SHOCK_LEVELS[2];
   const g = quake(2);
   const far = L.radius * 1.5; // beyond the ring's reach, inside the crack's
