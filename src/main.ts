@@ -153,6 +153,8 @@ function newGame({ seed: s }: { seed?: number } = {}) {
   shownOffer = undefined;
   const stageView = document.getElementById('view')!;
   stageView.style.setProperty('--ar', String(game.view.w / game.view.h));
+  stageView.style.setProperty('--sx', String(VIEW.w / game.view.w));
+  stageView.style.setProperty('--sy', String(VIEW.h / game.view.h));
   stageView.classList.toggle('fit', game.bounds.w <= game.view.w && game.bounds.h <= game.view.h);
   const goal = aimCamera();
   drawCam.x = goal.x;

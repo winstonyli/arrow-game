@@ -18,7 +18,9 @@ html, body { margin: 0; height: 100%; background: #0d0415; overflow: hidden; tou
 /* The UI covers the whole screen. Landscape keeps the old unit (900 u across a 3:2 screen); portrait sizes it from the width and stacks the cards. */
 /* --ar is the sim view's aspect (set from game.view). The view covers the screen (the renderer crops it); .fit shows a whole fixed-size room instead (letterboxed). */
 #view { --ar: 1; position: absolute; left: 50%; top: 50%; width: max(100vw, calc(100vh * var(--ar))); aspect-ratio: var(--ar); transform: translate(-50%, -50%); }
-#view.fit { width: min(100vw, calc(100vh * var(--ar))); }
+/* The canvases are always VIEW-sized (the room sits in their top-left corner), so a fit view enlarges them by --sx/--sy and clips the rest. */
+#view.fit { width: min(100vw, calc(100vh * var(--ar))); overflow: hidden; }
+#view.fit canvas { inset: auto; left: 0; top: 0; width: calc(100% * var(--sx)); height: calc(100% * var(--sy)); }
 #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #ui { position: absolute; inset: 0; pointer-events: none; }
 #ui button, #ui .overlay { pointer-events: auto; }
