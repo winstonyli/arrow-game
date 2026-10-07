@@ -208,6 +208,19 @@ test('packInstances draws an active shockwave as three rings, none when idle', (
   assert.ok(out[4] < 0 && out[4] >= -1); // ring fade
 });
 
+test('packInstances draws Aftershock\'s second ring and Fissure\'s crack within the instance budget', () => {
+  const w = new World(2);
+  const out = new Float32Array((2 + WEAPON_INSTANCES) * STRIDE);
+  const ws = createWeaponState();
+  ws.shock.on = true; ws.shock.r = 100; ws.shock.max = 300;
+  const one = packInstances(w, player(), G({ wstate: ws }), out);
+  ws.shock.on2 = true; ws.shock.r2 = 50; ws.shock.x2 = 10; ws.shock.y2 = 10;
+  assert.ok(packInstances(w, player(), G({ wstate: ws }), out) > one);
+  const ws2 = createWeaponState();
+  ws2.shock.on = true; ws2.shock.line = true; ws2.shock.r = 576; ws2.shock.max = 576; ws2.shock.ux = 1;
+  assert.ok(packInstances(w, player(), G({ wstate: ws2 }), out) <= 1 + WEAPON_INSTANCES);
+});
+
 test('packInstances draws a chain-lightning zap as fading dots along its path, and caps them', () => {
   const w = new World(2);
   const ws = createWeaponState();

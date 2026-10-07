@@ -35,7 +35,8 @@ export function stateHash(g: Game): number {
   for (const { id } of WEAPONS) mix(g.player.stats.branches[id] ?? 0);
   const sh = g.wstate.shock;
   mix(sh.on ? 1 : 0);
-  for (const v of [sh.cd, sh.x, sh.y, sh.r, sh.max]) num(v);
+  for (const v of [sh.cd, sh.x, sh.y, sh.r, sh.max, sh.ux, sh.uy, sh.d2, sh.x2, sh.y2, sh.r2]) num(v);
+  mix(sh.on2 ? 1 : 0);
   num(g.wstate.chain.cd); // the zap's path and life are presentation only and follow from the sim
   for (const b of g.wstate.boom.b) {
     mix(b.phase);

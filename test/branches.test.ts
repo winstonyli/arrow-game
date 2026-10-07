@@ -12,6 +12,8 @@ import { icon } from '../src/ui/icons.ts';
 import { hudModel } from '../src/ui/model.ts';
 import { updateChain, CHAIN_LEVELS, CHAIN_RANGE, CHAIN_JUMP, MAX_JUMPS, CORONA_LEVELS, CORONA_RADIUS, DAISY_DMG } from '../src/game/weapons/chain.ts';
 import { MAX_BOLT_DOTS, BOLT_DOT_GAP } from '../src/render/webgl.ts';
+import { updateShockwave, SHOCK_LEVELS, SHOCK_SPEED, AFTER_DELAY, AFTER_DMG, AFTER_ECHO, FISSURE_RANGE, FISSURE_DMG, FISSURE_HALF } from '../src/game/weapons/shockwave.ts';
+import { SHOVE_PX } from '../src/game/hit.ts';
 import type { Game } from '../src/game/game.ts';
 
 const arenaGame = (): Game => createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
@@ -115,4 +117,58 @@ test('the bolt and path buffers hold a full-length Daisy Chain zap', () => {
   const g = arenaGame();
   assert.ok(g.wstate.chain.px.length >= MAX_JUMPS + 2);
   assert.ok(g.wstate.chain.px.length >= 2 * CORONA_LEVELS[CORONA_LEVELS.length - 1].n);
+});
+
+const quake = (branch: number, level = 3): Game => {
+  const g = arenaGame();
+  g.player.stats.weapons.shockwave = level;
+  g.player.stats.branches.shockwave = branch;
+  return g;
+};
+const run = (g: Game, secs: number) => { for (let k = 0; k < Math.round(secs * 60); k++) { settle(g); updateShockwave(g, g.player.stats.weapons.shockwave, 1 / 60); } };
+
+test('Aftershock sends a second ring 0.4 s later at 60% damage, and both rings shove without Personal Space', () => {
+  const L = SHOCK_LEVELS[2];
+  const g = quake(1);
+  const j = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 100, g.player.y);
+  const x0 = g.world.x[j];
+  run(g, 0.4); // ring 1 has crossed it, ring 2 has not started
+  assert.ok(Math.abs(g.world.hp[j] - (BRUISER_HP - L.damage * AFTER_DMG)) < 1e-2);
+  const pushed1 = g.world.x[j] - x0;
+  assert.ok(pushed1 > SHOVE_PX - 1e-2, 'shoved');
+  run(g, 0.5); // ring 2 arrives
+  const second = BRUISER_HP - L.damage * AFTER_DMG - L.damage * AFTER_DMG * AFTER_ECHO;
+  assert.ok(Math.abs(g.world.hp[j] - second) < 1e-2);
+  assert.ok(g.world.x[j] - x0 > 2 * SHOVE_PX - 1, 'shoved twice');
+});
+
+test('Fissure is a narrow crack toward the nearest enemy that reaches 1.8x farther and hits 40% harder', () => {
+  const L = SHOCK_LEVELS[2];
+  const g = quake(2);
+  const far = L.radius * 1.5; // beyond the ring's reach, inside the crack's
+  const onLine = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + far, g.player.y);
+  const off = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + far + 40, g.player.y + FISSURE_HALF + 40); // beside the line, and farther than the target
+  run(g, 2);
+  assert.ok(Math.abs(g.world.hp[onLine] - (BRUISER_HP - L.damage * FISSURE_DMG)) < 1e-2);
+  assert.equal(g.world.hp[off], BRUISER_HP);
+  assert.equal(L.radius * FISSURE_RANGE > far, true);
+});
+
+test('the shockwave branch state is hashed', () => {
+  const a = quake(1);
+  const b = quake(1);
+  const j = (g: Game) => spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 100, g.player.y);
+  j(a); j(b);
+  run(a, 0.5); run(b, 0.3);
+  assert.notEqual(stateHash(a), stateHash(b));
+});
+
+test('a ring hits each enemy once even when a push carries it ahead of the ring', () => {
+  const L = SHOCK_LEVELS[2];
+  const g = quake(0);
+  g.player.stats.knockback = 3; // a 30 px push, far more than the ring advances per tick
+  const j = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 100, g.player.y);
+  g.world.hp[j] = 10000;
+  run(g, L.radius / SHOCK_SPEED + 0.1);
+  assert.equal(g.world.hp[j], 10000 - L.damage);
 });

@@ -6,9 +6,10 @@ import { creditDamage, ACT, HEAL, SRC } from './runstats.ts';
 import { BLAST_BASE, BLAST_CAP, BLAST_DMG, BLAST_PER, CRIT_CHANCE, CRIT_MULT, FROST_SECS, IGNITE_DPS, IGNITE_SECS, KNOCK_PX, VAMP_HP } from './modifiers.ts';
 
 // What a hit is, for the modifiers (Tasks 2-5): CRIT = may crit, KNOCK = may push, NOBLAST = its kills do not explode, STATUS = a surviving hit starts Frost and Ignite.
-import { HIT_CRIT, HIT_KNOCK, HIT_NOBLAST, HIT_STATUS, HIT_TICK } from './hitflags.ts';
+import { HIT_CRIT, HIT_KNOCK, HIT_NOBLAST, HIT_SHOVE, HIT_STATUS, HIT_TICK } from './hitflags.ts';
 import { HIT_FLAGS } from './coverage.ts';
-export { HIT_CRIT, HIT_KNOCK, HIT_NOBLAST, HIT_STATUS, HIT_TICK }; // existing importers keep working
+export { HIT_CRIT, HIT_KNOCK, HIT_NOBLAST, HIT_SHOVE, HIT_STATUS, HIT_TICK }; // existing importers keep working
+export const SHOVE_PX = 30; // the push HIT_SHOVE guarantees
 const BLAST_PAL = -1; // render/fx PAL_GEM (gold); the sim does not import render code
 
 // Positions of kills that explode this tick, drained by explosionSystem. Fixed size; empty between ticks, so it is
@@ -19,7 +20,7 @@ export const createBlasts = (): Blasts => ({ n: 0, x: new Float32Array(BLAST_CAP
 // The one place an enemy takes damage. (dx, dy) is the hit's direction (zero when it has none). A slot that is no
 // longer a live enemy (killed earlier this tick, the grid is older) is rejected. A lethal hit calls onKill before the
 // despawn and returns 1; every other hit returns 0. Modifiers apply here: HIT_CRIT hits may crit (rolled on game.rng),
-// a surviving HIT_KNOCK hit is pushed back along (dx, dy), a kill heals the player (vamp) and queues a blast for
+// a surviving HIT_KNOCK hit is pushed back along (dx, dy) (HIT_SHOVE guarantees a push of SHOVE_PX), a kill heals the player (vamp) and queues a blast for
 // explosionSystem unless the hit is HIT_NOBLAST. A surviving HIT_STATUS hit refreshes slowT / burnT to the full
 // duration for each owned status (frost, ignite). A surviving HIT_TICK hit tells fx.soft so presentation shows no flash.
 export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: number, dy: number): number {
@@ -35,10 +36,10 @@ export function hitEnemy(game: Game, j: number, dmg: number, flags: number, dx: 
   creditDamage(game, Math.min(dmg, world.hp[j]), crit);
   world.hp[j] -= dmg;
   if (world.hp[j] > 0) {
-    if (flags & HIT_KNOCK && s.knockback > 0) {
+    if (flags & HIT_KNOCK && (s.knockback > 0 || flags & HIT_SHOVE)) {
       const m = Math.hypot(dx, dy);
       if (m > 1e-6) {
-        const push = (s.knockback * KNOCK_PX) / m;
+        const push = Math.max(s.knockback * KNOCK_PX, flags & HIT_SHOVE ? SHOVE_PX : 0) / m;
         const ox = world.x[j];
         const oy = world.y[j];
         world.x[j] = clamp(ox + dx * push, world.radius[j], game.bounds.w - world.radius[j]);

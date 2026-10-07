@@ -39,9 +39,10 @@ export const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff',
 const RING_LINES = 3; // concentric one-pixel rings make the shockwave's visible width
 export const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
 const BOLT_DOT_R = 2.5;
+const FISSURE_DOTS = 60; // a 576 px crack, one dot per 10 px
 export const MAX_BOLT_DOTS = 200; // a full-length level-5 Daisy Chain zap is about 175 dots (tested)
 // Instances the buffer reserves for weapon visuals: the rings, the zap's dots, the boomerangs, the fire patches, the mines, the meteor strike rings, the beam's dots, the drones' bodies and tracers, the daggers' heads and trails.
-export const WEAPON_INSTANCES = RING_LINES + MAX_BOLT_DOTS + MAX_BOOMS + FIRE_CAP + MINE_CAP + METEOR_CAP + BEAM_MAX_DOTS + DRONE_INSTANCES + DAGGER_INSTANCES;
+export const WEAPON_INSTANCES = 2 * RING_LINES + FISSURE_DOTS + MAX_BOLT_DOTS + MAX_BOOMS + FIRE_CAP + MINE_CAP + METEOR_CAP + BEAM_MAX_DOTS + DRONE_INSTANCES + DAGGER_INSTANCES;
 const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));
 
 const LAYERS = [KIND.GEM, KIND.ENEMY, KIND.ENEMY_PROJECTILE, KIND.PROJECTILE];
@@ -186,9 +187,17 @@ export function packInstances(world: World, player: Player, game: Pick<RenderGam
   const ws = game.wstate;
   if (ws) {
     const sh = ws.shock;
-    if (sh.on) {
+    if (sh.on && sh.line) { // Fissure: dots along the crack up to its front, fading as it spreads
+      const a = 0.2 + 0.8 * (1 - sh.r / sh.max);
+      const steps = Math.min(FISSURE_DOTS, Math.floor(sh.r / BOLT_DOT_GAP) + 1);
+      for (let k = 0; k < steps; k++) put(out, n++ * STRIDE, sh.x + sh.ux * k * BOLT_DOT_GAP, sh.y + sh.uy * k * BOLT_DOT_GAP, BOLT_DOT_R, P_WEAPON, a, 0, 0, 0, 0);
+    } else if (sh.on) {
       const a = 0.2 + 0.8 * (1 - sh.r / sh.max); // fades as it spreads
       for (let k = 0; k < RING_LINES; k++) put(out, n++ * STRIDE, sh.x, sh.y, Math.max(1, sh.r - k * 1.5), P_FLASH, -a, 0, 0, 0, 0);
+    }
+    if (sh.on2) { // Aftershock's second ring
+      const a = 0.2 + 0.8 * (1 - sh.r2 / sh.max);
+      for (let k = 0; k < RING_LINES; k++) put(out, n++ * STRIDE, sh.x2, sh.y2, Math.max(1, sh.r2 - k * 1.5), P_FLASH, -a, 0, 0, 0, 0);
     }
     const ch = ws.chain;
     if (ch.life > 0) {

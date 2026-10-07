@@ -205,12 +205,29 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       ctx.fill();
     }
     const ws = game.wstate;
-    if (ws.shock.on) {
+    const sh = ws.shock;
+    if (sh.on && sh.line) { // Fissure
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 6;
+      ctx.globalAlpha = 0.2 + 0.8 * (1 - sh.r / sh.max);
+      ctx.beginPath();
+      ctx.moveTo(sh.x, sh.y);
+      ctx.lineTo(sh.x + sh.ux * sh.r, sh.y + sh.uy * sh.r);
+      ctx.stroke();
+    } else if (sh.on) {
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
-      ctx.globalAlpha = 0.2 + 0.8 * (1 - ws.shock.r / ws.shock.max);
+      ctx.globalAlpha = 0.2 + 0.8 * (1 - sh.r / sh.max);
       ctx.beginPath();
-      ctx.arc(ws.shock.x, ws.shock.y, ws.shock.r, 0, TAU);
+      ctx.arc(sh.x, sh.y, sh.r, 0, TAU);
+      ctx.stroke();
+    }
+    if (sh.on2) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.2 + 0.8 * (1 - sh.r2 / sh.max);
+      ctx.beginPath();
+      ctx.arc(sh.x2, sh.y2, sh.r2, 0, TAU);
       ctx.stroke();
     }
     if (ws.chain.life > 0) {
