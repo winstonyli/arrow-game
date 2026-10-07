@@ -6,7 +6,7 @@ import type { Game, GameFx } from './game.ts';
 import type { Vec } from '../core/math.ts';
 
 export const ATTRACT_CAPACITY = 5000;
-export const ATTRACT_SPEED = 0.5; // the backdrop runs at this fraction of real time: calmer behind the menu
+export const ATTRACT_SPEED = 0.35; // the backdrop runs at this fraction of real time: calmer behind the menu
 export const ATTRACT_CAMERA_RATE = 2.5; // draw-camera ease rate (per second) while it is shown; play uses the default 12
 export const ATTRACT_RESTART = 90; // seconds of game time before the title screen starts a fresh run, so it stays lively and cheap
 

@@ -113,7 +113,7 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 @media (orientation: portrait) { #stage { --u: min(calc(100vw / 330), calc(100vh / 620)); } .bar { width: calc(var(--u) * 30); flex: none; } .hud-top { gap: calc(var(--u) * 6); } .cards { grid-template-columns: calc(var(--u) * 290); } .overlay .panel.wide { width: calc(var(--u) * 310); } }
 
 /* Title screen: the self-playing run shows through (see main.ts showGame), the name pulses and gets a light sweep, and the panel's rows fade up one after another. */
-.overlay.backdrop { background: color-mix(in srgb, var(--bg) 40%, transparent); }
+.overlay.backdrop { background: color-mix(in srgb, var(--bg) 58%, transparent); }
 .title-name { position: relative; animation: title-glow 4s ease-in-out infinite; }
 .title-name::after { content: attr(data-text); position: absolute; inset: 0; color: transparent; text-shadow: none; background: linear-gradient(100deg, transparent 40%, #ffffffcc 50%, transparent 60%) 120% 0 / 250% 100% no-repeat; -webkit-background-clip: text; background-clip: text; animation: title-sweep 6s ease-in-out 1s infinite; }
 .title-panel > * { animation: rise 0.45s ease-out backwards; }
