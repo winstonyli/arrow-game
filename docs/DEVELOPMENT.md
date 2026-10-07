@@ -337,6 +337,8 @@ New baseline: **Vite build, minified, Chrome 154, AMD Radeon 780M iGPU (ANGLE D3
 
 This measures the minified bundle under much heavier load, so it is not comparable with the unbundled table above; it is the reference for later runs of the bundle.
 
+Release run for v0.4.0 (2026-10-07, after the square view and the draw-time player interpolation; Vite build, minified, Chrome 154, AMD Radeon 780M iGPU through ANGLE D3D11 (the bench does not pick the eGPU), CPU about 25 to 30% busy from other programs, Defender real-time protection off, default matrix, `--mode=background`, one run). Median frame ms (p95), Canvas2D / WebGL: dense 1k 16.7 (16.9) / 16.7 (17.4); 5k 25.7 (32.7) / 16.7 (17.9); 10k 50.4 (64.1) / 16.7 (18.0); 20k 120.4 (143.0) / 105.1 (165.8). converge 1k 16.7 (16.9) / 16.7 (17.0); 5k 26.3 (32.7) / 16.7 (17.7); 10k 52.4 (66.6) / 16.6 (18.1); 20k 123.7 (144.2) / 115.2 (154.7). Everything is at or below the 2026-10-03 baseline above (which ran under 93 to 98% load), and WebGL draw CPU stays under 1 ms. Soak: `bun run soak` survived 10 minutes (638 enemies at the peak, level 40, 3284 kills), tick median 0.02 to 0.04 ms, p95 up to 0.06 ms, nothing dropped.
+
 WebGL draw CPU time is ~0.5 ms at every N, so rendering no longer limits frame time. At 20k the frame time is about 4-5 sim steps (the stepper's catch-up cap) at 37-46 ms each: the sim's collision cost under 900x600 crowding is the remaining limit. Spikes at 10k converge (p95 84 ms) come from the same sim cost as chasers pile up.
 
 ## Collision search radius (plan 2c)
