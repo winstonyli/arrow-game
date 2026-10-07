@@ -17,6 +17,9 @@ const DAGGER_LEVEL = 5;
 // Mines' level in the maxed build, found the same way (a scan over the weapon levels): only 3 keeps every flag below true.
 const MINES_LEVEL = 3;
 
+// Fork picks in the maxed build: [fork id, weapon id, ordinary picks after the fork]. A fork resets the weapon to level 3.
+const FORKS: [string, string, number][] = [['chain.b', 'chain', 2]];
+
 // Ten weapons (the bow aside) and all six modifiers at level 5, except Mines at MINES_LEVEL and the Drone at level 4 (at 5 it kills the few enemies before the beam or a meteor reaches one; applySkill does not check slots); Daggers at level 5 kept every coverage flag true, an invulnerable drifting player, checkpoints every 20 s.
 function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean; detonated: boolean; meteors: boolean; struck: boolean; beamed: boolean; droned: boolean; daggered: boolean }): number[] {
   const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(7), input: { x: 0.6, y: 0.3 } });
@@ -27,6 +30,10 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   // The Drone is held at level 4 (two drones, range 280): at level 5 the arena's few enemies die to the drones before the beam or a meteor ever reaches one, and the run would no longer cover them.
   for (let k = 0; k < 4; k++) applySkill(g.player.stats, 'drone');
   for (let k = 0; k < DAGGER_LEVEL; k++) applySkill(g.player.stats, 'daggers');
+  for (const [fork, weapon, more] of FORKS) {
+    applySkill(g.player.stats, fork);
+    for (let k = 0; k < more; k++) applySkill(g.player.stats, weapon);
+  }
   const out: number[] = [];
   const mn = g.wstate.mines;
   const prevOn = new Uint8Array(mn.on.length);
@@ -93,7 +100,7 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   return out;
 }
 
-const EXPECTED: number[] = [1726924163, 2723321070, 1204864314];
+const EXPECTED: number[] = [1123580421, 4231008552, 1823655160];
 
 test('a maxed build hashes the same on every run and on both engines', () => {
   const a = run();

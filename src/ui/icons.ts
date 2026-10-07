@@ -33,7 +33,7 @@ const PATHS: Record<string, string> = {
 };
 
 export function icon(id: string): string {
-  const p = PATHS[id];
+  const p = PATHS[id.split('.')[0]]; // a branch id reuses its weapon's icon
   if (!p) throw new Error(`unknown icon: ${id}`);
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 }

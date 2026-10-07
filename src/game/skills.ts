@@ -1,5 +1,5 @@
 import { MAX_WEAPONS, WEAPONS } from './weapons.ts';
-import type { WeaponDef } from './weapons.ts';
+import type { Branch, WeaponDef } from './weapons.ts';
 import type { PlayerStats } from './player.ts';
 import { MOD_MAX, MODS } from './modifiers.ts';
 import type { ModDef } from './modifiers.ts';
@@ -28,6 +28,9 @@ const PASSIVES: Skill[] = [
 
 const slotsUsed = (s: PlayerStats): number => Object.keys(s.weapons).length + 1; // the bow always holds one
 
+// A fork is pending while the weapon sits at level 2 with no branch chosen.
+export const forkPending = (s: PlayerStats, w: WeaponDef): boolean => !!w.branches && (s.weapons[w.id] ?? 0) === 2 && !s.branches[w.id];
+
 function weaponSkill(w: WeaponDef): Skill {
   const level = (s: PlayerStats): number => s.weapons[w.id] ?? 0;
   return {
@@ -35,12 +38,29 @@ function weaponSkill(w: WeaponDef): Skill {
     id: w.id,
     name: w.name,
     desc: w.desc,
-    available: (s) => level(s) < w.maxLevel && (level(s) > 0 || slotsUsed(s) < MAX_WEAPONS),
+    available: (s) => level(s) < w.maxLevel && !forkPending(s, w) && (level(s) > 0 || slotsUsed(s) < MAX_WEAPONS),
     tag: (s) => (level(s) === 0 ? 'NEW' : `Lv ${level(s)} → ${level(s) + 1}`),
     apply: (s) => {
       const next = Math.min(w.maxLevel, level(s) + 1);
       s.weapons[w.id] = next;
       w.onLevel?.(s, next);
+    },
+  };
+}
+
+function forkSkill(w: WeaponDef, i: 0 | 1): Skill {
+  const b: Branch = w.branches![i];
+  return {
+    arena: true,
+    id: `${w.id}.${i === 0 ? 'a' : 'b'}`,
+    name: b.name,
+    desc: b.desc,
+    available: (s) => forkPending(s, w),
+    tag: () => 'FORK',
+    apply: (s) => {
+      s.branches[w.id] = i + 1;
+      s.weapons[w.id] = 3;
+      w.onLevel?.(s, 3);
     },
   };
 }
@@ -57,7 +77,7 @@ function modifierSkill(m: ModDef): Skill {
   };
 }
 
-export const SKILLS: Skill[] = [...PASSIVES, ...WEAPONS.map(weaponSkill), ...MODS.map(modifierSkill)];
+export const SKILLS: Skill[] = [...PASSIVES, ...WEAPONS.map(weaponSkill), ...WEAPONS.filter((w) => w.branches).flatMap((w) => [forkSkill(w, 0), forkSkill(w, 1)]), ...MODS.map(modifierSkill)];
 
 export const SKILLS_BY_ID = Object.fromEntries(SKILLS.map((s) => [s.id, s]));
 
@@ -72,14 +92,21 @@ export function offerTag(stats: PlayerStats, id: string): string {
   return SKILLS_BY_ID[id]?.tag?.(stats) ?? '';
 }
 
-// rng: () => number in [0, 1). Partial Fisher-Yates over the skills that can be offered: `arena` skills only when
+// rng: () => number in [0, 1). Full Fisher-Yates shuffle of the skills that can be offered: `arena` skills only when
 // `arena` is true (rooms keeps the original pool), and none that `available(stats)` rules out (already owned or maxed).
+// A pending fork's `.a` and `.b` cards are one unit in the shuffle, so the pair is always offered together.
 export function pickChoices(rng: () => number, n = 3, stats: PlayerStats | null = null, arena = false): string[] {
   const ids = SKILLS.filter((k) => (arena || !k.arena) && (!stats || !k.available || k.available(stats))).map((k) => k.id);
-  const m = Math.min(n, ids.length);
-  for (let i = 0; i < m; i++) {
-    const j = i + Math.floor(rng() * (ids.length - i));
-    [ids[i], ids[j]] = [ids[j], ids[i]];
+  const units: string[][] = [];
+  for (const id of ids) {
+    if (id.endsWith('.b')) continue; // travels with its '.a'
+    units.push(id.endsWith('.a') ? [id, `${id.slice(0, -1)}b`] : [id]);
   }
-  return ids.slice(0, m);
+  for (let i = units.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [units[i], units[j]] = [units[j], units[i]];
+  }
+  const out: string[] = [];
+  for (const u of units) if (out.length + u.length <= n) out.push(...u);
+  return out;
 }

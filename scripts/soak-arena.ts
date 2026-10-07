@@ -24,7 +24,7 @@ const g = createGame({ capacity: 50000, bounds: ARENA_BOUNDS, mode: createArena(
 if (bot === 'still') g.player.hp = g.player.maxHp = 1e9;
 
 // Smart bot skill priority, first wins: weapons, then the six modifiers, then the other upgrades. Unlisted ids sort first (indexOf -1), so list every id.
-const PRIORITY = ['multishot', 'rapid', 'power', 'shockwave', 'chain', 'blade', 'boomerang', 'flame', 'mines', 'meteor', 'beam', 'drone', 'daggers', 'crit', 'explode', 'vamp', 'frost', 'ignite', 'knockback', 'homing', 'pierce', 'regen', 'ricochet', 'magnet', 'swift'];
+const PRIORITY = ['multishot', 'rapid', 'power', 'shockwave', 'shockwave.a', 'shockwave.b', 'chain', 'chain.a', 'chain.b', 'blade', 'blade.a', 'blade.b', 'boomerang', 'flame', 'mines', 'meteor', 'beam', 'drone', 'drone.a', 'drone.b', 'daggers', 'crit', 'explode', 'vamp', 'frost', 'ignite', 'knockback', 'homing', 'pierce', 'regen', 'ricochet', 'magnet', 'swift'];
 // --picks=random takes a random offered card (own seeded RNG, so the sim is untouched); --picks=a,b,c ranks the listed ids first (the rest keep the smart order). Default: smart bot uses PRIORITY, the others take the first card.
 const picks = arg('picks', '');
 const pickRng = seeded(Number(arg('seed', 1)) + 1000003);

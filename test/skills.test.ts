@@ -36,7 +36,7 @@ test('pickChoices returns distinct valid ids for any rng', () => {
 });
 
 test('rooms never offers arena skills; arena does, minus owned or maxed ones', () => {
-  const arenaIds = SKILLS.filter((s) => s.arena).map((s) => s.id);
+  const arenaIds = SKILLS.filter((s) => s.arena && !s.id.includes('.')).map((s) => s.id); // fork cards need a level-2 weapon (see branches.test.ts)
   for (const rng of [() => 0, () => 0.5, () => 0.999]) {
     for (const id of pickChoices(rng, 3)) assert.ok(!arenaIds.includes(id), id);
   }

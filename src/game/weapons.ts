@@ -27,12 +27,17 @@ export const MAX_WEAPONS = 5;
 // A levelled weapon. skills.ts turns each into an arena-only skill: the first pick takes it (level 1), later picks
 // level it, and it drops out of the offer at maxLevel or when every slot is taken. `onLevel` runs after the level
 // rises, for weapons that cache a stat (blades write stats.orbit); weapons with an update read their level each tick.
+// One side of a weapon's level-2 fork. skills.ts turns a pair into the cards `<weapon>.a` and `<weapon>.b`; the weapon's
+// update (or bladePos) reads stats.branches[weapon] (1 = a, 2 = b).
+export interface Branch { name: string; desc: string }
+
 export interface WeaponDef {
   id: string;
   name: string;
   desc: string;
   maxLevel: number;
   onLevel?: (s: PlayerStats, level: number) => void;
+  branches?: [Branch, Branch]; // present on weapons that fork at level 2
   update?: (game: Game, level: number, dt: number) => number; // runs each tick while owned; returns kills
 }
 

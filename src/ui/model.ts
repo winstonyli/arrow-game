@@ -33,6 +33,16 @@ export interface ArenaHud extends HudCommon {
 }
 export type HudModel = RoomsHud | ArenaHud;
 
+// HUD chips are per weapon: a branch pick (`chain.a`) counts toward its weapon's chip, in first-seen order.
+function foldBranches(skills: Record<string, number>): { id: string; count: number }[] {
+  const out = new Map<string, number>();
+  for (const [id, count] of Object.entries(skills)) {
+    const base = id.split('.')[0];
+    out.set(base, (out.get(base) ?? 0) + count);
+  }
+  return [...out].map(([id, count]) => ({ id, count }));
+}
+
 // Everything the DOM layer shows, as plain values, so it can be tested without a DOM.
 export function hudModel(game: Game, kind: ModeName): HudModel {
   const p = game.player;
@@ -40,7 +50,7 @@ export function hudModel(game: Game, kind: ModeName): HudModel {
     hpPct: (Math.max(0, p.hp) / p.maxHp) * 100,
     hp: Math.max(0, Math.ceil(p.hp)),
     kills: game.kills,
-    skills: Object.entries(game.skills).map(([id, count]) => ({ id, count })),
+    skills: foldBranches(game.skills),
     boss: game.time - game.bossAt < BOSS_BANNER_S,
   };
   // `kind` first, then the common fields, then the kind's own: the same key order the model always had.

@@ -37,9 +37,9 @@ const P_SLOW = P_WEAPON + 1;
 const P_BURN = P_SLOW + 1;
 export const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9', '#ffa657', FROST_TINT, IGNITE_TINT];
 const RING_LINES = 3; // concentric one-pixel rings make the shockwave's visible width
-const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
+export const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
 const BOLT_DOT_R = 2.5;
-const MAX_BOLT_DOTS = 160; // a full-length level-5 zap is about 120 dots
+export const MAX_BOLT_DOTS = 200; // a full-length level-5 Daisy Chain zap is about 175 dots (tested)
 // Instances the buffer reserves for weapon visuals: the rings, the zap's dots, the boomerangs, the fire patches, the mines, the meteor strike rings, the beam's dots, the drones' bodies and tracers, the daggers' heads and trails.
 export const WEAPON_INSTANCES = RING_LINES + MAX_BOLT_DOTS + MAX_BOOMS + FIRE_CAP + MINE_CAP + METEOR_CAP + BEAM_MAX_DOTS + DRONE_INSTANCES + DAGGER_INSTANCES;
 const ALPHAS = COLORS.map((_, i) => (i === P_PLAYER_BLINK ? 0.4 : 1));

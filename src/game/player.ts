@@ -27,6 +27,7 @@ export function baseStats() {
     orbit: 0, // blades circling the player
     moveFireRate: 0, // fire-rate multiplier while moving; 0 = no shooting on the move (rooms), arena sets 0.5
     weapons: {} as Record<string, number>, // weapon id -> level (1..maxLevel); the bow is not listed and uses a slot
+    branches: {} as Record<string, number>, // weapon id -> 1 | 2 once its level-2 fork is taken (hashed); 0 / missing = no branch
     damageMult: 1, // all weapons (Power Shot)
     cooldownMult: 1, // multiplies every weapon interval except Beam, Flame trail and Orbit Blade, which have none (Rapid Fire divides it)
     bladeDps: BLADE_DPS, // per blade, set by the Orbit Blade level
