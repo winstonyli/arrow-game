@@ -31,7 +31,7 @@ Requires [Bun](https://bun.sh). Node is only used for an optional cross-engine t
 bun install          # dev dependencies only
 bun run dev          # Vite dev server on http://localhost:8000
 bun run build        # production bundle in dist/
-bun test             # the full test suite (401 tests)
+bun test             # the full test suite (426 tests)
 node --test test/*.test.ts   # same tests on Node/V8, a cross-engine check of the golden hashes
 bun run typecheck    # tsc --noEmit
 ```
@@ -46,9 +46,10 @@ In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` first (or use PowerShell), beca
 
 ## Features
 
-- **Weapons** (Pit, levels 1 to 5, up to four held at once alongside the bow): Whirligig, Quake, Live Wire, Yo-Yo, Hot Heels, Breadcrumbs, Incoming!, Lighthouse, Hornets and Pincushion; the bow with its Multishot, Piercing, Ricochet and Homing upgrades.
+- **Weapons** (Pit, levels 1 to 5, up to four held at once alongside the bow): Whirligig, Quake, Live Wire, Yo-Yo, Hot Heels, Breadcrumbs, Incoming!, Lighthouse, Hornets and Pincushion; the bow with its Multishot, Piercing, Ricochet and Homing upgrades. Whirligig, Quake, Live Wire and Hornets fork at level 2 into a choice of two branches (Corona Wire or Daisy Chain, Aftershock or Fissure, Carousel or Blender, Hive Mind or Stinger).
+- **Level-up glow**: hover, focus or press a card and the HUD weapon chips it affects light up while the rest dim.
 - **Modifiers** (Pit, levels 1 to 5): Lucky Strike, Personal Space, Vampiric, Popcorn, Molasses and Cooked.
-- **Deterministic replays**: every run is its seed plus quantized inputs and picks, so it can be re-simulated exactly and verified (`SIM_VERSION` 12).
+- **Deterministic replays**: every run is its seed plus quantized inputs and picks, so it can be re-simulated exactly and verified (`SIM_VERSION` 13).
 - **Daily challenges, ghosts and share codes**, as described above.
 - **Rendering and polish**: WebGL2 renderer with a Canvas2D fallback (`?renderer=canvas2d`), motion trails, screen shake and hit effects, and WebAudio-synthesized sound with no audio files.
 

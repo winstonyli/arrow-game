@@ -3,6 +3,16 @@
 Versioning and what counts as a release: see "Versioning and commits" in the README. Each entry names the
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
+## v0.4.0
+`SIM_VERSION` 13, `REPLAY_VERSION` 1 (replays and echoes from v0.3.1 are flagged stale and cannot be watched or raced; the file format is unchanged). Build depth: more to choose between within a run. Details in docs/DEVELOPMENT.md ("Build depth").
+
+- Branches: Whirligig, Quake, Live Wire and Hornets each fork at level 2. The two branch cards are offered together (the ordinary card is withheld until you choose), carry a FORK tag, and put the weapon at level 3 on the chosen branch. Live Wire: Corona Wire (a pulse zaps the closest enemies around you) or Daisy Chain (3 more jumps, fades less, 15% softer). Quake: Aftershock (a second ring, both shove) or Fissure (a narrow crack, 2.4x reach, 1.8x damage). Whirligig: Carousel (wide orbit, 15% softer) or Blender (tight, twice the spin, 30% harder). Hornets: Hive Mind (2 more hornets at 70% damage) or Stinger (1.6x range, 1.5x damage, 1.3x slower). The chosen branch is hashed.
+- Hornets: the drone cap grows from 3 to 5 (Hive Mind).
+- Parity: one coverage table (`src/game/coverage.ts`) now drives both the sim and the UI. Gaps closed: Quake pushes with Personal Space; Whirligig and Yo-Yo apply Molasses and Cooked; Yo-Yo, Breadcrumbs and Incoming! can crit.
+- Level-up screen: hovering, focusing or pressing a card lights the HUD chips it affects and dims the rest. The Quick Draw, Lucky Strike, Personal Space, Molasses and Cooked descriptions no longer list weapons, and Quick Draw reads "The bow and your timed weapons attack 30% faster".
+- Balance (paired sweep, 30 seeds): Corona Wire's reach 90 to 220 px, Fissure's reach 1.8x to 2.4x, damage 1.4x to 1.8x and crack 40 to 60 px. Daisy Chain, Hive Mind and Stinger still outrun Corona Wire, and Carousel and Blender need a play test (docs/DEVELOPMENT.md, "Backlog").
+- Tests: 426 on Bun and Node. Not run for this entry: `bench:render` and `soak` (the machine was about 95% busy).
+
 ## v0.3.1
 `SIM_VERSION` 12, `REPLAY_VERSION` 1 (replays and share codes from v0.3.0 stop verifying; the file format is unchanged). The naming pass is display text only and ids stay fixed; the sim changes are the dagger pool and the Popcorn trim below; the run stats are presentation only.
 
