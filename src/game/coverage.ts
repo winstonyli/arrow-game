@@ -9,13 +9,13 @@ const c = (crit: boolean, knock: boolean, status: boolean, tick: boolean, note: 
 
 export const COVERAGE: Record<CoverageId, Coverage> = {
   bow: c(true, true, true, false, 'Arrows hit once, in a direction.'),
-  blade: c(false, false, false, false, 'Per-tick damage: crits and pushes would be noise.'),
-  shockwave: c(true, false, true, false, 'No push yet (Task 2 adds it).'),
+  blade: c(false, false, true, false, 'Per-tick damage: crits and pushes would be noise; contact still applies Molasses and Cooked.'),
+  shockwave: c(true, true, true, false, 'The ring pushes along the line from its origin.'),
   chain: c(true, true, true, false, 'Each jump is a hit with a direction.'),
-  boomerang: c(false, false, false, false, 'No status yet (Task 2 adds it).'),
+  boomerang: c(true, false, true, false, 'Out and back along one line, so a push direction is ambiguous.'),
   flame: c(false, false, true, true, 'Tick damage: no crits or pushes.'),
-  mines: c(false, true, true, false, 'No crit yet (Task 2 adds it).'),
-  meteor: c(false, true, true, false, 'No crit yet (Task 2 adds it).'),
+  mines: c(true, true, true, false, 'A blast pushes away from its centre.'),
+  meteor: c(true, true, true, false, 'A blast pushes away from its centre.'),
   beam: c(false, false, true, true, 'Tick damage: no crits or pushes.'),
   drone: c(true, false, true, false, 'Stings have no direction worth pushing along.'),
   daggers: c(true, false, true, false, 'Pierce through; a push would fight the flight path.'),

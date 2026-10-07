@@ -5,11 +5,20 @@ import { fileURLToPath } from 'node:url';
 import { COVERAGE, HIT_FLAGS, covers } from '../src/game/coverage.ts';
 import { HIT_CRIT, HIT_KNOCK, HIT_STATUS, HIT_TICK } from '../src/game/hitflags.ts';
 import { WEAPONS } from '../src/game/weapons.ts';
-import { MODS } from '../src/game/modifiers.ts';
+import { MODS, KNOCK_PX, FROST_SECS } from '../src/game/modifiers.ts';
+import { createGame } from '../src/game/game.ts';
+import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
+import { seeded } from '../src/core/math.ts';
+import { KIND } from '../src/core/world.ts';
+import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
+import { applySkill } from '../src/game/skills.ts';
+import { updateShockwave } from '../src/game/weapons/shockwave.ts';
+import { updateBoomerang } from '../src/game/weapons/boomerang.ts';
+import type { Game } from '../src/game/game.ts';
 
 const C = HIT_CRIT, K = HIT_KNOCK, S = HIT_STATUS, T = HIT_TICK;
-// The intended flags per source. Task 1 pins today's behaviour; Task 2 edits this table on purpose.
-const EXPECTED: Record<string, number> = { bow: C | K | S, blade: 0, shockwave: C | S, chain: C | K | S, boomerang: 0, flame: S | T, mines: S | K, meteor: S | K, beam: S | T, drone: C | S, daggers: C | S };
+// The intended flags per source.
+const EXPECTED: Record<string, number> = { bow: C | K | S, blade: S, shockwave: C | K | S, chain: C | K | S, boomerang: C | S, flame: S | T, mines: C | S | K, meteor: C | S | K, beam: S | T, drone: C | S, daggers: C | S };
 
 test('the coverage table has the bow and every weapon, and its flags are the intended ones', () => {
   assert.deepEqual(Object.keys(COVERAGE).sort(), ['bow', ...WEAPONS.map((w) => w.id)].sort());
@@ -42,4 +51,36 @@ test('no weapon file spells a hit flag itself: every hitEnemy call reads HIT_FLA
     assert.ok(!/\bHIT_(CRIT|KNOCK|STATUS|TICK|SHOVE)\b/.test(text), `${f} spells a flag`);
     for (const line of text.split(/\r?\n/)) if (/\bhitEnemy\(game/.test(line)) assert.ok(/HIT_FLAGS\.\w+/.test(line), `${f}: ${line.trim()}`);
   }
+});
+
+const arenaGame = (): Game => createGame({ capacity: 5000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(1), input: { x: 0, y: 0 } });
+const settle = (g: Game) => g.grid.rebuild(g.world, KIND.ENEMY);
+
+test('Quake pushes a surviving enemy away from the ring origin with Personal Space', () => {
+  const g = arenaGame();
+  applySkill(g.player.stats, 'shockwave');
+  g.player.stats.knockback = 1;
+  const j = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 100, g.player.y);
+  const x0 = g.world.x[j];
+  // Stop at the first hit: a 10 px push moves the enemy ahead of the 6.7 px/tick ring, which then catches it again.
+  for (let k = 0; k < 60 && g.world.x[j] === x0; k++) { settle(g); updateShockwave(g, 1, 1 / 60); }
+  assert.ok(Math.abs(g.world.x[j] - (g.player.x + 100 + KNOCK_PX)) < 1e-2);
+  assert.ok(Math.abs(g.world.y[j] - g.player.y) < 1e-2);
+});
+
+test('Whirligig hits start Molasses', () => {
+  const g = arenaGame();
+  g.player.stats.frost = 1;
+  const j = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 100, g.player.y);
+  g.hits.blade(j, 1, 0, 0);
+  assert.equal(g.world.slowT[j], FROST_SECS);
+});
+
+test('Yo-Yo hits start Molasses', () => {
+  const g = arenaGame();
+  applySkill(g.player.stats, 'boomerang');
+  g.player.stats.frost = 1;
+  const j = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x + 80, g.player.y);
+  for (let k = 0; k < 120 && g.world.slowT[j] === 0; k++) { settle(g); updateBoomerang(g, 1, 1 / 60); }
+  assert.equal(g.world.slowT[j], FROST_SECS);
 });

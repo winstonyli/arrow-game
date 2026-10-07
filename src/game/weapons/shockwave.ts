@@ -44,9 +44,11 @@ export function updateShockwave(game: Game, level: number, dt: number): number {
   for (let q = 0; q < n; q++) {
     const j = grid.out[q];
     if (world.kind[j] !== KIND.ENEMY) continue;
-    const d = Math.hypot(world.x[j] - s.x, world.y[j] - s.y);
+    const dx = world.x[j] - s.x;
+    const dy = world.y[j] - s.y;
+    const d = Math.hypot(dx, dy);
     if (d <= prev || d > s.r) continue;
-    kills += hitEnemy(game, j, dmg, HIT_FLAGS.shockwave, 0, 0);
+    kills += hitEnemy(game, j, dmg, HIT_FLAGS.shockwave, dx, dy);
   }
   if (s.r >= s.max) s.on = false;
   return kills;

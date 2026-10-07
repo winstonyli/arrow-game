@@ -244,7 +244,7 @@ test('each blast shows one ring at least as wide as its damage radius', () => {
   for (const [, , r] of rings) assert.ok(r >= 70);
 });
 
-test('the Shockwave ring never knocks back, even with Knockback maxed', () => {
+test('the Shockwave ring pushes a surviving enemy outward from its origin with Knockback', () => {
   const g = arenaGame();
   applySkill(g.player.stats, 'shockwave');
   g.player.stats.knockback = 5;
@@ -253,12 +253,12 @@ test('the Shockwave ring never knocks back, even with Knockback maxed', () => {
   const x = g.world.x[j];
   const y = g.world.y[j];
   const hp = g.world.hp[j];
-  for (let k = 0; k < 40; k++) {
+  for (let k = 0; k < 40 && g.world.hp[j] === hp; k++) {
     settle(g);
     updateShockwave(g, 1, 1 / 60);
   }
   assert.ok(g.world.hp[j] < hp, 'the ring did hit it');
-  assert.equal(g.world.x[j], x);
+  assert.ok(g.world.x[j] > x);
   assert.equal(g.world.y[j], y);
 });
 

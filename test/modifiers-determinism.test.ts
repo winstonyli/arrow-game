@@ -12,15 +12,17 @@ import { DAGGERS } from '../src/game/weapons/daggers.ts';
 import { KIND } from '../src/core/world.ts';
 import { METEOR_TELEGRAPH } from '../src/game/weapons/meteor.ts';
 
-// Daggers' level in the maxed build: the highest level at which every coverage flag below stays true (Task 1 procedure).
+// Daggers' level in the maxed build: the highest level at which every coverage flag below stays true.
 const DAGGER_LEVEL = 5;
+// Mines' level in the maxed build, found the same way (a scan over the weapon levels): only 3 keeps every flag below true.
+const MINES_LEVEL = 3;
 
-// Ten weapons (the bow aside) and all six modifiers at level 5, except the Drone at level 4 (at 5 it kills the few enemies before the beam or a meteor reaches one; applySkill does not check slots); Daggers at level 5 kept every coverage flag true, an invulnerable drifting player, checkpoints every 20 s.
+// Ten weapons (the bow aside) and all six modifiers at level 5, except Mines at MINES_LEVEL and the Drone at level 4 (at 5 it kills the few enemies before the beam or a meteor reaches one; applySkill does not check slots); Daggers at level 5 kept every coverage flag true, an invulnerable drifting player, checkpoints every 20 s.
 function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean; detonated: boolean; meteors: boolean; struck: boolean; beamed: boolean; droned: boolean; daggered: boolean }): number[] {
   const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(7), input: { x: 0.6, y: 0.3 } });
   g.player.hp = g.player.maxHp = 1e9;
   for (const id of ['blade', 'shockwave', 'chain', 'boomerang', 'flame', 'mines', 'meteor', 'beam', 'crit', 'knockback', 'explode', 'vamp', 'frost', 'ignite']) {
-    for (let k = 0; k < 5; k++) applySkill(g.player.stats, id);
+    for (let k = 0; k < (id === 'mines' ? MINES_LEVEL : 5); k++) applySkill(g.player.stats, id);
   }
   // The Drone is held at level 4 (two drones, range 280): at level 5 the arena's few enemies die to the drones before the beam or a meteor ever reaches one, and the run would no longer cover them.
   for (let k = 0; k < 4; k++) applySkill(g.player.stats, 'drone');
@@ -91,7 +93,7 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   return out;
 }
 
-const EXPECTED: number[] = [608878031, 1908451674, 2543615662];
+const EXPECTED: number[] = [1726924163, 2723321070, 1204864314];
 
 test('a maxed build hashes the same on every run and on both engines', () => {
   const a = run();

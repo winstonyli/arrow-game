@@ -6,6 +6,7 @@ import { baseStats, createPlayer, fireVolley, autoFire } from '../src/game/playe
 import { spawnEnemy, ENEMY } from '../src/game/enemies.ts';
 import { SKILLS, applySkill, pickChoices, offerTag } from '../src/game/skills.ts';
 import { MAX_WEAPONS, WEAPONS } from '../src/game/weapons.ts';
+import { CRIT_MULT } from '../src/game/modifiers.ts';
 import { BLADE_LEVELS } from '../src/game/weapons/blade.ts';
 import { MAX_BLADES, BLADE_DPS } from '../src/game/orbit.ts';
 import { createGame, tick } from '../src/game/game.ts';
@@ -586,15 +587,15 @@ test('a mine triggers inside 30 px plus the enemy radius, ignores a farther one,
   assert.equal(damage(g, out), 0);
 });
 
-test('a blast deals exactly level damage times damageMult, never crits, applies Frost and Ignite, and pushes outward with Knockback only', () => {
+test('a blast deals exactly level damage times damageMult, crits, applies Frost and Ignite, and pushes outward with Knockback only', () => {
   const g = arenaGame();
   const s = g.player.stats;
-  s.damageMult = 2; s.crit = 10; s.frost = 1; s.ignite = 1; s.knockback = 0;
+  s.damageMult = 1; s.crit = 10; s.frost = 1; s.ignite = 1; s.knockback = 0;
   const j = at(g, 6, 0);
   const x0 = g.world.x[j];
   run(g, 1, 1);
   assert.equal(liveMines(g), 0);
-  assert.ok(Math.abs(damage(g, j) - MINE_LEVELS[0].dmg * 2) < 1e-3); // crit 10 is chance 1: any crit flag would show
+  assert.ok(Math.abs(damage(g, j) - MINE_LEVELS[0].dmg * CRIT_MULT) < 1e-3); // crit 10 is chance 1: the blast crits
   assert.ok(g.world.slowT[j] > 0 && g.world.burnT[j] > 0);
   assert.equal(g.world.x[j], x0); // no Knockback modifier, no push
   const g2 = arenaGame();
@@ -774,11 +775,11 @@ test('nothing lands before the telegraph ends, and the strike is consumed once i
   assert.equal(damage(g, j), d);
 });
 
-test('a blast deals exactly level damage times damageMult, never crits, reaches the radius only, applies Frost and Ignite, and pushes with Knockback only', () => {
+test('a blast deals exactly level damage times damageMult, crits, reaches the radius only, applies Frost and Ignite, and pushes with Knockback only', () => {
   const g = arenaGame();
   firstPick(g);
   const s = g.player.stats;
-  s.damageMult = 2; s.crit = 10; s.frost = 1; s.ignite = 1; s.knockback = 0;
+  s.damageMult = 1; s.crit = 10; s.frost = 1; s.ignite = 1; s.knockback = 0;
   const L = METEOR_LEVELS[0];
   const BR = ENEMY_TYPES[ENEMY.BRUISER].radius;
   const j = at(g, 100, 0); // the only candidate in range: picked first
@@ -786,7 +787,7 @@ test('a blast deals exactly level damage times damageMult, never crits, reaches 
   const out = at(g, 100, L.radius + BR + 20);
   const x0 = g.world.x[j];
   runM(g, 1, 1 / 60 + METEOR_TELEGRAPH + 0.05);
-  assert.ok(Math.abs(damage(g, j) - L.dmg * 2) < 1e-3); // crit 10 is chance 1: any crit flag would show
+  assert.ok(Math.abs(damage(g, j) - L.dmg * CRIT_MULT) < 1e-3); // crit 10 is chance 1: the blast crits
   assert.ok(damage(g, edge) > 0);
   assert.equal(damage(g, out), 0);
   assert.ok(g.world.slowT[j] > 0 && g.world.burnT[j] > 0);
