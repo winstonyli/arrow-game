@@ -148,6 +148,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     bests.rooms,
     button('Challenges', 'g', () => on.onChallenges()),
     h('div', 'mu', 'WASD or arrows to move. Aim is automatic.'),
+    h('div', 'mu version', typeof __APP_VERSION__ === 'undefined' ? 'dev' : `v${__APP_VERSION__}`),
   );
   title.append(titlePanel);
 

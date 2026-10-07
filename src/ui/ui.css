@@ -87,6 +87,7 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 
 .over-title { color: var(--x); }
 .new-best { color: var(--g); }
+.version { font-size: calc(var(--u) * 9); opacity: 0.6; }
 .title-name { color: var(--a); font-size: calc(var(--u) * 26) !important; }
 
 /* bottom: 42u clears the skill chips (bottom 8u + ~26u tall), which stay visible while watching. */

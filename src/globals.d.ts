@@ -20,6 +20,8 @@ export interface ArrowGameDebug {
 }
 
 declare global {
+  /** package.json version, injected by vite (vite.config.ts); undefined under bun test. */
+  const __APP_VERSION__: string;
   interface Window {
     arrowGame: ArrowGameDebug;
   }
