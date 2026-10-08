@@ -1,0 +1,55 @@
+{
+  "priority": [
+    "shockwave",
+    "chain.a",
+    "blade.a",
+    "chain",
+    "shockwave.a",
+    "rapid",
+    "power",
+    "blade",
+    "regen",
+    "shockwave.b",
+    "drone.a",
+    "meteor",
+    "explode",
+    "chain.b",
+    "multishot",
+    "drone",
+    "daggers",
+    "boomerang",
+    "vamp",
+    "flame",
+    "blade.b",
+    "beam",
+    "frost",
+    "knockback",
+    "mines",
+    "swift",
+    "pierce",
+    "drone.b",
+    "crit",
+    "homing",
+    "magnet",
+    "ignite",
+    "ricochet"
+  ],
+  "gens": 7,
+  "pop": 24,
+  "seeds": 3,
+  "minutes": 20,
+  "heldout": {
+    "seeds": 30,
+    "base": [
+      886.8322222217442,
+      1093.9611111104446,
+      1183.3694444436965
+    ],
+    "evolved": [
+      1182.079999999253,
+      1178.5461111103675,
+      1199.9999999992367
+    ]
+  },
+  "generated": "2026-10-08"
+}

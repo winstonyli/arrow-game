@@ -5,3 +5,5 @@ scripts/evolve-state.json
 scripts/evolve-bot.log
 scripts/evolve-heldout.log
 scripts/evolve-priority-state.json
+scripts/evolve-priority.log
+scripts/evolve-priority-heldout.log
