@@ -398,4 +398,4 @@ Reading it:
 - Clearly worse: Pinball -262 damage/s [-386, -135] and -155 s survival, Molasses -149 [-282, 0], Skewer -115 [-225, -5], Breadcrumbs -92 [-187, -13].
 - Clearly better single picks: Incoming! +119 [42, 212], Quick Draw +78 [2, 178].
 - Everything else spans zero at 20 seeds. The branch rows are granted at the start and the plain rows are priority picks, so the two groups are not directly comparable (same caveat as the earlier sweeps).
-- Compared with the `smart` bot sweeps above, the build ranking is similar (branches on top, Pinball at the bottom), so the earlier conclusions about which builds are strong do not look like artefacts of the weak bot. The absolute numbers are not comparable.
+- Compared with the earlier `smart` bot sweeps: the branches are strong in both. Pinball and Molasses were "not significant" before and are clearly negative now (the longer, stronger runs resolve them), so the weak bot hid at least those two. The absolute numbers are not comparable (different bot, 15 minute cap, 20 seeds).
