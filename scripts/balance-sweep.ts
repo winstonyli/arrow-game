@@ -7,13 +7,9 @@
 // shows fewer than --seeds runs. Repeated looks inflate false positives a little, so use it to screen and rerun survivors in full.
 // Usage: bun scripts/balance-sweep.ts [--seeds=40] [--minutes=6] [--jobs=4] [--builds=id,id,...] [--base=1] [--bot=smart|evolved] [--early=1]
 // Runs scripts/lib/sweep-worker.ts child processes (each does a batch of seeds in one process) at BelowNormal priority; at most --jobs at once (keep it <= a quarter of the cores free).
-import { spawn } from 'node:child_process';
-import os from 'node:os';
-import { readFileSync } from 'node:fs';
 import { SKILLS } from '../src/game/skills.ts';
 import { seeded } from '../src/core/math.ts';
-import { DEFAULT_PARAMS } from './lib/bot.ts';
-import type { BotParams } from './lib/bot.ts';
+import { runAll as runBatches, loadParams } from './lib/sweep-run.ts';
 
 const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
 const nSeeds = Number(arg('seeds', 40));
@@ -23,32 +19,8 @@ const base = Number(arg('base', 1));
 const early = arg('early', '') !== '';
 const builds = arg('builds', '') ? arg('builds', '').split(',') : SKILLS.map((s) => s.id);
 const names = Object.fromEntries(SKILLS.map((s) => [s.id, s.name]));
-const params: BotParams = arg('bot', 'smart') === 'evolved' ? { ...DEFAULT_PARAMS, ...JSON.parse(readFileSync(new URL('./bot-params.json', import.meta.url), 'utf8')).params } : DEFAULT_PARAMS;
-
-interface Run { secs: number; picked: boolean; dps: number }
-
-// Dotted builds are granted at the start, since a random offer rarely reaches a level-2 fork before the bot dies: chain.a = chain, chain, chain.a (level 3 with the branch); chain.0 = chain, chain (level 2, no branch: the reference row). Other builds are ranked first in the pick order.
-function runBatch(seeds: number[], force: string): Promise<Run[]> {
-  return new Promise((resolve, reject) => {
-    const spec = JSON.stringify({ params, minutes, force, seeds });
-    const p = spawn(process.execPath, ['scripts/lib/sweep-worker.ts', spec], { stdio: ['ignore', 'pipe', 'inherit'] });
-    try { os.setPriority(p.pid!, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch { /* best effort */ }
-    let out = '';
-    p.stdout!.on('data', (d) => (out += d));
-    p.on('close', (code) => {
-      const line = out.split(/\r?\n/).find((l) => l.startsWith('RESULT '));
-      if (code !== 0 || !line) return reject(new Error(`worker failed for build "${force}" (exit ${code})`));
-      resolve(JSON.parse(line.slice(7)));
-    });
-  });
-}
-
-// All seeds of one build, split into at most `jobs` contiguous batches run in parallel; results are in seed order.
-async function runAll(seeds: number[], force: string): Promise<Run[]> {
-  const per = Math.ceil(seeds.length / jobs);
-  const parts = Array.from({ length: Math.ceil(seeds.length / per) }, (_, i) => seeds.slice(i * per, (i + 1) * per));
-  return (await Promise.all(parts.map((s) => runBatch(s, force)))).flat();
-}
+const params = loadParams(arg('bot', 'smart'));
+const runAll = (seeds: number[], force: string) => runBatches(params, minutes, jobs, seeds, force);
 
 const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
 // Mean of the paired differences with a 95% percentile-bootstrap interval (seeded, so the report is reproducible).
