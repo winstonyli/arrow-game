@@ -145,3 +145,13 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 .title-menu > :nth-child(2) { animation-delay: 0.1s; }
 .title-menu > :nth-child(3) { animation-delay: 0.2s; }
 @media (prefers-reduced-motion: reduce) { .title-menu > * { animation: none; } }
+/* Transitions: hover and focus glows ease in and out, bars glide, overlays fade in (hiding is instant: display: none cannot transition). */
+.btn { transition: box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease; }
+.pause-btn { transition: border-color 0.15s ease; }
+.card { transition: border-color 0.18s ease, box-shadow 0.18s ease; }
+.card svg { transition: color 0.18s ease; }
+.field { transition: border-color 0.18s ease, box-shadow 0.18s ease; }
+.bar i { transition: width 0.15s ease-out; }
+@keyframes fade { from { opacity: 0; } }
+.overlay, .scrim { animation: fade 0.2s ease-out backwards; }
+@media (prefers-reduced-motion: reduce) { .btn, .pause-btn, .card, .card svg, .field, .bar i { transition: none; } .overlay, .scrim { animation: none; } }
