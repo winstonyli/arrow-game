@@ -131,13 +131,15 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 
 /* Title menu: each button carries its best-run badge on the right; the controls sit behind the "?" corner button. */
 .title-panel { position: relative; }
-.title-menu, .title-help { width: 100%; display: flex; flex-direction: column; gap: calc(var(--u) * 10); }
-.title-menu[hidden], .title-help[hidden] { display: none; }
+.title-menu { width: 100%; display: flex; flex-direction: column; gap: calc(var(--u) * 10); }
+.scrim { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--bg) 80%, transparent); }
+.scrim[hidden] { display: none; }
+.overlay .help-box { width: calc(var(--u) * 250); display: flex; flex-direction: column; gap: calc(var(--u) * 10); animation: rise 0.25s ease-out backwards; }
 .menu-btn { display: flex; align-items: center; justify-content: space-between; padding: calc(var(--u) * 10) calc(var(--u) * 12); text-align: left; }
 .badge { font-size: calc(var(--u) * 10); letter-spacing: calc(var(--u) * 1); padding: calc(var(--u) * 2) calc(var(--u) * 8); border-radius: 99px; background: color-mix(in srgb, currentColor 16%, transparent); white-space: nowrap; }
 .badge.none { opacity: 0.55; }
 .help-btn { position: absolute; top: calc(var(--u) * 8); right: calc(var(--u) * 8); width: auto; min-width: 44px; min-height: 44px; padding: 0; }
-.help-row { display: flex; gap: calc(var(--u) * 10); text-align: left; font-size: calc(var(--u) * 12); color: var(--muted); }
+.help-row { align-self: stretch; display: flex; gap: calc(var(--u) * 10); text-align: left; font-size: calc(var(--u) * 12); color: var(--muted); }
 .help-row b { flex: 0 0 calc(var(--u) * 58); color: var(--a); font-family: var(--display); letter-spacing: calc(var(--u) * 1); text-transform: uppercase; }
 .title-menu > * { animation: rise 0.45s ease-out backwards; }
 .title-menu > :nth-child(2) { animation-delay: 0.1s; }

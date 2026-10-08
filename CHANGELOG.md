@@ -10,7 +10,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 - Enemy hp grows with the clock: x(1 + t/300 + (t/400)^2) at spawn (x1.3 at 1:30, x2.4 at 5:00, x9 at 10:00, x19 at 15:00), splitter swarmers included. Each boss after the first has 50% more hp than the one before. Rooms is unchanged.
 - Measured (paired sweep, 30 seeds): the bot with no forced skill survives 128 s (166 s on the square-view build, 190 s on v0.4.0); with a fork granted at the start: Aftershock +282 s, Corona Wire +76 s, Hive Mind +586 s (about 12 minutes in total), against about +100 to +190 s before. A 15-minute Hive Mind soak reaches the 800-enemy cap around minute 11. Details in docs/DEVELOPMENT.md ("Difficulty curve").
 - The golden arena replay uses seed 20261008 (the blind scripted bot used to die at 31 s with no picks); the title-backdrop test no longer requires a level-up; the maxed-build test seed is 4.
-- Title screen: shorter. The best run is a badge on the right of each button (Arena `4:12`, Rooms `Room 7`, a dim `No runs`), the tagline and the controls line are gone, and the controls sit behind a `?` button in the panel corner (Esc or Close returns to the menu).
+- Title screen: shorter. The best run is a badge on the right of each button (Arena `4:12`, Rooms `Room 7`, a dim `No runs`), the tagline and the controls line are gone, and the controls open as a dialog over the menu from a `?` button in the panel corner (Esc, Close or a click outside dismisses it).
 
 ## v0.4.0
 `SIM_VERSION` 15, `REPLAY_VERSION` 1 (replays from v0.3.1 are flagged stale and cannot be watched or raced; the file format is unchanged). Build depth: more to choose between within a run. Details in docs/DEVELOPMENT.md ("Build depth").

@@ -151,19 +151,25 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   };
   const menu = h('div', 'title-menu');
   menu.append(menuButton('Arena', 'primary b', bests.arena, () => on.onPlay('arena')), menuButton('Rooms', '', bests.rooms, () => on.onPlay('rooms')), menuButton('Challenges', 'g', null, () => on.onChallenges()));
-  // Controls live behind a "?" so the title stays short; it replaces the menu until closed (Esc or Close).
-  const help = h('div', 'title-help');
+  // Controls live behind a "?": a dialog over the menu (the panel goes inert behind it); Esc, Close or a click on the scrim dismisses it.
+  const help = h('div', 'scrim');
+  const helpBox = h('div', 'panel help-box');
+  helpBox.setAttribute('role', 'dialog');
+  helpBox.setAttribute('aria-modal', 'true');
+  helpBox.setAttribute('aria-label', 'Controls');
   help.hidden = true;
   const toggleHelp = (open: boolean) => {
     help.hidden = !open;
-    menu.hidden = open;
+    titlePanel.inert = open;
     helpBtn.setAttribute('aria-expanded', String(open));
-    focusFirst(open ? help : menu);
+    if (open) focusFirst(help);
+    else helpBtn.focus({ preventScroll: true });
   };
   const helpBtn = button('?', 'g help-btn', () => toggleHelp(!!help.hidden));
   helpBtn.setAttribute('aria-label', 'Controls');
   helpBtn.setAttribute('aria-expanded', 'false');
-  help.append(
+  helpBox.append(
+    h('h2', 'glow-text', 'Controls'),
     h('div', 'help-row', '<b>Move</b><span>WASD or arrow keys, or drag on a touch screen</span>'),
     h('div', 'help-row', '<b>Aim</b><span>Automatic</span>'),
     h('div', 'help-row', '<b>Pause</b><span>Esc or P</span>'),
@@ -176,11 +182,14 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   titlePanel.append(
     titleName,
     menu,
-    help,
     helpBtn,
     h('div', 'mu version', typeof __APP_VERSION__ === 'undefined' ? 'dev' : `v${__APP_VERSION__}`),
   );
-  title.append(titlePanel);
+  help.append(helpBox);
+  help.addEventListener('click', (e) => {
+    if (e.target === help) toggleHelp(false);
+  });
+  title.append(titlePanel, help);
 
   const pause = h('div', 'overlay');
   const soundBtn = button('', 'g', () => on.onToggleSound());
