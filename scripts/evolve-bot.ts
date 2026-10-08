@@ -9,7 +9,7 @@
 // every generation, so --resume continues an interrupted run. Workers run at BelowNormal priority; never more than --jobs at once.
 // --target=priority evolves the card-pick order instead (one key in [0, 1] per card, sorted ascending; the steering numbers stay at
 // the scripts/bot-params.json values) and writes scripts/bot-priority.json; its held-out comparison is evolved order vs PRIORITY.
-// Usage: bun scripts/evolve-bot.ts [--target=params|priority] [--gens=40] [--pop=24] [--seeds=3] [--minutes=10] [--jobs=6] [--sigma=0.2] [--heldout=30] [--resume] [--race] [--out=scripts/bot-params.json] [--state=scripts/evolve-state.json]
+// Usage: bun scripts/evolve-bot.ts [--target=params|priority] [--gens=40] [--pop=24] [--seeds=3] [--minutes=10] [--jobs=6] [--sigma=0.2] [--heldout=30] [--resume] [--race] [--fitness=secs|damage] [--out=scripts/bot-params.json] [--state=scripts/evolve-state.json]
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import os from 'node:os';
@@ -21,6 +21,7 @@ import { seeded } from '../src/core/math.ts';
 
 const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
 const prio = arg('target', 'params') === 'priority';
+const metric = arg('fitness', 'secs'); // secs = seconds survived (saturates at the cap); damage = total damage dealt in the run, which keeps ranking bots that survive the whole cap
 const race = process.argv.includes('--race'); // score on one seed first, then finish only the better half on the rest (about 2x faster per generation)
 const gens = Number(arg('gens', 40));
 const pop = Number(arg('pop', 24));
@@ -54,7 +55,7 @@ async function evaluate(p: Cand, seeds: number[]): Promise<number[]> {
   try {
     const list = CONDS.flatMap((grant) => seeds.map((seed) => ({ seed, grant })));
     const out = await new Promise<string>((resolve, reject) => {
-      const c = spawn(process.execPath, ['scripts/lib/eval-worker.ts', JSON.stringify({ params: p.params, front: p.front, minutes, jobs: list })], { stdio: ['ignore', 'pipe', 'inherit'] });
+      const c = spawn(process.execPath, ['scripts/lib/eval-worker.ts', JSON.stringify({ params: p.params, front: p.front, minutes, metric, jobs: list })], { stdio: ['ignore', 'pipe', 'inherit'] });
       children.add(c);
       try { os.setPriority(c.pid!, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch { /* best effort */ }
       let buf = '';
@@ -71,7 +72,8 @@ const mean = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
 // --- parameters <-> unit vector ------------------------------------------------------------------------------------------
 const toUnit = (p: BotParams) => PARAM_KEYS.map((k) => (p[k] - BOUNDS[k][0]) / (BOUNDS[k][1] - BOUNDS[k][0]));
 const clamp01 = (x: number) => (prio ? x : Math.min(1, Math.max(0, x))); // only the order of the card keys matters, so they need no bounds
-const evoParams = prio ? loadBot('evolved-params').params : DEFAULT_PARAMS;
+const current = prio ? loadBot('evolved') : { params: DEFAULT_PARAMS, front: undefined }; // priority target: the numbers stay fixed and the search starts from, and is compared with, the current card order
+const evoParams = current.params;
 const orderOf = (u: number[]): string[] => PRIORITY.map((id, i) => ({ id, i })).sort((a, b) => u[a.i] - u[b.i] || a.i - b.i).map((x) => x.id);
 const fromUnit = (u: number[]): Cand => prio
   ? { params: evoParams, front: orderOf(u) }
@@ -79,7 +81,7 @@ const fromUnit = (u: number[]): Cand => prio
 
 // --- evolution -----------------------------------------------------------------------------------------------------------
 interface State { gen: number; mean: number[]; rngSeed: number; history: { gen: number; meanFit: number; bestFit: number; popMean: number }[] }
-let state: State = { gen: 0, mean: prio ? PRIORITY.map((_, i) => i / (PRIORITY.length - 1)) : toUnit(DEFAULT_PARAMS),rngSeed: 20261008, history: [] };
+let state: State = { gen: 0, mean: prio ? PRIORITY.map((id) => current.front!.indexOf(id) / (PRIORITY.length - 1)) : toUnit(DEFAULT_PARAMS), rngSeed: 20261008, history: [] };
 if (resume && existsSync(statePath)) state = JSON.parse(readFileSync(statePath, 'utf8'));
 const rng = seeded(state.rngSeed + state.gen * 7919);
 const gauss = () => Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(2 * Math.PI * rng());
@@ -121,14 +123,14 @@ async function heldoutRuns(p: Cand): Promise<number[][]> {
   const parts = await Promise.all(chunks(hseeds, 5).map((c) => evaluate(p, c).then((r) => ({ c, r }))));
   return CONDS.map((_, ci) => parts.flatMap(({ c, r }) => r.slice(ci * c.length, (ci + 1) * c.length)));
 }
-const [base, tuned] = await Promise.all([heldoutRuns({ params: evoParams }), heldoutRuns(evolved)]);
+const [base, tuned] = await Promise.all([heldoutRuns({ params: evoParams, front: current.front }), heldoutRuns(evolved)]);
 const label = ['baseline', 'Corona Wire', 'Aftershock'];
 const boot = (d: number[]): [number, number] => { // 95% bootstrap interval of the mean paired difference
   const r = seeded(1);
   const ms = Array.from({ length: 2000 }, () => mean(d.map(() => d[Math.floor(r() * d.length)]))).sort((a, b) => a - b);
   return [ms[50], ms[1949]];
 };
-console.log(`\nHeld-out comparison (${heldout} unseen seeds per build, cap ${minutes} min, mean seconds survived):`);
+console.log(`\nHeld-out comparison (${heldout} unseen seeds per build, cap ${minutes} min, mean ${metric === 'damage' ? 'damage dealt' : 'seconds survived'}):`);
 const rows = CONDS.map((_, i) => {
   const diff = tuned[i].map((v, j) => v - base[i][j]);
   const [lo, hi] = boot(diff);
