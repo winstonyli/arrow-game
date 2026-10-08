@@ -68,19 +68,22 @@ export function makeSteer(p: BotParams, smart: boolean): (g: Game) => void {
   };
 }
 
-export const pickSmart = (offer: string[]): string => [...offer].sort((a, b) => PRIORITY.indexOf(a) - PRIORITY.indexOf(b))[0];
+export const pickSmart = (offer: string[], rank: string[] = PRIORITY): string => [...offer].sort((a, b) => rank.indexOf(a) - rank.indexOf(b))[0];
 
-// Headless smart-bot run for the evolution: returns the seconds survived (capped at `minutes`) and the kill count.
-// `grant` ids are applied before the first tick, as in soak-arena --grant.
-export function runHeadless(p: BotParams, seed: number, grant: string[], minutes: number): { secs: number; died: boolean; kills: number } {
+// Headless smart-bot run for the evolution and the balance sweep: returns the seconds survived (capped at `minutes`), the kill count,
+// the skills taken and the damage dealt (weapons + upgrades, as soak-arena --json reports it).
+// `grant` ids are applied before the first tick, as in soak-arena --grant; `front` ids are ranked ahead of PRIORITY, as in --picks.
+export function runHeadless(p: BotParams, seed: number, grant: string[], minutes: number, front: string[] = []): { secs: number; died: boolean; kills: number; skills: Record<string, number>; dmg: number } {
   const g = createGame({ capacity: 50000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(seed), input: { x: 0, y: 0 } });
   for (const id of grant) { applySkill(g.player.stats, id); g.skills[id] = (g.skills[id] ?? 0) + 1; }
   const steer = makeSteer(p, true);
+  const rank = front.length ? [...front, ...PRIORITY] : PRIORITY;
   const ticks = Math.round(minutes * 3600);
   for (let k = 0; k < ticks && !g.over; k++) {
-    if (g.offer) choose(g, pickSmart(g.offer));
+    if (g.offer) choose(g, pickSmart(g.offer, rank));
     steer(g);
     tick(g, 1 / 60);
   }
-  return { secs: g.time, died: g.over, kills: g.kills };
+  const sum = (a: ArrayLike<number>) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i]; return s; };
+  return { secs: g.time, died: g.over, kills: g.kills, skills: g.skills, dmg: sum(g.stats.dmg) + sum(g.stats.up) };
 }
