@@ -1,13 +1,17 @@
 import { KIND } from './world.ts';
 import type { World, Kind } from './world.ts';
 
-// Uniform grid, rebuilt every tick by counting sort (no allocation).
+// Uniform grid, rebuilt every tick by counting sort (no allocation). The sort touches only the occupied cells, so a
+// rebuild costs O(entities), not O(arena cells): a 3000 x 2000 arena has about 6000 cells and a few hundred enemies.
 export class Grid {
   cs: number;
   cols: number;
   rows: number;
-  start: Int32Array;
+  begin: Int32Array; // first slot of a cell in `items`; valid only where count > 0
+  count: Int32Array; // entities in a cell (0 for every cell not in `occupied`)
   cursor: Int32Array;
+  occupied: Int32Array; // the cells with count > 0 after the last rebuild
+  nOccupied: number;
   items: Uint32Array;
   cell: Int32Array;
   out: Uint32Array;
@@ -18,8 +22,11 @@ export class Grid {
     this.cols = Math.ceil(width / cellSize);
     this.rows = Math.ceil(height / cellSize);
     const cells = this.cols * this.rows;
-    this.start = new Int32Array(cells + 1);
+    this.begin = new Int32Array(cells);
+    this.count = new Int32Array(cells);
     this.cursor = new Int32Array(cells);
+    this.occupied = new Int32Array(Math.min(cells, capacity));
+    this.nOccupied = 0;
     this.items = new Uint32Array(capacity);
     this.cell = new Int32Array(capacity);
     this.out = new Uint32Array(capacity);
@@ -37,19 +44,25 @@ export class Grid {
   }
 
   rebuild(world: World, wantKind: Kind): void {
-    const { start, cursor, items, cell, cols } = this;
-    start.fill(0);
+    const { begin, count, cursor, occupied, items, cell, cols } = this;
+    for (let k = 0; k < this.nOccupied; k++) count[occupied[k]] = 0;
+    let nOcc = 0;
     let maxR = 0;
     for (let i = 0; i < world.high; i++) {
       if (world.kind[i] !== wantKind) continue;
       const c = this._row(world.y[i]) * cols + this._col(world.x[i]);
       cell[i] = c;
-      start[c + 1]++;
+      if (count[c]++ === 0) occupied[nOcc++] = c;
       if (world.radius[i] > maxR) maxR = world.radius[i];
     }
     this.maxRadius = maxR;
-    for (let c = 0; c < cursor.length; c++) start[c + 1] += start[c];
-    cursor.set(start.subarray(0, cursor.length));
+    this.nOccupied = nOcc;
+    let sum = 0;
+    for (let k = 0; k < nOcc; k++) {
+      const c = occupied[k];
+      begin[c] = cursor[c] = sum;
+      sum += count[c];
+    }
     for (let i = 0; i < world.high; i++) {
       if (world.kind[i] === wantKind) items[cursor[cell[i]]++] = i;
     }
@@ -65,7 +78,9 @@ export class Grid {
     for (let row = r0; row <= r1; row++) {
       for (let col = c0; col <= c1; col++) {
         const c = row * this.cols + col;
-        for (let k = this.start[c]; k < this.start[c + 1]; k++) this.out[n++] = this.items[k];
+        const m = this.count[c];
+        if (m === 0) continue;
+        for (let k = this.begin[c], e = k + m; k < e; k++) this.out[n++] = this.items[k];
       }
     }
     return n;
