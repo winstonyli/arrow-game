@@ -44,6 +44,11 @@ export function gemSystem(world: World, player: Player, dt: number, stats?: RunS
     }
     const rx = world.x[i] - player.x;
     const ry = world.y[i] - player.y;
+    // A free gem outside both the pickup and the capture box does nothing this tick, so skip the hypot (the slack covers rounding).
+    if (world.cd[i] === 0) {
+      const lim = Math.max(reach, player.radius + world.radius[i]) * 1.000001;
+      if (Math.abs(rx) > lim || Math.abs(ry) > lim) continue;
+    }
     const d = Math.hypot(rx, ry);
     if (d <= player.radius + world.radius[i]) {
       xp += world.damage[i];

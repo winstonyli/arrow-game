@@ -45,9 +45,16 @@ export function makeSteer(p: BotParams, smart: boolean): (g: Game) => void {
       const k = world.kind[i];
       if (k === KIND.NONE) continue;
       const dx = player.x - world.x[i], dy = player.y - world.y[i];
+      // Skip the hypot when the box test already rules the entity out (exact: hypot >= max(|dx|, |dy|); the slack covers rounding).
+      if (k === KIND.GEM) {
+        if (gd < Infinity && (Math.abs(dx) > gd * 1.000001 || Math.abs(dy) > gd * 1.000001)) continue;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d < gd) { gd = d; gx = -dx / d; gy = -dy / d; }
+        continue;
+      }
+      if (k === KIND.PROJECTILE || Math.abs(dx) > p.flee || Math.abs(dy) > p.flee) continue;
       const d = Math.hypot(dx, dy) || 1;
-      if (k === KIND.GEM) { if (d < gd) { gd = d; gx = -dx / d; gy = -dy / d; } continue; }
-      if (k === KIND.PROJECTILE || d > p.flee) continue;
+      if (d > p.flee) continue;
       const t = world.type[i];
       const kind = k === KIND.ENEMY_PROJECTILE ? p.wShot : t === ENEMY.SHOOTER ? p.wShooter : t === ENEMY.BOSS ? p.wBoss : t === ENEMY.SWARMER ? p.wSwarm : 1;
       const w = (kind * ((p.flee - d) / p.flee) ** p.fall) / d;
