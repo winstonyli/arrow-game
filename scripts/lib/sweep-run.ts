@@ -7,13 +7,9 @@ import { spawn } from 'node:child_process';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { DEFAULT_PARAMS } from './bot.ts';
-import type { BotParams } from './bot.ts';
+import type { Bot } from './bot.ts';
 
 export interface Run { secs: number; picked: boolean; dps: number }
-
-export const loadParams = (bot: string): BotParams =>
-  bot === 'evolved' ? { ...DEFAULT_PARAMS, ...JSON.parse(readFileSync(new URL('../bot-params.json', import.meta.url), 'utf8')).params } : DEFAULT_PARAMS;
 
 const here = (rel: string) => new URL(rel, import.meta.url);
 const cacheFile = here('../.run-cache.jsonl');
@@ -33,12 +29,12 @@ if (existsSync(cacheFile)) {
   for (const l of live) { const j = JSON.parse(l); cache.set(j.k, { secs: j.secs, picked: j.picked, dps: j.dps }); }
   if (live.length < lines.length) writeFileSync(cacheFile, live.map((l) => l + '\n').join(''));
 }
-const keyOf = (params: BotParams, minutes: number, force: string, seed: number) =>
-  createHash('sha1').update(JSON.stringify([params, minutes, force, seed])).digest('hex').slice(0, 16);
+const keyOf = (bot: Bot, minutes: number, force: string, seed: number) =>
+  createHash('sha1').update(JSON.stringify([bot, minutes, force, seed])).digest('hex').slice(0, 16);
 
-function runBatch(params: BotParams, minutes: number, seeds: number[], force: string): Promise<Run[]> {
+function runBatch(bot: Bot, minutes: number, seeds: number[], force: string): Promise<Run[]> {
   return new Promise((resolve, reject) => {
-    const spec = JSON.stringify({ params, minutes, force, seeds });
+    const spec = JSON.stringify({ params: bot.params, front: bot.front, minutes, force, seeds });
     const p = spawn(process.execPath, ['scripts/lib/sweep-worker.ts', spec], { stdio: ['ignore', 'pipe', 'inherit'] });
     try { os.setPriority(p.pid!, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch { /* best effort */ }
     let out = '';
@@ -51,18 +47,18 @@ function runBatch(params: BotParams, minutes: number, seeds: number[], force: st
   });
 }
 
-export async function runAll(params: BotParams, minutes: number, jobs: number, seeds: number[], force: string): Promise<Run[]> {
-  const missing = seeds.filter((s) => !cache.has(keyOf(params, minutes, force, s)));
+export async function runAll(bot: Bot, minutes: number, jobs: number, seeds: number[], force: string): Promise<Run[]> {
+  const missing = seeds.filter((s) => !cache.has(keyOf(bot, minutes, force, s)));
   if (missing.length) {
     const per = Math.ceil(missing.length / jobs);
     const parts = Array.from({ length: Math.ceil(missing.length / per) }, (_, i) => missing.slice(i * per, (i + 1) * per));
-    const done = (await Promise.all(parts.map((s) => runBatch(params, minutes, s, force)))).flat();
+    const done = (await Promise.all(parts.map((s) => runBatch(bot, minutes, s, force)))).flat();
     const lines = missing.map((s, i) => {
-      const k = keyOf(params, minutes, force, s);
+      const k = keyOf(bot, minutes, force, s);
       cache.set(k, done[i]);
       return JSON.stringify({ c: codeHash, k, ...done[i] }) + '\n';
     });
     appendFileSync(cacheFile, lines.join(''));
   }
-  return seeds.map((s) => cache.get(keyOf(params, minutes, force, s))!);
+  return seeds.map((s) => cache.get(keyOf(bot, minutes, force, s))!);
 }

@@ -1,6 +1,7 @@
 // The steering bot used by the soak and balance scripts, with its tunable numbers pulled out into BotParams.
 // DEFAULT_PARAMS reproduces the hand-set `smart` bot exactly (scripts/soak-arena.ts checks nothing else changed);
 // scripts/evolve-bot.ts searches for better numbers inside BOUNDS and writes them to scripts/bot-params.json (`--bot=evolved`).
+import { readFileSync } from 'node:fs';
 import { createGame, tick, choose } from '../../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../../src/modes/arena.ts';
 import { ENEMY } from '../../src/game/enemies.ts';
@@ -31,6 +32,15 @@ export const BOUNDS: Record<keyof BotParams, [number, number]> = {
   wallMargin: [80, 500], wallWeight: [0, 4], side: [0, 1.5], gemPull: [0, 2], gemRange: [50, 800],
 };
 export const PARAM_KEYS = Object.keys(DEFAULT_PARAMS) as (keyof BotParams)[];
+
+// The bots: smart = hand-set numbers and card order; evolved-params = evolved numbers only; evolved = evolved numbers and card order.
+export interface Bot { params: BotParams; front?: string[] }
+const readJson = (rel: string) => JSON.parse(readFileSync(new URL(rel, import.meta.url), 'utf8'));
+export const loadBot = (name: string): Bot => {
+  if (name === 'smart') return { params: DEFAULT_PARAMS };
+  if (name !== 'evolved' && name !== 'evolved-params') throw new Error(`unknown bot "${name}" (smart, evolved-params, evolved)`);
+  return { params: { ...DEFAULT_PARAMS, ...readJson('../bot-params.json').params }, front: name === 'evolved' ? readJson('../bot-priority.json').priority : undefined };
+};
 
 // Smart bot skill priority, first wins: weapons, then the six modifiers, then the other upgrades. Unlisted ids sort first (indexOf -1), so list every id.
 export const PRIORITY = ['multishot', 'rapid', 'power', 'shockwave', 'shockwave.a', 'shockwave.b', 'chain', 'chain.a', 'chain.b', 'blade', 'blade.a', 'blade.b', 'boomerang', 'flame', 'mines', 'meteor', 'beam', 'drone', 'drone.a', 'drone.b', 'daggers', 'crit', 'explode', 'vamp', 'frost', 'ignite', 'knockback', 'homing', 'pierce', 'regen', 'ricochet', 'magnet', 'swift'];

@@ -5,11 +5,12 @@
 // Dotted ids are granted at the start instead (weapon.a / weapon.b = branch at level 3, weapon.0 = the weapon at level 2 as the reference): see soak-arena --grant.
 // With --early=1 a build stops taking seeds (in steps of 10, from 20) once the damage-per-second interval excludes 0; its row then
 // shows fewer than --seeds runs. Repeated looks inflate false positives a little, so use it to screen and rerun survivors in full.
-// Usage: bun scripts/balance-sweep.ts [--seeds=40] [--minutes=6] [--jobs=4] [--builds=id,id,...] [--base=1] [--bot=smart|evolved] [--early=1]
+// Usage: bun scripts/balance-sweep.ts [--seeds=40] [--minutes=6] [--jobs=4] [--builds=id,id,...] [--base=1] [--bot=smart|evolved-params|evolved] [--early=1]
 // Runs scripts/lib/sweep-worker.ts child processes (each does a batch of seeds in one process) at BelowNormal priority; at most --jobs at once (keep it <= a quarter of the cores free).
 import { SKILLS } from '../src/game/skills.ts';
 import { seeded } from '../src/core/math.ts';
-import { runAll as runBatches, loadParams } from './lib/sweep-run.ts';
+import { runAll as runBatches } from './lib/sweep-run.ts';
+import { loadBot } from './lib/bot.ts';
 
 const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
 const nSeeds = Number(arg('seeds', 40));
@@ -19,8 +20,8 @@ const base = Number(arg('base', 1));
 const early = arg('early', '') !== '';
 const builds = arg('builds', '') ? arg('builds', '').split(',') : SKILLS.map((s) => s.id);
 const names = Object.fromEntries(SKILLS.map((s) => [s.id, s.name]));
-const params = loadParams(arg('bot', 'smart'));
-const runAll = (seeds: number[], force: string) => runBatches(params, minutes, jobs, seeds, force);
+const bot = loadBot(arg('bot', 'smart'));
+const runAll = (seeds: number[], force: string) => runBatches(bot, minutes, jobs, seeds, force);
 
 const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
 // Mean of the paired differences with a 95% percentile-bootstrap interval (seeded, so the report is reproducible).

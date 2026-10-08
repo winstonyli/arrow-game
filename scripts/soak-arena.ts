@@ -6,15 +6,13 @@
 // --bot=smart is the same plus: skill priority (damage/rate/multishot before speed), gems pulled in even with enemies near, and a sideways component so it circles instead of pinning itself on a wall.
 // It reports when the bot dies, which is the survival-time yardstick for balance changes.
 // At the end it prints the run's damage, healing and activity breakdown (damage share per weapon and upgrade; the upgrade rows are approximate), the balance data: run several --seed values to compare.
-// Usage: node scripts/soak-arena.ts [--minutes=10] [--bot=still|kite|smart|evolved] [--seed=1] [--picks=random|id,id,...] [--grant=id,id,...]
+// Usage: node scripts/soak-arena.ts [--minutes=10] [--bot=still|kite|smart|evolved-params|evolved] [--seed=1] [--picks=random|id,id,...] [--grant=id,id,...]
 import { createGame, tick, choose } from '../src/game/game.ts';
 import { createArena, ARENA_BOUNDS } from '../src/modes/arena.ts';
 import { seeded } from '../src/core/math.ts';
 import { applySkill } from '../src/game/skills.ts';
 import { KIND } from '../src/core/world.ts';
-import { DEFAULT_PARAMS, PRIORITY, makeSteer } from './lib/bot.ts';
-import type { BotParams } from './lib/bot.ts';
-import { readFileSync } from 'node:fs';
+import { PRIORITY, loadBot, makeSteer } from './lib/bot.ts';
 import { formatRunStats } from '../src/game/runstats-report.ts';
 
 const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
@@ -29,14 +27,14 @@ if (bot === 'still') g.player.hp = g.player.maxHp = 1e9;
 for (const id of arg('grant', '').split(',').filter(Boolean)) { applySkill(g.player.stats, id); g.skills[id] = (g.skills[id] ?? 0) + 1; }
 
 // --picks=random takes a random offered card (own seeded RNG, so the sim is untouched); --picks=a,b,c ranks the listed ids first (the rest keep the smart order). Default: smart bot uses PRIORITY, the others take the first card.
-// --bot=evolved is smart with the numbers scripts/evolve-bot.ts wrote to scripts/bot-params.json (printed below so a result records them).
-const smartish = bot === 'smart' || bot === 'evolved';
-const params: BotParams = bot === 'evolved' ? { ...DEFAULT_PARAMS, ...JSON.parse(readFileSync(new URL('./bot-params.json', import.meta.url), 'utf8')).params } : DEFAULT_PARAMS;
-if (bot === 'evolved') console.log('bot params ' + JSON.stringify(params));
+// --bot=evolved-params / evolved are smart with the numbers scripts/evolve-bot.ts wrote to scripts/bot-params.json (and, for evolved, the card order in scripts/bot-priority.json); printed below so a result records them.
+const smartish = bot !== 'still' && bot !== 'kite';
+const { params, front = [] } = loadBot(smartish ? bot : 'smart');
+if (bot.startsWith('evolved')) console.log('bot params ' + JSON.stringify(params) + (front.length ? ' order ' + front.join(',') : ''));
 const steer = makeSteer(params, smartish);
 const picks = arg('picks', '');
 const pickRng = seeded(Number(arg('seed', 1)) + 1000003);
-const rank = picks && picks !== 'random' ? [...picks.split(','), ...PRIORITY] : PRIORITY;
+const rank = [...(picks && picks !== 'random' ? picks.split(',') : []), ...front, ...PRIORITY];
 const pick = (offer: string[]): string => {
   if (picks === 'random') return offer[Math.floor(pickRng() * offer.length)];
   return smartish || picks ? [...offer].sort((a, b) => rank.indexOf(a) - rank.indexOf(b))[0] : offer[0];

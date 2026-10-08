@@ -1,9 +1,10 @@
-// Does the evolved bot (scripts/bot-params.json) beat the default smart bot on starting builds it was NOT trained on?
+// Does bot B beat bot A on starting builds? Default: the evolved bot (numbers in scripts/bot-params.json and card order in scripts/bot-priority.json) vs the hand-set smart bot, on builds it was mostly NOT trained on.
 // For each build, runs both bots on the same seeds and reports mean survival and damage per second for each, with the paired
 // difference (evolved - default) and its 95% bootstrap interval. Builds use the sweep's ids: '' = nothing, weapon.0 = the weapon at
 // level 2, weapon.a / weapon.b = the weapon with that branch (see balance-sweep.ts). Training used '', chain.a and shockwave.a.
-// Usage: bun scripts/compare-bots.ts [--seeds=30] [--minutes=15] [--jobs=4] [--base=5000] [--builds=id,id,...]
-import { runAll, loadParams } from './lib/sweep-run.ts';
+// Usage: bun scripts/compare-bots.ts [--seeds=30] [--minutes=15] [--jobs=4] [--base=5000] [--builds=id,id,...] [--a=smart] [--b=evolved]  (bots: smart, evolved-params, evolved; differences are B - A)
+import { runAll } from './lib/sweep-run.ts';
+import { loadBot } from './lib/bot.ts';
 import { seeded } from '../src/core/math.ts';
 
 const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
@@ -23,11 +24,11 @@ function paired(d: number[]): [number, number, number] {
 const mark = (lo: number, hi: number) => (lo > 0 ? ' +' : hi < 0 ? ' -' : '  ');
 
 const seeds = Array.from({ length: nSeeds }, (_, i) => base + i);
-const def = loadParams('smart'), evo = loadParams('evolved');
-console.log(`compare: ${builds.length} builds x ${nSeeds} seeds (${base}+), cap ${minutes} min, ${jobs} at a time\n`);
-console.log('build'.padEnd(13) + 'surv def'.padStart(9) + 'surv evo'.padStart(9) + '  d surv s (95% CI)'.padEnd(26) + 'dps def'.padStart(8) + 'dps evo'.padStart(8) + '  d dps (95% CI)');
+const botA = loadBot(arg('a', 'smart')), botB = loadBot(arg('b', 'evolved'));
+console.log(`compare ${arg('b', 'evolved')} vs ${arg('a', 'smart')}: ${builds.length} builds x ${nSeeds} seeds (${base}+), cap ${minutes} min, ${jobs} at a time\n`);
+console.log('build'.padEnd(13) + 'surv A'.padStart(9) + 'surv B'.padStart(9) + '  d surv s (95% CI)'.padEnd(26) + 'dps A'.padStart(8) + 'dps B'.padStart(8) + '  d dps (95% CI)');
 for (const b of builds) {
-  const [a, e] = [await runAll(def, minutes, jobs, seeds, b), await runAll(evo, minutes, jobs, seeds, b)];
+  const [a, e] = [await runAll(botA, minutes, jobs, seeds, b), await runAll(botB, minutes, jobs, seeds, b)];
   const [ds, slo, shi] = paired(e.map((r, i) => r.secs - a[i].secs));
   const [dd, dlo, dhi] = paired(e.map((r, i) => r.dps - a[i].dps));
   console.log(

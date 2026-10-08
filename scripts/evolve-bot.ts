@@ -16,7 +16,7 @@ import os from 'node:os';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { DEFAULT_PARAMS, BOUNDS, PARAM_KEYS, PRIORITY } from './lib/bot.ts';
 import type { BotParams } from './lib/bot.ts';
-import { loadParams } from './lib/sweep-run.ts';
+import { loadBot } from './lib/bot.ts';
 import { seeded } from '../src/core/math.ts';
 
 const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
@@ -71,7 +71,7 @@ const mean = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
 // --- parameters <-> unit vector ------------------------------------------------------------------------------------------
 const toUnit = (p: BotParams) => PARAM_KEYS.map((k) => (p[k] - BOUNDS[k][0]) / (BOUNDS[k][1] - BOUNDS[k][0]));
 const clamp01 = (x: number) => (prio ? x : Math.min(1, Math.max(0, x))); // only the order of the card keys matters, so they need no bounds
-const evoParams = prio ? loadParams('evolved') : DEFAULT_PARAMS;
+const evoParams = prio ? loadBot('evolved-params').params : DEFAULT_PARAMS;
 const orderOf = (u: number[]): string[] => PRIORITY.map((id, i) => ({ id, i })).sort((a, b) => u[a.i] - u[b.i] || a.i - b.i).map((x) => x.id);
 const fromUnit = (u: number[]): Cand => prio
   ? { params: evoParams, front: orderOf(u) }
