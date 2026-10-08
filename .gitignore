@@ -4,3 +4,4 @@ docs/superpowers/
 scripts/evolve-state.json
 scripts/evolve-bot.log
 scripts/evolve-heldout.log
+scripts/evolve-priority-state.json
