@@ -362,6 +362,7 @@ What the numbers said (smart soak bot, paired seeds, machine about 25% busy, Def
 - Final: baseline 128 s (166 s on the earlier square-view build, 190 s on v0.4.0), Aftershock +282 s, Corona Wire +76 s, Hive Mind +586 s (15-minute cap on the run, 30 seeds). Hive Mind soak seeds 1 and 2: one reaches the 800-enemy cap around minute 11 and stays there, the other dies near minute 14.
 - `ENEMY_CAP` (800) now binds for the strongest build from about minute 11. Not removed: perf is sim-bound at 20k enemies (105 to 124 ms per frame), and an unbounded cap would let late runs drift there. Raise it in steps (1200, 1600) and re-run `bench:render` if a longer tail is wanted.
 - The blind scripted golden bot dies at 31 to 47 s on every tried seed (it used to last 73 to 90 s), so the arena golden uses seed 20261008 (2654 ticks, 1 pick).
+- XP curve (same release, no further `SIM_VERSION` bump): `xpFor(L) = round(3 + 2L + L^2/4)` replaces `5 + 5L`: 5 xp to leave level 1 (was 10), 19 at level 5 (30), 48 at 10 (55), cheaper through level 12, then 143 at level 20 (105) and 209 at 25. Quick paired sweep (30 seeds, 6 minute cap, load about 70% from the playtest, Defender off): baseline survival 147 s (128 s with the linear curve), Aftershock +177 s, Hive Mind +207 s. The build rows are capped by the 6 minute run, so they do not compare with the 15 minute figures above.
 - Not done: human play-testing of the new early game; Rooms is untouched.
 
 ## Square view sweep (merged from `proto/square-view`, 2026-10-07)

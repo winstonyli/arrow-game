@@ -35,7 +35,8 @@ const SHOOTER_DEPTH = 100;
 const WALL_PAD = 20;
 const TRIES = 32;
 
-export const xpFor = (level: number): number => 5 + 5 * level;
+// XP to leave level L: 5 at level 1 and convex, so early levels come faster than the old linear 5 + 5L (cheaper through level 12, 143 at level 20 against 105).
+export const xpFor = (level: number): number => Math.round(3 + 2 * level + (level * level) / 4);
 export const spawnRate = (t: number): number => BASE_RATE + RATE_PER_SEC * t;
 export const hpScale = (t: number): number => 1 + t / HP_GROWTH + (t / HP_QUAD) ** 2;
 

@@ -12,6 +12,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 - The golden arena replay uses seed 20261008 (the blind scripted bot used to die at 31 s with no picks); the title-backdrop test no longer requires a level-up; the maxed-build test seed is 4.
 - Title screen: shorter. The best run is a badge on the right of each button (Arena `4:12`, Rooms `Room 7`, a dim `No runs`), the tagline and the controls line are gone, and the controls open as a dialog over the menu from a `?` button in the panel corner (Esc, Close or a click outside dismisses it).
 - Gems scale with their value: radius is `5 + 2 sqrt(value - 1)` px (1 xp 5, shooter 7, bruiser 9, boss 13.7), so a bigger drop is easier to read and to pick up. The collision radius is the draw radius, so it changes the maxed-build pinned hash (no `SIM_VERSION` bump, still unreleased 16; the golden replays did not change).
+- XP curve is convex and cheaper early: `round(3 + 2L + L^2/4)` xp to leave level L (5 at level 1, 19 at level 5, 48 at level 10), pricier than the old `5 + 5L` from level 13 (143 at level 20, was 105). The arena golden is regenerated (seed 20261008, 3492 ticks, 3 picks).
 
 ## v0.4.0
 `SIM_VERSION` 15, `REPLAY_VERSION` 1 (replays from v0.3.1 are flagged stale and cannot be watched or raced; the file format is unchanged). Build depth: more to choose between within a run. Details in docs/DEVELOPMENT.md ("Build depth").
