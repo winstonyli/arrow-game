@@ -9,17 +9,20 @@ import type { Game } from '../game/game.ts';
 export const ARENA_BOUNDS = { w: 3000, h: 2000 };
 
 // Initial tuning; expect to change these in play.
-export const BASE_RATE = 0.6; // enemies per second at t = 0
-export const RATE_PER_SEC = 0.015; // added per second survived
+export const BASE_RATE = 0.9; // enemies per second at t = 0
+export const RATE_PER_SEC = 0.012; // added per second survived
 export const ENEMY_CAP = 800; // live enemies; the director stops spawning above this
-export const SHOOTER_AFTER = 60; // seconds before shooters join the mix
+export const SHOOTER_AFTER = 45; // seconds before shooters join the mix
+export const HP_GROWTH = 300; // seconds for enemy hp to grow by its starting value: hp x (1 + t / HP_GROWTH + (t / HP_QUAD)^2)
+export const HP_QUAD = 400; // seconds at which the squared term adds the starting value again: later growth is convex (x9 at 10 minutes, x19 at 15)
+export const BOSS_HP_STEP = 0.5; // each boss after the first has this much more hp than the one before
 export const SHOOTER_SHARE = 0.3;
 // Enemy mix: from `after` seconds a type takes `share` of spawns (first match wins, in this order);
 // the rest are chasers. A swarmer spawn is a pack of `pack` enemies and costs that much of the director's debt.
 export const MIX = [
   { type: ENEMY.SHOOTER, after: SHOOTER_AFTER, share: SHOOTER_SHARE, pack: 1 },
-  { type: ENEMY.SWARMER, after: 30, share: 0.15, pack: 4 },
-  { type: ENEMY.BRUISER, after: 90, share: 0.08, pack: 1 },
+  { type: ENEMY.SWARMER, after: 15, share: 0.15, pack: 4 },
+  { type: ENEMY.BRUISER, after: 80, share: 0.08, pack: 1 },
   { type: ENEMY.SPLITTER, after: 150, share: 0.08, pack: 1 },
 ];
 const SPLIT_COUNT = 2;
@@ -34,6 +37,7 @@ const TRIES = 32;
 
 export const xpFor = (level: number): number => 5 + 5 * level;
 export const spawnRate = (t: number): number => BASE_RATE + RATE_PER_SEC * t;
+export const hpScale = (t: number): number => 1 + t / HP_GROWTH + (t / HP_QUAD) ** 2;
 
 export const clock = (t: number): string => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
@@ -101,12 +105,14 @@ export function createArena() {
         for (let k = 0; k < count; k++) {
           const dx = k === 0 ? 0 : (rng() - 0.5) * 2 * PACK_SPREAD;
           const dy = k === 0 ? 0 : (rng() - 0.5) * 2 * PACK_SPREAD;
-          spawnEnemy(world, pick ? pick.type : ENEMY.CHASER, clamp(pt.x + dx, WALL_PAD, game.bounds.w - WALL_PAD), clamp(pt.y + dy, WALL_PAD, game.bounds.h - WALL_PAD));
+          const e = spawnEnemy(world, pick ? pick.type : ENEMY.CHASER, clamp(pt.x + dx, WALL_PAD, game.bounds.w - WALL_PAD), clamp(pt.y + dy, WALL_PAD, game.bounds.h - WALL_PAD));
+          if (e >= 0) world.hp[e] *= hpScale(game.time);
         }
         this.debt -= count - 1;
       }
       if (game.time >= this.nextBoss && spawnPoint(game, pt)) {
-        spawnEnemy(world, ENEMY.BOSS, pt.x, pt.y);
+        const b = spawnEnemy(world, ENEMY.BOSS, pt.x, pt.y);
+        if (b >= 0) world.hp[b] *= hpScale(game.time) * (1 + BOSS_HP_STEP * (Math.round(this.nextBoss / BOSS_EVERY) - 1));
         game.fx?.shake(0.6);
         game.sfx?.boss();
         game.bossAt = game.time;
@@ -127,7 +133,8 @@ export function createArena() {
       if (world.type[j] === ENEMY.SPLITTER) {
         for (let k = 0; k < SPLIT_COUNT && world.kindCount[KIND.ENEMY] < ENEMY_CAP; k++) {
           const a = game.rng() * Math.PI * 2;
-          spawnEnemy(world, ENEMY.SWARMER, clamp(world.x[j] + Math.cos(a) * 14, WALL_PAD, game.bounds.w - WALL_PAD), clamp(world.y[j] + Math.sin(a) * 14, WALL_PAD, game.bounds.h - WALL_PAD));
+          const e = spawnEnemy(world, ENEMY.SWARMER, clamp(world.x[j] + Math.cos(a) * 14, WALL_PAD, game.bounds.w - WALL_PAD), clamp(world.y[j] + Math.sin(a) * 14, WALL_PAD, game.bounds.h - WALL_PAD));
+          if (e >= 0) world.hp[e] *= hpScale(game.time);
         }
       }
       const value = ENEMY_TYPES[world.type[j]].xp;

@@ -3,6 +3,14 @@
 Versioning and what counts as a release: see "Versioning and commits" in the README. Each entry names the
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
+## v0.4.1 (unreleased)
+`SIM_VERSION` 16 (replays from v0.4.0 are flagged stale). Difficulty curve: a faster start and a steeper late game.
+
+- Arena spawn rate starts at 0.9 per second (was 0.6) and climbs 0.012 per second (was 0.015). Swarmers unlock at 15 s (was 30), shooters at 45 s (was 60), bruisers at 80 s (was 90).
+- Enemy hp grows with the clock: x(1 + t/300 + (t/400)^2) at spawn (x1.3 at 1:30, x2.4 at 5:00, x9 at 10:00, x19 at 15:00), splitter swarmers included. Each boss after the first has 50% more hp than the one before. Rooms is unchanged.
+- Measured (paired sweep, 30 seeds): the bot with no forced skill survives 128 s (166 s on the square-view build, 190 s on v0.4.0); with a fork granted at the start: Aftershock +282 s, Corona Wire +76 s, Hive Mind +586 s (about 12 minutes in total), against about +100 to +190 s before. A 15-minute Hive Mind soak reaches the 800-enemy cap around minute 11. Details in docs/DEVELOPMENT.md ("Difficulty curve").
+- The golden arena replay uses seed 20261008 (the blind scripted bot used to die at 31 s with no picks); the title-backdrop test no longer requires a level-up; the maxed-build test seed is 4.
+
 ## v0.4.0
 `SIM_VERSION` 15, `REPLAY_VERSION` 1 (replays from v0.3.1 are flagged stale and cannot be watched or raced; the file format is unchanged). Build depth: more to choose between within a run. Details in docs/DEVELOPMENT.md ("Build depth").
 

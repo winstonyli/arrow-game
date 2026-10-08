@@ -15,7 +15,7 @@ interface GoldenFixture {
 
 const OUT = new URL('../test/fixtures/', import.meta.url);
 mkdirSync(OUT, { recursive: true });
-const CASES: [mode: ModeName, seed: number, maxTicks: number][] = [['arena', 20261003, 5400], ['rooms', 20261003, 5400]];
+const CASES: [mode: ModeName, seed: number, maxTicks: number][] = [['arena', 20261008, 5400], ['rooms', 20261003, 5400]];
 let failed = false;
 for (const [mode, seed, maxTicks] of CASES) {
   const { game, replay } = driveLive({ mode, seed, maxTicks });

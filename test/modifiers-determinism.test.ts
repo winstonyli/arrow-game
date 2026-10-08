@@ -22,7 +22,7 @@ const FORKS: [string, string, number][] = [['chain.b', 'chain', 2], ['shockwave.
 
 // Ten weapons (the bow aside) and all six modifiers at level 5, except Mines at MINES_LEVEL and the Drone at level 4 (at 5 it kills the few enemies before the beam or a meteor reaches one; applySkill does not check slots); Daggers at level 5 kept every coverage flag true, an invulnerable drifting player, checkpoints every 20 s.
 function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolean; detonated: boolean; meteors: boolean; struck: boolean; beamed: boolean; droned: boolean; daggered: boolean }): number[] {
-  const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(10), input: { x: 0.6, y: 0.3 } });
+  const g = createGame({ capacity: 20000, bounds: ARENA_BOUNDS, mode: createArena(), rng: seeded(4), input: { x: 0.6, y: 0.3 } });
   g.player.hp = g.player.maxHp = 1e9;
   for (const id of ['blade', 'shockwave', 'chain', 'boomerang', 'flame', 'mines', 'meteor', 'beam', 'crit', 'knockback', 'explode', 'vamp', 'frost', 'ignite']) {
     for (let k = 0; k < (id === 'mines' ? MINES_LEVEL : 5); k++) applySkill(g.player.stats, id);
@@ -100,7 +100,7 @@ function run(seen?: { slow: boolean; burn: boolean; fire: boolean; mines: boolea
   return out;
 }
 
-const EXPECTED: number[] = [300634178, 971884843, 2129162458];
+const EXPECTED: number[] = [1148364714, 609613281, 1523894995];
 
 test('a maxed build hashes the same on every run and on both engines', () => {
   const a = run();

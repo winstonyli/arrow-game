@@ -30,7 +30,7 @@ test('pickMix: nothing before the first unlock (and no rng call), then entries i
   const never = () => (calls++, 0);
   assert.equal(pickMix(10, never), null);
   assert.equal(calls, 0);
-  assert.equal(pickMix(40, () => 0)!.type, ENEMY.SWARMER); // shooters not unlocked yet
+  assert.equal(pickMix(30, () => 0)!.type, ENEMY.SWARMER); // shooters not unlocked yet
   assert.equal(pickMix(70, () => 0)!.type, ENEMY.SHOOTER);
   assert.equal(pickMix(70, () => 0.31)!.type, ENEMY.SWARMER); // 0.31 - 0.3 < 0.15
   assert.equal(pickMix(200, () => 0.3 + 0.15 + 0.01)!.type, ENEMY.BRUISER);
@@ -41,7 +41,7 @@ test('pickMix: nothing before the first unlock (and no rng call), then entries i
 
 test('a swarmer spawn is a pack and costs the director that many spawns of debt', () => {
   const g = arena();
-  g.time = 40;
+  g.time = 30;
   g.mode.debt = 1;
   g.mode.update(g, 0);
   assert.equal(count(g, ENEMY.SWARMER), 4);
@@ -176,7 +176,7 @@ test('a homing arrow does not turn back toward the enemy it just pierced', () =>
 
 test('packs and splits respect ENEMY_CAP and stay inside the world', () => {
   const g = arena();
-  g.time = 40;
+  g.time = 30;
   g.mode.debt = 1;
   for (let k = 0; k < 799; k++) spawnEnemy(g.world, ENEMY.CHASER, 1500, 1000);
   g.mode.update(g, 0);
