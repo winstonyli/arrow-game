@@ -390,3 +390,12 @@ Reading it:
 - With the 10 minute cap, two of three builds saturate, so those rows cannot rank builds any more. A paired sweep with the evolved bot needs a longer cap (15 minutes or more) or a harder objective; not done yet.
 - Whether a good human plays like the evolved bot is untested. It suggests that the arena difficulty curve is soft against a player who kites well.
 - Not done: evolving the card pick order (`PRIORITY` is still hand-set).
+
+### Paired sweep with the evolved bot (2026-10-08)
+
+`node scripts/balance-sweep.ts --bot=evolved --seeds=20 --minutes=15 --jobs=4` (all 33 rows, seeds 1 to 20; machine about 100% busy from other sessions, Defender real-time protection off; load only changes wall time). Baseline: survival 723 s of the 900 s cap, 444.3 damage/s. Survival is saturated against this bot (many runs hit the cap), so read the damage column; deltas are paired, 95% bootstrap intervals in brackets.
+- Clearly stronger than baseline (all granted branch rows): Aftershock +372 damage/s [251, 500] (+158 s survival), Hive Mind +315 [195, 439], Stinger +302 [190, 422], Corona Wire +293 [145, 433], Daisy Chain +268 [135, 400], Fissure +243 [84, 400]. Vampiric survives longer (+177 s [94, 268]) with no clear damage change.
+- Clearly worse: Pinball -262 damage/s [-386, -135] and -155 s survival, Molasses -149 [-282, 0], Skewer -115 [-225, -5], Breadcrumbs -92 [-187, -13].
+- Clearly better single picks: Incoming! +119 [42, 212], Quick Draw +78 [2, 178].
+- Everything else spans zero at 20 seeds. The branch rows are granted at the start and the plain rows are priority picks, so the two groups are not directly comparable (same caveat as the earlier sweeps).
+- Compared with the `smart` bot sweeps above, the build ranking is similar (branches on top, Pinball at the bottom), so the earlier conclusions about which builds are strong do not look like artefacts of the weak bot. The absolute numbers are not comparable.

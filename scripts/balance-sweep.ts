@@ -3,7 +3,7 @@
 // per second (mean paired difference with a 95% bootstrap interval), over all runs (not just those that got the skill, so
 // there is no selection bias), plus how many runs actually picked it. An interval that spans 0 means "no measurable effect".
 // Dotted ids are granted at the start instead (weapon.a / weapon.b = branch at level 3, weapon.0 = the weapon at level 2 as the reference): see soak-arena --grant.
-// Usage: bun scripts/balance-sweep.ts [--seeds=40] [--minutes=6] [--jobs=4] [--builds=id,id,...] [--base=1]
+// Usage: bun scripts/balance-sweep.ts [--seeds=40] [--minutes=6] [--jobs=4] [--builds=id,id,...] [--base=1] [--bot=smart|evolved]
 // Runs soak-arena.ts as child processes at BelowNormal priority; at most --jobs at once (keep it <= a quarter of the cores free).
 import { spawn } from 'node:child_process';
 import os from 'node:os';
@@ -22,7 +22,7 @@ interface Run { secs: number; picked: boolean; dps: number }
 
 function runOne(seed: number, force: string): Promise<Run> {
   return new Promise((resolve, reject) => {
-    const args = ['scripts/soak-arena.ts', `--minutes=${minutes}`, '--bot=smart', `--seed=${seed}`, '--json=1'];
+    const args = ['scripts/soak-arena.ts', `--minutes=${minutes}`, `--bot=${arg('bot', 'smart')}`, `--seed=${seed}`, '--json=1'];
     // Dotted rows are granted at the start, since a random offer rarely reaches a level-2 fork before the bot dies: chain.a = chain, chain, chain.a (level 3 with the branch); chain.0 = chain, chain (level 2, no branch: the reference row). Other rows are forced to the front of the pick order.
     const [weapon] = force.split('.');
     if (force) args.push(force.includes('.') ? `--grant=${weapon},${weapon}${force.endsWith('.0') ? '' : `,${force}`}` : `--picks=${force}`);
