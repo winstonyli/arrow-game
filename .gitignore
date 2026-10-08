@@ -7,3 +7,4 @@ scripts/evolve-heldout.log
 scripts/evolve-priority-state.json
 scripts/evolve-priority.log
 scripts/evolve-priority-heldout.log
+scripts/.run-cache.jsonl
