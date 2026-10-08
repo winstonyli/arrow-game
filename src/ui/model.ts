@@ -104,9 +104,11 @@ export function overModel(game: Game, kind: ModeName, rec: { best: Bests; isNew:
   return { title: 'Game over', rows, newBest };
 }
 
+export const NO_RUNS = 'No runs';
+
 export function bestLine(kind: ModeName, best: Bests): string {
-  if (kind === 'rooms') return best.room ? `Best room ${best.room}` : 'No runs yet';
-  return best.time ? `Best ${clock(best.time)} / ${best.kills ?? 0} kills` : 'No runs yet';
+  if (kind === 'rooms') return best.room ? `Room ${best.room}` : NO_RUNS;
+  return best.time ? clock(best.time) : NO_RUNS;
 }
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : String(n));

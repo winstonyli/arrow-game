@@ -128,3 +128,18 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 @keyframes title-glow { 50% { text-shadow: 0 0 calc(var(--u) * 12) currentColor, 0 0 calc(var(--u) * 30) currentColor; } }
 @keyframes title-sweep { 0%, 55% { background-position: 120% 0; } 85%, 100% { background-position: -20% 0; } }
 @media (prefers-reduced-motion: reduce) { .title-name, .title-name::after, .title-panel > * { animation: none; } }
+
+/* Title menu: each button carries its best-run badge on the right; the controls sit behind the "?" corner button. */
+.title-panel { position: relative; }
+.title-menu, .title-help { width: 100%; display: flex; flex-direction: column; gap: calc(var(--u) * 10); }
+.title-menu[hidden], .title-help[hidden] { display: none; }
+.menu-btn { display: flex; align-items: center; justify-content: space-between; padding: calc(var(--u) * 10) calc(var(--u) * 12); text-align: left; }
+.badge { font-size: calc(var(--u) * 10); letter-spacing: calc(var(--u) * 1); padding: calc(var(--u) * 2) calc(var(--u) * 8); border-radius: 99px; background: color-mix(in srgb, currentColor 16%, transparent); white-space: nowrap; }
+.badge.none { opacity: 0.55; }
+.help-btn { position: absolute; top: calc(var(--u) * 8); right: calc(var(--u) * 8); width: auto; min-width: 44px; min-height: 44px; padding: 0; }
+.help-row { display: flex; gap: calc(var(--u) * 10); text-align: left; font-size: calc(var(--u) * 12); color: var(--muted); }
+.help-row b { flex: 0 0 calc(var(--u) * 58); color: var(--a); font-family: var(--display); letter-spacing: calc(var(--u) * 1); text-transform: uppercase; }
+.title-menu > * { animation: rise 0.45s ease-out backwards; }
+.title-menu > :nth-child(2) { animation-delay: 0.1s; }
+.title-menu > :nth-child(3) { animation-delay: 0.2s; }
+@media (prefers-reduced-motion: reduce) { .title-menu > * { animation: none; } }

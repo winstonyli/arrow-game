@@ -3,6 +3,7 @@ import { SKILLS_BY_ID } from '../game/skills.ts';
 import { affects } from '../game/coverage.ts';
 import { ReplayError } from '../replay/codec.ts';
 import type { ModeName } from '../game/game.ts';
+import { NO_RUNS } from './model.ts';
 import type { HudModel, OverModel, ChallengeRow } from './model.ts';
 
 export type Screen = 'none' | 'title' | 'play' | 'pause' | 'over' | 'challenges' | 'watch';
@@ -141,16 +142,42 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   const titleName = h('h1', 'title-name glow-text', 'Arrow game');
   titleName.dataset.text = 'Arrow game'; // the light sweep is a copy of the text, clipped to the letters
 
-  const bests = { arena: h('div', 'mu'), rooms: h('div', 'mu') };
+  // Each menu button carries its best-run badge on the right (setBests fills it in).
+  const bests = { arena: h('span', 'badge'), rooms: h('span', 'badge') };
+  const menuButton = (label: string, cls: string, badge: HTMLElement | null, fn: () => void) => {
+    const b = button(`<span>${label}</span>`, `menu-btn ${cls}`, fn);
+    if (badge) b.append(badge);
+    return b;
+  };
+  const menu = h('div', 'title-menu');
+  menu.append(menuButton('Arena', 'primary b', bests.arena, () => on.onPlay('arena')), menuButton('Rooms', '', bests.rooms, () => on.onPlay('rooms')), menuButton('Challenges', 'g', null, () => on.onChallenges()));
+  // Controls live behind a "?" so the title stays short; it replaces the menu until closed (Esc or Close).
+  const help = h('div', 'title-help');
+  help.hidden = true;
+  const toggleHelp = (open: boolean) => {
+    help.hidden = !open;
+    menu.hidden = open;
+    helpBtn.setAttribute('aria-expanded', String(open));
+    focusFirst(open ? help : menu);
+  };
+  const helpBtn = button('?', 'g help-btn', () => toggleHelp(!!help.hidden));
+  helpBtn.setAttribute('aria-label', 'Controls');
+  helpBtn.setAttribute('aria-expanded', 'false');
+  help.append(
+    h('div', 'help-row', '<b>Move</b><span>WASD or arrow keys, or drag on a touch screen</span>'),
+    h('div', 'help-row', '<b>Aim</b><span>Automatic</span>'),
+    h('div', 'help-row', '<b>Pause</b><span>Esc or P</span>'),
+    h('div', 'help-row', '<b>Mute</b><span>M</span>'),
+    button('Close', 'b', () => toggleHelp(false)),
+  );
+  title.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !help.hidden) toggleHelp(false);
+  });
   titlePanel.append(
     titleName,
-    h('div', 'mu', 'One archer. Too many enemies.'),
-    button('Arena', 'primary b', () => on.onPlay('arena')),
-    bests.arena,
-    button('Rooms', '', () => on.onPlay('rooms')),
-    bests.rooms,
-    button('Challenges', 'g', () => on.onChallenges()),
-    h('div', 'mu', 'WASD or arrows to move. Aim is automatic.'),
+    menu,
+    help,
+    helpBtn,
     h('div', 'mu version', typeof __APP_VERSION__ === 'undefined' ? 'dev' : `v${__APP_VERSION__}`),
   );
   title.append(titlePanel);
@@ -382,9 +409,13 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     );
   }
 
+  const setBadge = (badge: HTMLElement, text: string) => {
+    badge.textContent = text;
+    badge.classList.toggle('none', text === NO_RUNS);
+  };
   function setBests(b: { arena: string; rooms: string }) {
-    bests.arena.textContent = `Arena: ${b.arena}`;
-    bests.rooms.textContent = `Rooms: ${b.rooms}`;
+    setBadge(bests.arena, b.arena);
+    setBadge(bests.rooms, b.rooms);
   }
 
   return { show, update, setOffer, showOver, setBests, setWatch, setChallenges, setStatus, setImportBusy };

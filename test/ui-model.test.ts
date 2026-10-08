@@ -95,9 +95,9 @@ test('over model for rooms and without records', () => {
 });
 
 test('bestLine for the title screen', () => {
-  assert.equal(bestLine('arena', { time: 252, kills: 412 }), 'Best 4:12 / 412 kills');
-  assert.equal(bestLine('rooms', { room: 9 }), 'Best room 9');
-  assert.equal(bestLine('arena', {}), 'No runs yet');
+  assert.equal(bestLine('arena', { time: 252, kills: 412 }), '4:12');
+  assert.equal(bestLine('rooms', { room: 9 }), 'Room 9');
+  assert.equal(bestLine('arena', {}), 'No runs');
 });
 
 test('every skill and HUD glyph has an icon', () => {
