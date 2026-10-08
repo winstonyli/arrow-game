@@ -1,3 +1,5 @@
 node_modules/
 dist/
 docs/superpowers/
+scripts/evolve-state.json
+scripts/evolve-bot.log
