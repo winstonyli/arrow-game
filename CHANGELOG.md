@@ -11,6 +11,7 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 - Measured (paired sweep, 30 seeds): the bot with no forced skill survives 128 s (166 s on the square-view build, 190 s on v0.4.0); with a fork granted at the start: Aftershock +282 s, Corona Wire +76 s, Hive Mind +586 s (about 12 minutes in total), against about +100 to +190 s before. A 15-minute Hive Mind soak reaches the 800-enemy cap around minute 11. Details in docs/DEVELOPMENT.md ("Difficulty curve").
 - The golden arena replay uses seed 20261008 (the blind scripted bot used to die at 31 s with no picks); the title-backdrop test no longer requires a level-up; the maxed-build test seed is 4.
 - Title screen: shorter. The best run is a badge on the right of each button (Arena `4:12`, Rooms `Room 7`, a dim `No runs`), the tagline and the controls line are gone, and the controls open as a dialog over the menu from a `?` button in the panel corner (Esc, Close or a click outside dismisses it).
+- Gems scale with their value: radius is `5 + 2 sqrt(value - 1)` px (1 xp 5, shooter 7, bruiser 9, boss 13.7), so a bigger drop is easier to read and to pick up. The collision radius is the draw radius, so it changes the maxed-build pinned hash (no `SIM_VERSION` bump, still unreleased 16; the golden replays did not change).
 
 ## v0.4.0
 `SIM_VERSION` 15, `REPLAY_VERSION` 1 (replays from v0.3.1 are flagged stale and cannot be watched or raced; the file format is unchanged). Build depth: more to choose between within a run. Details in docs/DEVELOPMENT.md ("Build depth").

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
 import { createPlayer, movePlayer } from '../src/game/player.ts';
 import { moveSystem } from '../src/core/systems.ts';
-import { spawnGem, gemSystem, GEM_LIFE } from '../src/game/gems.ts';
+import { spawnGem, gemSystem, gemRadius, GEM_LIFE, GEM_RADIUS } from '../src/game/gems.ts';
 import type { Player } from '../src/game/player.ts';
 
 const setup = () => ({ world: new World(20), player: createPlayer(450, 500) });
@@ -15,6 +15,13 @@ test('spawnGem stores the value in damage and a life timer', () => {
   assert.equal(world.kind[g], KIND.GEM);
   assert.equal(world.damage[g], 3);
   assert.equal(world.life[g], GEM_LIFE);
+});
+
+test('gem radius grows with its value, a 1 xp gem keeps the base size', () => {
+  const { world } = setup();
+  assert.equal(world.radius[spawnGem(world, 10, 20, 1)], GEM_RADIUS);
+  assert.ok(gemRadius(2) > GEM_RADIUS && gemRadius(5) > gemRadius(2) && gemRadius(20) > gemRadius(5));
+  assert.ok(Math.abs(world.radius[spawnGem(world, 10, 20, 20)] - gemRadius(20)) < 1e-4); // radius is stored as a float32
 });
 
 test('a gem outside the pickup radius stays put', () => {

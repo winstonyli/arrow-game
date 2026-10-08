@@ -5,7 +5,8 @@ import type { Player } from './player.ts';
 import { ACT } from './runstats.ts';
 import type { RunStats } from './runstats.ts';
 
-export const GEM_RADIUS = 5;
+export const GEM_RADIUS = 5; // a 1 xp gem; bigger gems grow with their value (see gemRadius)
+export const gemRadius = (value: number): number => GEM_RADIUS + 2 * Math.sqrt(Math.max(0, value - 1)); // 1 xp: 5, 2: 7, 3: 7.8, 5: 9, 20: 13.7
 export const GEM_LIFE = 60; // seconds before an uncollected gem despawns
 // A captured gem is a damped orbit around the player, simulated in the player's frame of reference (so a
 // moving player drags its gems along and a gem cannot be outrun): a spring-like pull of strength PULL^2 per px
@@ -18,7 +19,7 @@ const SWING_TIME = 0.5; // s: the sideways push builds momentum without a jolt, 
 const MAX_REL = 600; // px/s cap on the speed relative to the player, a safety net
 
 export function spawnGem(world: World, x: number, y: number, value: number): number {
-  const i = world.spawn(KIND.GEM, x, y, 0, 0, GEM_RADIUS, 0);
+  const i = world.spawn(KIND.GEM, x, y, 0, 0, gemRadius(value), 0);
   if (i < 0) return -1;
   world.damage[i] = value;
   world.life[i] = GEM_LIFE;
