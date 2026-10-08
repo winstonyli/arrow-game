@@ -9,7 +9,7 @@
 // every generation, so --resume continues an interrupted run. Workers run at BelowNormal priority; never more than --jobs at once.
 // --target=priority evolves the card-pick order instead (one key in [0, 1] per card, sorted ascending; the steering numbers stay at
 // the scripts/bot-params.json values) and writes scripts/bot-priority.json; its held-out comparison is evolved order vs PRIORITY.
-// Usage: bun scripts/evolve-bot.ts [--target=params|priority] [--gens=40] [--pop=24] [--seeds=3] [--minutes=10] [--jobs=6] [--sigma=0.2] [--heldout=30] [--resume] [--out=scripts/bot-params.json] [--state=scripts/evolve-state.json]
+// Usage: bun scripts/evolve-bot.ts [--target=params|priority] [--gens=40] [--pop=24] [--seeds=3] [--minutes=10] [--jobs=6] [--sigma=0.2] [--heldout=30] [--resume] [--race] [--out=scripts/bot-params.json] [--state=scripts/evolve-state.json]
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import os from 'node:os';
@@ -21,6 +21,7 @@ import { seeded } from '../src/core/math.ts';
 
 const arg = (name: string, dflt: string | number): string => (process.argv.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${dflt}`).split('=')[1];
 const prio = arg('target', 'params') === 'priority';
+const race = process.argv.includes('--race'); // score on one seed first, then finish only the better half on the rest (about 2x faster per generation)
 const gens = Number(arg('gens', 40));
 const pop = Number(arg('pop', 24));
 const nSeeds = Number(arg('seeds', 3));
@@ -89,8 +90,18 @@ for (let g = state.gen; g < gens; g++) {
   const sigma = sigma0 * (1 - (0.8 * g) / Math.max(1, gens - 1));
   const seeds = Array.from({ length: nSeeds }, (_, j) => 100 + g * nSeeds + j); // fresh seeds each generation, shared by the whole generation
   const cands = [state.mean, ...Array.from({ length: pop }, () => state.mean.map((m) => clamp01(m + sigma * gauss())))];
-  const fits = await Promise.all(cands.map((u) => evaluate(fromUnit(u), seeds).then(mean)));
-  const order = cands.map((_, i) => i).sort((a, b) => fits[b] - fits[a]);
+  let fits: number[];
+  let alive = cands.map((_, i) => i); // candidates still in the running; with --race the weaker half drops after the first seed
+  if (!race) fits = await Promise.all(cands.map((u) => evaluate(fromUnit(u), seeds).then(mean)));
+  else {
+    const first = await Promise.all(cands.map((u) => evaluate(fromUnit(u), seeds.slice(0, 1))));
+    fits = first.map(mean);
+    alive = alive.sort((a, b) => fits[b] - fits[a]).slice(0, Math.max(2, Math.ceil(cands.length / 2)));
+    if (!alive.includes(0)) alive.push(0); // the old mean always gets the full score so the log stays comparable
+    const rest = await Promise.all(alive.map((i) => evaluate(fromUnit(cands[i]), seeds.slice(1))));
+    alive.forEach((i, k) => { fits[i] = mean([...first[i], ...rest[k]]); });
+  }
+  const order = alive.sort((a, b) => fits[b] - fits[a]);
   const mu = Math.max(2, Math.floor(pop / 4));
   const w = Array.from({ length: mu }, (_, i) => Math.log(mu + 0.5) - Math.log(i + 1));
   const wsum = w.reduce((a, b) => a + b, 0);
