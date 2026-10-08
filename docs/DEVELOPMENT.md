@@ -383,7 +383,7 @@ Run record: `node scripts/evolve-bot.ts --gens=40 --pop=24 --seeds=3 --minutes=1
 | Corona Wire | 311.1 s | 600.0 s (cap) | +288.9 (223.0, 349.7) |
 | Aftershock | 394.5 s | 600.0 s (cap) | +205.5 (149.0, 259.0) |
 
-Final parameters (default to evolved): flee 260 to 175.3, fall 1 to 2.691, wShooter 1 to 1.866, wBoss 1 to 1.153, wSwarm 1 to 0.4855, wShot 1 to 1.25, wallMargin 250 to 434.2, wallWeight 1 to 0.82, side 0.5 to 0.06596, gemPull 0.7 to 0.2813, gemRange 400 to 511.7. In words: it flees later and only from close threats (steep falloff), stays well off the walls, barely circles, ignores gems less than the old bot did only when nothing is near, and treats swarmers as the least dangerous.
+Final parameters (default to evolved): flee 260 to 175.3, fall 1 to 2.691, wShooter 1 to 1.866, wBoss 1 to 1.153, wSwarm 1 to 0.4855, wShot 1 to 1.25, wallMargin 250 to 434.2, wallWeight 1 to 0.82, side 0.5 to 0.06596, gemPull 0.7 to 0.2813, gemRange 400 to 511.7. In words: it flees later and only from close threats (steep falloff), stays well off the walls, barely circles, is pulled toward nearby gems less strongly while fleeing (0.28 against 0.7, from a longer range), and treats swarmers as the least dangerous.
 
 Reading it:
 - The old bot was far from a strong player: the evolved one survives the full 10 minutes on the baseline build most of the time (level about 21, about 2,500 kills at 10 minutes on seed 1), where the old one died around 3 minutes. Every earlier survival figure (baseline 128 to 190 s, build rows) came from the weak bot.
