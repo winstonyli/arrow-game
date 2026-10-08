@@ -299,15 +299,37 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   let screen: Screen = 'none';
   const focusFirst = (node: ParentNode) => node.querySelector('button')?.focus({ preventScroll: true });
 
+  // Hiding an overlay fades it out first (CSS .leaving) and sets hidden when the fade ends; showing it again mid-fade cancels that. Reduced motion hides at once.
+  const LEAVE_MS = 150;
+  function setShown(node: HTMLElement, shown: boolean) {
+    if (!shown && node.classList.contains('leaving')) return;
+    const gen = (Number(node.dataset.gen) || 0) + 1;
+    node.dataset.gen = String(gen);
+    node.classList.remove('leaving');
+    node.inert = false;
+    if (shown) node.hidden = false;
+    else if (node.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) node.hidden = true;
+    else {
+      node.classList.add('leaving');
+      node.inert = true;
+      setTimeout(() => {
+        if (node.dataset.gen !== String(gen)) return;
+        node.hidden = true;
+        node.classList.remove('leaving');
+        node.inert = false;
+      }, LEAVE_MS);
+    }
+  }
+
   function show(name: Screen) {
     screen = name;
     hud.hidden = name === 'none' || name === 'title' || name === 'over' || name === 'challenges';
     hud.dataset.watch = String(name === 'watch');
     watchbar.hidden = name !== 'watch';
-    title.hidden = name !== 'title';
-    pause.hidden = name !== 'pause';
-    over.hidden = name !== 'over';
-    challenges.hidden = name !== 'challenges';
+    setShown(title, name === 'title');
+    setShown(pause, name === 'pause');
+    setShown(over, name === 'over');
+    setShown(challenges, name === 'challenges');
     // Overlays and the picker own the keyboard: take the HUD (pause button) out of the tab order.
     hud.inert = name !== 'play' || !!offer;
     if (name === 'title') focusFirst(title);
@@ -329,7 +351,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
 
   function setOffer(ids: string[] | null, header = '', tags: string[] = []) {
     offer = ids;
-    picker.hidden = !ids;
+    setShown(picker, !!ids);
     hud.inert = screen !== 'play' || !!ids;
     if (!ids) {
       glow(null);
