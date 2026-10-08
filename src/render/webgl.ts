@@ -1,4 +1,5 @@
 import { KIND } from '../core/world.ts';
+import { gemBlinking } from '../game/gems.ts';
 import { ENEMY_TYPES } from '../game/enemies.ts';
 import { drawWorldGrid } from './grid-lines.ts';
 import { POOL, RING, PAL_WHITE, PAL_DUST } from './fx.ts';
@@ -147,6 +148,7 @@ export function packInstances(world: World, player: Player, game: Pick<RenderGam
     for (let i = 0; i < world.high; i++) {
       const k = world.kind[i];
       if (k !== layer) continue;
+      if (k === KIND.GEM && gemBlinking(world, i)) continue;
       const x = world.x[i];
       const y = world.y[i];
       const r = world.radius[i];

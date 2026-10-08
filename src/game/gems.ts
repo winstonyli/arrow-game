@@ -8,6 +8,8 @@ import type { RunStats } from './runstats.ts';
 export const GEM_RADIUS = 5; // a 1 xp gem; bigger gems grow with their value (see gemRadius)
 export const gemRadius = (value: number): number => GEM_RADIUS + 2 * Math.sqrt(Math.max(0, value - 1)); // 1 xp: 5, 2: 7, 3: 7.8, 5: 9, 20: 13.7
 export const GEM_LIFE = 60; // seconds before an uncollected gem despawns
+const GEM_WARN = 10; // s before expiry that an uncollected gem starts to blink (drawing only), faster in the last 3 s
+export const gemBlinking = (world: World, i: number): boolean => world.life[i] < GEM_WARN && world.cd[i] === 0 && Math.floor(world.life[i] * (world.life[i] < 3 ? 10 : 5)) % 2 === 1;
 // A captured gem is a damped orbit around the player, simulated in the player's frame of reference (so a
 // moving player drags its gems along and a gem cannot be outrun): a spring-like pull of strength PULL^2 per px
 // plus drag DRAG on the velocity relative to the player, and a sideways push that fades out over the first

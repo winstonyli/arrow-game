@@ -1,4 +1,5 @@
 import { KIND } from '../core/world.ts';
+import { gemBlinking } from '../game/gems.ts';
 import { ENEMY_TYPES } from '../game/enemies.ts';
 import { drawWorldGrid } from './grid-lines.ts';
 import { POOL, RING, PAL_WHITE, PAL_DUST } from './fx.ts';
@@ -62,7 +63,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     ctx.globalAlpha = 0.3;
     ctx.beginPath();
     for (let i = 0; i < world.high; i++) {
-      if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type)) continue;
+      if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type) || (kind === KIND.GEM && gemBlinking(world, i))) continue;
       fx.tail(world, i, tv);
       tailPath(world.x[i], world.y[i], world.radius[i]);
     }
@@ -86,7 +87,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     ctx.fillStyle = color;
     ctx.beginPath();
     for (let i = 0; i < world.high; i++) {
-      if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type)) continue;
+      if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type) || (kind === KIND.GEM && gemBlinking(world, i))) continue;
       const r = world.radius[i];
       ctx.moveTo(world.x[i] + r, world.y[i]);
       ctx.arc(world.x[i], world.y[i], r, 0, TAU);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { World, KIND } from '../src/core/world.ts';
 import { createPlayer, movePlayer } from '../src/game/player.ts';
 import { moveSystem } from '../src/core/systems.ts';
-import { spawnGem, gemSystem, gemRadius, GEM_LIFE, GEM_RADIUS } from '../src/game/gems.ts';
+import { spawnGem, gemSystem, gemRadius, gemBlinking, GEM_LIFE, GEM_RADIUS } from '../src/game/gems.ts';
 import type { Player } from '../src/game/player.ts';
 
 const setup = () => ({ world: new World(20), player: createPlayer(450, 500) });
@@ -15,6 +15,18 @@ test('spawnGem stores the value in damage and a life timer', () => {
   assert.equal(world.kind[g], KIND.GEM);
   assert.equal(world.damage[g], 3);
   assert.equal(world.life[g], GEM_LIFE);
+});
+
+test('a gem blinks only in its last seconds and not once captured', () => {
+  const { world } = setup();
+  const g = spawnGem(world, 10, 20, 1);
+  assert.equal(gemBlinking(world, g), false); // fresh
+  world.life[g] = 9.9; // 5 Hz: hidden on odd half-periods
+  const seen = new Set<boolean>();
+  for (let l = 9.9; l > 3; l -= 0.01) { world.life[g] = l; seen.add(gemBlinking(world, g)); }
+  assert.deepEqual([...seen].sort(), [false, true]);
+  world.life[g] = 2; world.cd[g] = 0.1; // captured: always drawn
+  assert.equal(gemBlinking(world, g), false);
 });
 
 test('gem radius grows with its value, a 1 xp gem keeps the base size', () => {
