@@ -1,4 +1,5 @@
 import { KIND } from '../core/world.ts';
+import type { World } from '../core/world.ts';
 import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../game/enemies.ts';
 import { spawnGem } from '../game/gems.ts';
 import { pickChoices } from '../game/skills.ts';
@@ -14,7 +15,8 @@ export const RATE_PER_SEC = 0.012; // added per second survived
 export const ENEMY_CAP = 800; // live enemies; the director stops spawning above this
 export const SHOOTER_AFTER = 45; // seconds before shooters join the mix
 export const HP_GROWTH = 300; // seconds for enemy hp to grow by its starting value: hp x (1 + t / HP_GROWTH + (t / HP_QUAD)^2)
-export const HP_QUAD = 400; // seconds at which the squared term adds the starting value again: later growth is convex (x9 at 10 minutes, x19 at 15)
+export const HP_QUAD = 220; // seconds at which the squared term adds the starting value again: later growth is convex (x10 at 10 minutes, x28 at 15)
+export const DMG_GROWTH = 1.5; // enemy contact damage grows by this multiple of its starting value per minute: damage x (1 + DMG_GROWTH t / 60)
 export const BOSS_HP_STEP = 0.5; // each boss after the first has this much more hp than the one before
 export const SHOOTER_SHARE = 0.3;
 // Enemy mix: from `after` seconds a type takes `share` of spawns (first match wins, in this order);
@@ -39,6 +41,17 @@ const TRIES = 32;
 export const xpFor = (level: number): number => Math.round(3 + 2 * level + (level * level) / 4);
 export const spawnRate = (t: number): number => BASE_RATE + RATE_PER_SEC * t;
 export const hpScale = (t: number): number => 1 + t / HP_GROWTH + (t / HP_QUAD) ** 2;
+export const dmgScale = (t: number): number => 1 + (DMG_GROWTH * t) / 60;
+
+// Spawns an enemy with hp and contact damage scaled for the time `t`. Every arena spawn goes through here, so the two curves cannot drift apart.
+function spawnScaled(world: World, type: number, x: number, y: number, t: number): number {
+  const e = spawnEnemy(world, type, x, y);
+  if (e >= 0) {
+    world.hp[e] *= hpScale(t);
+    world.damage[e] *= dmgScale(t);
+  }
+  return e;
+}
 
 export const clock = (t: number): string => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
@@ -106,14 +119,13 @@ export function createArena() {
         for (let k = 0; k < count; k++) {
           const dx = k === 0 ? 0 : (rng() - 0.5) * 2 * PACK_SPREAD;
           const dy = k === 0 ? 0 : (rng() - 0.5) * 2 * PACK_SPREAD;
-          const e = spawnEnemy(world, pick ? pick.type : ENEMY.CHASER, clamp(pt.x + dx, WALL_PAD, game.bounds.w - WALL_PAD), clamp(pt.y + dy, WALL_PAD, game.bounds.h - WALL_PAD));
-          if (e >= 0) world.hp[e] *= hpScale(game.time);
+          spawnScaled(world, pick ? pick.type : ENEMY.CHASER, clamp(pt.x + dx, WALL_PAD, game.bounds.w - WALL_PAD), clamp(pt.y + dy, WALL_PAD, game.bounds.h - WALL_PAD), game.time);
         }
         this.debt -= count - 1;
       }
       if (game.time >= this.nextBoss && spawnPoint(game, pt)) {
-        const b = spawnEnemy(world, ENEMY.BOSS, pt.x, pt.y);
-        if (b >= 0) world.hp[b] *= hpScale(game.time) * (1 + BOSS_HP_STEP * (Math.round(this.nextBoss / BOSS_EVERY) - 1));
+        const b = spawnScaled(world, ENEMY.BOSS, pt.x, pt.y, game.time);
+        if (b >= 0) world.hp[b] *= 1 + BOSS_HP_STEP * (Math.round(this.nextBoss / BOSS_EVERY) - 1);
         game.fx?.shake(0.6);
         game.sfx?.boss();
         game.bossAt = game.time;
@@ -134,8 +146,7 @@ export function createArena() {
       if (world.type[j] === ENEMY.SPLITTER) {
         for (let k = 0; k < SPLIT_COUNT && world.kindCount[KIND.ENEMY] < ENEMY_CAP; k++) {
           const a = game.rng() * Math.PI * 2;
-          const e = spawnEnemy(world, ENEMY.SWARMER, clamp(world.x[j] + Math.cos(a) * 14, WALL_PAD, game.bounds.w - WALL_PAD), clamp(world.y[j] + Math.sin(a) * 14, WALL_PAD, game.bounds.h - WALL_PAD));
-          if (e >= 0) world.hp[e] *= hpScale(game.time);
+          spawnScaled(world, ENEMY.SWARMER, clamp(world.x[j] + Math.cos(a) * 14, WALL_PAD, game.bounds.w - WALL_PAD), clamp(world.y[j] + Math.sin(a) * 14, WALL_PAD, game.bounds.h - WALL_PAD), game.time);
         }
       }
       const value = ENEMY_TYPES[world.type[j]].xp;
