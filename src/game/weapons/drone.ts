@@ -17,11 +17,11 @@ export const DRONE_TRACER_DOTS = 6; // dots in a tracer (presentation only)
 export const DRONE_INSTANCES = DRONE_MAX * (1 + DRONE_TRACER_DOTS); // the WebGL buffer's share: a body and a tracer per drone
 export const DRONE_OFFSETS: ReadonlyArray<readonly [number, number]> = [[-32, -32], [32, -32], [0, 36], [-48, 10], [48, 10]]; // screen-space, from the player
 export const DRONE_LEVELS = [
-  { count: 1, dmg: 10, interval: 0.6, range: 220 },
-  { count: 1, dmg: 14, interval: 0.55, range: 240 },
-  { count: 2, dmg: 16, interval: 0.5, range: 260 },
-  { count: 2, dmg: 22, interval: 0.45, range: 280 },
-  { count: 3, dmg: 26, interval: 0.45, range: 300 },
+  { count: 1, dmg: 6.5, interval: 0.6, range: 220 },
+  { count: 1, dmg: 9, interval: 0.55, range: 240 },
+  { count: 2, dmg: 10.5, interval: 0.5, range: 260 },
+  { count: 2, dmg: 14, interval: 0.45, range: 280 },
+  { count: 3, dmg: 17, interval: 0.45, range: 300 },
 ];
 
 // A slot is active while on[k] is 1. (tx, ty) is where its last shot landed and `age` is that tracer's age (DRONE_TRACER

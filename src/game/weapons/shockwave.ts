@@ -14,11 +14,11 @@ export const SHOCK_LEVELS = [
   { damage: 75, radius: 320, interval: 3 },
 ];
 export const AFTER_DELAY = 0.4; // Aftershock: seconds between the rings
-export const AFTER_DMG = 0.8; // Aftershock: damage multiplier for both rings
-export const AFTER_ECHO = 0.6; // Aftershock: the second ring's share of the first's damage
+export const AFTER_DMG = 0.45; // Aftershock: damage multiplier for both rings
+export const AFTER_ECHO = 0.45; // Aftershock: the second ring's share of the first's damage
 export const FISSURE_RANGE = 2.4; // Fissure: reach multiplier
-export const FISSURE_DMG = 1.8; // Fissure: damage multiplier
-export const FISSURE_HALF = 30; // Fissure: half the crack's width in px (a 60 px crack)
+export const FISSURE_DMG = 2.4; // Fissure: damage multiplier
+export const FISSURE_HALF = 55; // Fissure: half the crack's width in px (a 110 px crack)
 
 // Ring 1 is fixed at the point it started from: `r` its radius, `max` where it stops, `cd` the time until the next pulse
 // can start (counted from the start of a pulse). Fissure uses the same r/max as the crack's length along (ux, uy) (`line`

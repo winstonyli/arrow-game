@@ -352,7 +352,7 @@ The candidate search used a fixed boss-sized radius (36) for every projectile; i
 
 Cell size re-swept at the new radius (16/32/64): 32 stays the default (64 is ~2x worse in dense and converge; 16 is similar in the crowded cases and worse when sparse). Run-to-run noise is about ±40% under the current machine load.
 
-## Difficulty curve (v0.4.1, `SIM_VERSION` 16)
+## Difficulty curve (v0.4.1, `SIM_VERSION` 16, superseded in part by the 2026-10-08 pass below)
 
 Spawn rate is `0.9 + 0.012 t` per second (`spawnRate`); enemy hp at spawn is multiplied by `hpScale(t) = 1 + t/300 + (t/400)^2` (`src/modes/arena.ts`), and bosses by a further `1 + 0.5 x (bosses before)`. Mix unlocks: swarmers 15 s, shooters 45 s, bruisers 80 s, splitters 150 s. Rooms is unchanged. Tuned 2026-10-07 after play feedback that the start felt slow and the late game flat.
 
@@ -435,3 +435,34 @@ Survival saturates against the evolved bot (it reaches the cap), so `evolve-bot.
 ### Difficulty probe: the enemy cap never binds (2026-10-08)
 
 Question: could a harder late game come from the 800-enemy cap (overflow spawns becoming enemy toughness)? Prototype in a throwaway worktree (reverted): overflow-to-toughness at three strengths changed nothing, because the evolved bot never reaches the cap (soak at minute 30: 153 enemies, 23,178 kills, 0.06 ms per tick). The cap is not a difficulty lever against this bot. `hpScale`'s quadratic term is: 12 seeds, 30-minute cap, deaths at `HP_QUAD` 400 (current) / 300 / 220: nearly all builds survive 30 minutes at 400; at 300 the no-upgrade baseline's 10th-percentile death is minute 7.0 (10 of 12 alive at 30); at 220 the baseline's 25th percentile is minute 17.6 (8 of 12 alive), `chain.a`'s 10th percentile is minute 23.6, and `shockwave.a`, `drone.a` and `blade.b` still survive in 12 of 12. Spawn rate and enemy damage or speed were not probed.
+
+### Harder, faster target and branch balance pass (2026-10-08, `SIM_VERSION` 17)
+
+Goal set with the playtester: a build with no upgrades should die at about 5 minutes and strong builds at about 10 (against the evolved bot, which outlasts a person by an unmeasured margin). Probes in a throwaway worktree (env knobs `HPQ`, `TEMPO`, `RPS`, `DG`; 5 builds, 8 seeds, 15-minute cap; scripts and outputs not kept):
+- Tempo `k` (replace `t` by `k t` in the spawn rate and hp curves) with `HP_QUAD` 220: weak builds die at 7 to 9 minutes at k = 1.5 to 2, but `drone.a` and `shockwave.a` still survive 7 to 8 of 8 runs at 15 minutes even with hp x67. Deaths are bimodal (10th percentile about 5 minutes, then either dead or at the cap): what kills a strong build is being hit, not the hp wall.
+- Spawn-rate slope 0.03 or 0.06 (from 0.012): easier, not harder. More enemies means more gems and levels (57 to 76 picks against 35 to 47), and the baseline median reached the 15-minute cap.
+- Contact damage growth `1 + DG t/60` is the lever that reaches strong builds: DG 1.5 gave medians 5.4 (no upgrades), 6.6 (`blade.b`), 12.4 to 15 (strong). It saturates by DG 2.5 (4 changes nothing: the runs that live are never hit). Scaling enemy shots by the same ratio changed nothing beyond noise, so it was left out. `HP_QUAD` 220 against 400 matters (`drone.a` 8 of 8 alive at 400, 3 of 8 at 220).
+- Shipped: `DMG_GROWTH` 1.5 and `HP_QUAD` 220 in `src/modes/arena.ts`; all three spawn sites (director, boss, splitter children) go through `spawnScaled`.
+
+Survival per build on the new curve (evolved bot, 20 seeds, seconds; the first sweep with a 30-minute cap, then tuned with a 20-minute cap; baseline 330 s then 320 s):
+
+| Build | Before tuning | After tuning |
+|---|---|---|
+| Quake level 2 | 726 | 459 |
+| Aftershock | 1478 | 802 |
+| Fissure | 565 | 508 |
+| Live Wire level 2 | 870 | 563 |
+| Corona Wire | 883 | 655 |
+| Daisy Chain | 1087 | 578 |
+| Hornets level 2 | 1276 | 715 |
+| Hive Mind | 1010 | 751 |
+| Stinger | 1117 | 544 |
+| Whirligig level 2 | 378 | 300 |
+| Carousel | 413 | 364 |
+| Blender | 399 | 391 |
+
+Changes: Hornets damage -35% at every level; `AFTER_DMG` 0.45, `AFTER_ECHO` 0.45; `DAISY_DMG` 0.7 and Corona Wire damage -17%; `FISSURE_DMG` 2.4 and `FISSURE_HALF` 55. Findings worth keeping:
+- Fissure was limited by coverage, not damage: damage 1.8 to 3.0 left it at about 7.5 minutes, a crack twice as wide (60 to 110 px) took it to 8.5 and tripled its damage per second.
+- Whirligig stays at 5 to 6.5 minutes whatever we do (a 50% damage buff changed nothing, reverted): the bot flees from anything within 260 px, so its blades rarely touch an enemy. Survival against this bot cannot judge a contact weapon; tune it by playtest.
+- Noise: 20 seeds give a 95% interval of about plus or minus 2 minutes on a build's survival, so nothing here is tuned finer than that.
+- Not done: human play-testing of the whole pass; the other six weapons have no branch and were not retuned.

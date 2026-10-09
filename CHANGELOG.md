@@ -4,7 +4,10 @@ Versioning and what counts as a release: see "Versioning and commits" in the REA
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
 ## v0.4.1 (unreleased)
-`SIM_VERSION` 16 (replays from v0.4.0 are flagged stale). Difficulty curve: a faster start and a steeper late game.
+`SIM_VERSION` 17 (replays from v0.4.0 are flagged stale). Difficulty curve: a faster start and a steeper late game, and a balance pass on the branches.
+
+- Enemy contact damage grows with the clock: x(1 + 1.5 t/60) at spawn (x2.5 at 1:00, x8.5 at 5:00), and the hp curve is steeper (`HP_QUAD` 400 to 220: x10 at 10:00, x28 at 15:00). With the evolved bot (20 seeds) a build with no upgrades now dies at about 5.3 minutes and the branch builds at 8 to 13 (they all survived 15 minutes or more before).
+- Balance pass, aiming every branch build at about 8 to 13 minutes against the evolved bot: Hornets damage -35% at every level; Aftershock damage 0.8 to 0.45 and echo share 0.6 to 0.45; Daisy Chain damage 0.85 to 0.7 and Corona Wire damage about -17%; Fissure damage 1.8 to 2.4 and crack width 60 to 110 px. Whirligig is untouched (see docs/DEVELOPMENT.md: the bot cannot measure it).
 
 - Arena spawn rate starts at 0.9 per second (was 0.6) and climbs 0.012 per second (was 0.015). Swarmers unlock at 15 s (was 30), shooters at 45 s (was 60), bruisers at 80 s (was 90).
 - Enemy hp grows with the clock: x(1 + t/300 + (t/400)^2) at spawn (x1.3 at 1:30, x2.4 at 5:00, x9 at 10:00, x19 at 15:00), splitter swarmers included. Each boss after the first has 50% more hp than the one before. Rooms is unchanged.
