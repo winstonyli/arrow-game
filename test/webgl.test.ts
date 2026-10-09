@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { createWebGLRenderer, packInstances, STRIDE } from '../src/render/webgl.ts';
 import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.ts';
+import { DANGER_ALPHA, DANGER_LEVELS, dangerLevel } from '../src/render/danger.ts';
+import { CONTACT_CAP } from '../src/modes/arena.ts';
 import { createFx, POOL } from '../src/render/fx.ts';
 import type { Game } from '../src/game/game.ts';
 import type { Player, PlayerStats } from '../src/game/player.ts';
@@ -30,6 +32,7 @@ test('packInstances writes live entities by layer, player last, skipping free sl
   const w = new World(10);
   const a = spawnEnemy(w, ENEMY.SHOOTER, 1, 2);
   const b = spawnEnemy(w, ENEMY.CHASER, 3, 4);
+  w.damage[a] = 0; // no danger ring: this test counts plain entities
   w.spawn(KIND.PROJECTILE, 7, 8, 0, 0, 4, 0);
   w.spawn(KIND.ENEMY_PROJECTILE, 9, 10, 0, 0, 5, 0);
   w.despawn(b);
@@ -141,7 +144,7 @@ test('particles pack before the player with alpha / negative ring fade', () => {
 
 test('with fx the cull pad keeps entities just outside the view for shake', () => {
   const w = new World(10);
-  spawnEnemy(w, ENEMY.CHASER, -20, 100); // radius 10: right edge at -10, 10 px outside
+  w.damage[spawnEnemy(w, ENEMY.CHASER, -20, 100)] = 0; // radius 10: right edge at -10, 10 px outside
   const out = new Float32Array(20 * STRIDE);
   assert.equal(packInstances(w, player(), G(), out), 1); // player only
   assert.equal(packInstances(w, player(), G({ fx: createFx(10) }), out), 2);
@@ -151,7 +154,7 @@ test('layers draw gems, enemies, enemy projectiles, arrows, then particles, blad
   const w = new World(20);
   w.spawn(KIND.PROJECTILE, 1, 0, 0, 0, 4, 0); // slot 0: arrow
   w.spawn(KIND.ENEMY_PROJECTILE, 2, 0, 0, 0, 4, 0);
-  spawnEnemy(w, ENEMY.CHASER, 3, 0);
+  w.damage[spawnEnemy(w, ENEMY.CHASER, 3, 0)] = 0;
   w.spawn(KIND.GEM, 4, 0, 0, 0, 5, 0); // slot 3: gem
   const fx = createFx(20, () => 0.5);
   fx.burst(5, 0); // 5 particles
@@ -444,4 +447,33 @@ test('five active drones with fresh tracers fit the instance budget', () => {
   ws.drones.age.fill(0);
   const out = new Float32Array((2 + WEAPON_INSTANCES) * STRIDE);
   assert.ok(packInstances(w, player(), G({ wstate: ws }), out) <= 1 + WEAPON_INSTANCES);
+});
+
+test('an enemy gets one ring per danger level, drawn right after it; a harmless one gets none', () => {
+  const w = new World(10);
+  const hot = spawnEnemy(w, ENEMY.CHASER, 100, 100);
+  const calm = spawnEnemy(w, ENEMY.CHASER, 200, 100);
+  w.damage[hot] = CONTACT_CAP;
+  w.damage[calm] = 0;
+  const out = new Float32Array(20 * STRIDE);
+  assert.equal(packInstances(w, player(), G(), out), 1 + DANGER_LEVELS + 1 + 1); // enemy + rings, enemy, player
+  for (let k = 1; k <= DANGER_LEVELS; k++) {
+    assert.equal(out[k * STRIDE + 3], COLORS.length - 1); // P_DANGER, the last palette entry
+    assert.ok(Math.abs(out[k * STRIDE + 4] + DANGER_ALPHA[DANGER_LEVELS]) < 1e-6); // float32
+    assert.ok(out[k * STRIDE + 2] > out[(k - 1) * STRIDE + 2], 'rings step outward');
+  }
+});
+
+test('a full buffer skips rings instead of overflowing', () => {
+  const w = new World(4);
+  w.damage[spawnEnemy(w, ENEMY.CHASER, 100, 100)] = CONTACT_CAP;
+  assert.equal(packInstances(w, player(), G(), new Float32Array(2 * STRIDE)), 2); // enemy, player: no room for rings
+});
+
+test('dangerLevel grows with damage, from 0 for none to DANGER_LEVELS at the cap', () => {
+  assert.equal(dangerLevel(0), 0);
+  assert.equal(dangerLevel(1), 1);
+  assert.equal(dangerLevel(CONTACT_CAP), DANGER_LEVELS);
+  let prev = 0;
+  for (let d = 0; d <= CONTACT_CAP; d++) { assert.ok(dangerLevel(d) >= prev); prev = dangerLevel(d); }
 });

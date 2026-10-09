@@ -15,6 +15,7 @@ import { DAGGER_CAP, DAGGER_DOT_R, DAGGER_TRAIL } from '../game/weapons/daggers.
 import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
+import { DANGER_ALPHA, DANGER_COLOR, DANGER_GAP, DANGER_LEVELS, dangerLevel } from './danger.ts';
 import type { Size, Vec } from '../core/math.ts';
 import type { Game, Mode } from '../game/game.ts';
 import type { Fx } from './fx.ts';
@@ -124,6 +125,26 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     ctx.fill();
   }
 
+  // A ring per danger level around each enemy that hurts on touch (see danger.ts): one path and one stroke per level.
+  function dangerRings(world: World): void {
+    ctx.strokeStyle = DANGER_COLOR;
+    ctx.lineWidth = 1.5;
+    for (let level = 1; level <= DANGER_LEVELS; level++) {
+      ctx.globalAlpha = DANGER_ALPHA[level];
+      ctx.beginPath();
+      for (let i = 0; i < world.high; i++) {
+        if (world.kind[i] !== KIND.ENEMY || dangerLevel(world.damage[i]) !== level) continue;
+        for (let k = 0; k < level; k++) {
+          const r = world.radius[i] + 1 + k * DANGER_GAP;
+          ctx.moveTo(world.x[i] + r, world.y[i]);
+          ctx.arc(world.x[i], world.y[i], r, 0, TAU);
+        }
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   function particles(fx: Fx): void {
     const p = fx.p;
     for (let k = 0; k < POOL; k++) {
@@ -188,6 +209,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     }
     if (game.player.stats.frost > 0 || game.player.stats.ignite > 0) tinted(world);
     if (fx) flashed(world, fx);
+    dangerRings(world);
     if (fx) tails(world, KIND.ENEMY_PROJECTILE, -1, '#ff7b72', fx);
     circles(world, KIND.ENEMY_PROJECTILE, -1, '#ff7b72');
     if (fx) tails(world, KIND.PROJECTILE, -1, '#58a6ff', fx);
