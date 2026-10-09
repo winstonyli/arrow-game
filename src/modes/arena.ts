@@ -15,7 +15,8 @@ export const RATE_PER_SEC = 0.012; // added per second survived
 export const ENEMY_CAP = 800; // live enemies; the director stops spawning above this
 export const SHOOTER_AFTER = 45; // seconds before shooters join the mix
 export const HP_GROWTH = 300; // seconds for enemy hp to grow by its starting value: hp x (1 + t / HP_GROWTH + (t / HP_QUAD)^2)
-export const HP_QUAD = 220; // seconds at which the squared term adds the starting value again: later growth is convex (x10 at 10 minutes, x28 at 15)
+export const HP_QUAD = 180; // seconds at which the squared term adds the starting value again: later growth is convex (x14 at 10 minutes, x29 at 15)
+export const CONTACT_CAP = 60; // a touch never costs more than this (the player has 100 hp), so a death takes two hits
 export const DMG_GROWTH = 1.5; // enemy contact damage grows by this multiple of its starting value per minute: damage x (1 + DMG_GROWTH t / 60)
 export const BOSS_HP_STEP = 0.5; // each boss after the first has this much more hp than the one before
 export const SHOOTER_SHARE = 0.3;
@@ -48,7 +49,7 @@ function spawnScaled(world: World, type: number, x: number, y: number, t: number
   const e = spawnEnemy(world, type, x, y);
   if (e >= 0) {
     world.hp[e] *= hpScale(t);
-    world.damage[e] *= dmgScale(t);
+    world.damage[e] = Math.min(world.damage[e] * dmgScale(t), CONTACT_CAP);
   }
   return e;
 }

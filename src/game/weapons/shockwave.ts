@@ -14,8 +14,8 @@ export const SHOCK_LEVELS = [
   { damage: 75, radius: 320, interval: 3 },
 ];
 export const AFTER_DELAY = 0.4; // Aftershock: seconds between the rings
-export const AFTER_DMG = 0.45; // Aftershock: damage multiplier for both rings
-export const AFTER_ECHO = 0.45; // Aftershock: the second ring's share of the first's damage
+export const AFTER_DMG = 0.35; // Aftershock: damage multiplier for both rings
+export const AFTER_ECHO = 0.4; // Aftershock: the second ring's share of the first's damage
 export const FISSURE_RANGE = 2.4; // Fissure: reach multiplier
 export const FISSURE_DMG = 2.4; // Fissure: damage multiplier
 export const FISSURE_HALF = 55; // Fissure: half the crack's width in px (a 110 px crack)

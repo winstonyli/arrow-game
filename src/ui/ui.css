@@ -52,6 +52,12 @@ svg { width: 1.25em; height: 1.25em; vertical-align: -0.2em; }
 .bar { width: calc(var(--u) * 80); height: calc(var(--u) * 9); background: var(--card); border: 1px solid currentColor; border-radius: calc(var(--u) * 4); overflow: hidden; }
 .bar i { display: block; height: 100%; background: currentColor; box-shadow: 0 0 calc(var(--u) * 8) currentColor; }
 .bar.hp { color: var(--x); } .bar.xp { color: var(--g); }
+.hp-w { position: relative; }
+.hp-d { position: absolute; left: 0; top: 100%; color: var(--x); opacity: 0; pointer-events: none; }
+.hp-d.on { animation: hp-d 0.9s ease-out; }
+@keyframes hp-d { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(calc(var(--u) * 8)); } }
+@media (prefers-reduced-motion: reduce) { .hp-d.on { animation-name: hp-d-still; } }
+@keyframes hp-d-still { from { opacity: 1; } to { opacity: 0; } }
 .spacer { flex: 1; }
 .time { color: var(--b); }
 #ui [data-kind=arena] .rooms-only, #ui [data-kind=rooms] .arena-only { display: none; }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, tick } from '../src/game/game.ts';
-import { createArena, ARENA_BOUNDS, spawnRate, xpFor, spawnPoint, BOSS_EVERY, BASE_RATE, RATE_PER_SEC, hpScale, dmgScale } from '../src/modes/arena.ts';
+import { createArena, ARENA_BOUNDS, spawnRate, xpFor, spawnPoint, BOSS_EVERY, BASE_RATE, RATE_PER_SEC, hpScale, dmgScale, CONTACT_CAP } from '../src/modes/arena.ts';
 import { KIND } from '../src/core/world.ts';
 import { ENEMY, ENEMY_TYPES, spawnEnemy } from '../src/game/enemies.ts';
 import { seeded } from '../src/core/math.ts';
@@ -86,7 +86,7 @@ test('enemies spawn with hp and contact damage scaled for the time', () => {
   const base = ENEMY_TYPES[g.world.type[c]];
   assert.ok(c !== undefined);
   assert.ok(Math.abs(g.world.hp[c] - base.hp * hpScale(300)) < 1e-4);
-  assert.ok(Math.abs(g.world.damage[c] - base.contact * dmgScale(300)) < 1e-4);
+  assert.ok(Math.abs(g.world.damage[c] - Math.min(base.contact * dmgScale(300), CONTACT_CAP)) < 1e-4);
   assert.ok(dmgScale(300) > 1 && dmgScale(0) === 1);
 });
 

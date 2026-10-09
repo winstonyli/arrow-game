@@ -115,7 +115,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
   const hud = h('div', 'hud');
   hud.innerHTML = `
     <div class="hud-top panel">
-      <span class="ic">${icon('heart')}</span><div class="bar hp"><i></i></div><b class="hp-n"></b>
+      <span class="ic">${icon('heart')}</span><div class="bar hp"><i></i></div><span class="hp-w"><b class="hp-n"></b><b class="hp-d"></b></span>
       <span class="arena-only"><span class="mu">Lv</span> <b class="lv"></b></span><div class="bar xp arena-only"><i></i></div>
       <span class="rooms-only"><span class="mu">Room</span> <b class="room"></b> <b class="boss-room" style="color:var(--x)"></b></span>
       <span class="spacer"></span>
@@ -130,7 +130,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     <div class="banner"><b class="glow-text">Knock Knock</b><span>Guess who's here</span></div>`;
   const q = (s: string) => lookup<HudSlot>(hud, s);
   const el = {
-    hp: q('.bar.hp i'), hpN: q('.hp-n'), lv: q('.lv'), xp: q('.bar.xp i'), room: q('.room'), bossRoom: q('.boss-room'),
+    hp: q('.bar.hp i'), hpN: q('.hp-n'), hpD: q('.hp-d'), lv: q('.lv'), xp: q('.bar.xp i'), room: q('.room'), bossRoom: q('.boss-room'),
     time: q('.time'), kills: q('.kills'), foes: q('.foes-n'), skills: q('.skills'), snd: q('.snd'), banner: q('.banner'),
     ghost: q('.ghost-line'),
   };
@@ -389,8 +389,17 @@ export function createUi(root: ParentNode, on: UiHandlers) {
     }
   });
 
+  // A hit shows its cost beside the hp number ("-60", rising and fading) so a big touch reads as one. hp only falls through damage.
+  let lastHp = -1;
   function update(m: HudModel, muted: boolean | undefined) {
     hud.dataset.kind = m.kind;
+    if (lastHp >= 0 && m.hp < lastHp) {
+      el.hpD.textContent = `-${lastHp - m.hp}`;
+      el.hpD.classList.remove('on');
+      void el.hpD.offsetWidth; // restart the animation
+      el.hpD.classList.add('on');
+    }
+    lastHp = m.hp;
     setWidth(el.hp, m.hpPct);
     setText(el.hpN, String(m.hp));
     setText(el.kills, String(m.kills));

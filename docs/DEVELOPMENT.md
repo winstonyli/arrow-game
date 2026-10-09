@@ -442,7 +442,7 @@ Goal set with the playtester: a build with no upgrades should die at about 5 min
 - Tempo `k` (replace `t` by `k t` in the spawn rate and hp curves) with `HP_QUAD` 220: weak builds die at 7 to 9 minutes at k = 1.5 to 2, but `drone.a` and `shockwave.a` still survive 7 to 8 of 8 runs at 15 minutes even with hp x67. Deaths are bimodal (10th percentile about 5 minutes, then either dead or at the cap): what kills a strong build is being hit, not the hp wall.
 - Spawn-rate slope 0.03 or 0.06 (from 0.012): easier, not harder. More enemies means more gems and levels (57 to 76 picks against 35 to 47), and the baseline median reached the 15-minute cap.
 - Contact damage growth `1 + DG t/60` is the lever that reaches strong builds: DG 1.5 gave medians 5.4 (no upgrades), 6.6 (`blade.b`), 12.4 to 15 (strong). It saturates by DG 2.5 (4 changes nothing: the runs that live are never hit). Scaling enemy shots by the same ratio changed nothing beyond noise, so it was left out. `HP_QUAD` 220 against 400 matters (`drone.a` 8 of 8 alive at 400, 3 of 8 at 220).
-- Shipped: `DMG_GROWTH` 1.5 and `HP_QUAD` 220 in `src/modes/arena.ts`; all three spawn sites (director, boss, splitter children) go through `spawnScaled`.
+- First shipped as `DMG_GROWTH` 1.5 and `HP_QUAD` 220, then amended below, in `src/modes/arena.ts`; all three spawn sites (director, boss, splitter children) go through `spawnScaled`.
 
 Survival per build on the new curve (evolved bot, 20 seeds, seconds; the first sweep with a 30-minute cap, then tuned with a 20-minute cap; baseline 330 s then 320 s):
 
@@ -466,3 +466,19 @@ Changes: Hornets damage -35% at every level; `AFTER_DMG` 0.45, `AFTER_ECHO` 0.45
 - Whirligig stays at 5 to 6.5 minutes whatever we do (a 50% damage buff changed nothing, reverted): the bot flees from anything within 260 px, so its blades rarely touch an enemy. Survival against this bot cannot judge a contact weapon; tune it by playtest.
 - Noise: 20 seeds give a 95% interval of about plus or minus 2 minutes on a build's survival, so nothing here is tuned finer than that.
 - Not done: human play-testing of the whole pass; the other six weapons have no branch and were not retuned.
+
+### Contact damage cap, HP_QUAD 180, damage chip (2026-10-08)
+
+Enemy contact damage was `base x (1 + 1.5 t/60)` against 100 hp: a chaser (10) reached 100 at minute 6, a bruiser (18) at 3.5, a boss touch (20) at 3, so late deaths were all one-hit kills while shots stayed at 8 to 10 (unscaled). Unintuitive, and it also explains the bimodal deaths in the probes. Now `CONTACT_CAP` = 60 (`src/modes/arena.ts`, applied in `spawnScaled`): two touches kill. Capping eased the curve (evolved bot, 20 seeds, 20-minute cap, baseline 7.0 minutes against 5.3), so `HP_QUAD` went 220 to 180 to bring it back (baseline 4.8). Survival in minutes at that point, then Aftershock was nerfed once more (damage 0.35, echo 0.4: 17.1 to 14.8):
+
+| Build | Minutes |
+|---|---|
+| no upgrades | 4.8 |
+| Quake level 2 / Aftershock / Fissure | 8.6 / 14.8 / 7.6 |
+| Live Wire level 2 / Corona Wire / Daisy Chain | 9.3 / 10.3 / 12.5 |
+| Hornets level 2 / Hive Mind / Stinger | 10.6 / 14.6 / 14.2 |
+| Whirligig level 2 / Carousel / Blender | 6.7 / 5.9 / 5.6 |
+
+Cap 60 only (`HP_QUAD` 220): baseline 7.0, Aftershock 16.7, Corona Wire 16.1, Hive Mind 16.0, Fissure 9.9. The goldens were regenerated with `--force` (`SIM_VERSION` 17 is still unreleased). Still true: nothing is tuned finer than plus or minus 2 minutes, Whirligig cannot be judged with this bot, and a person will die earlier than the bot.
+
+Presentation: the HUD shows the cost of each hit ("-12") under the hp number, rising and fading over 0.9 s (`.hp-d` in `src/ui/ui.ts`; no sim change). Considered and not done: floating numbers for damage dealt (hundreds of hits per second late, unreadable and costly in both renderers); instead consider crit and boss hits only, a damage-by-weapon end summary (the run stats already track it) and a "killed by" line, which needs the sim to remember the last hit's source.
