@@ -55,6 +55,7 @@ function enemyFire(world: World, i: number, t: EnemyType, aim: number): void {
       0,
     );
     if (p < 0) continue;
+    world.type[p] = world.type[i]; // who fired it, for the game-over screen
     world.damage[p] = t.projDamage;
     world.life[p] = 4;
   }

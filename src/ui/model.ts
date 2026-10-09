@@ -1,5 +1,6 @@
 import { KIND } from '../core/world.ts';
 import { clock, xpFor } from '../modes/arena.ts';
+import { ENEMY_TYPES } from '../game/enemies.ts';
 import type { Game, ModeName } from '../game/game.ts';
 import type { Bests } from '../game/records.ts';
 import type { GhostState } from '../replay/ghost.ts';
@@ -90,6 +91,11 @@ export function overModel(game: Game, kind: ModeName, rec: { best: Bests; isNew:
     kind === 'rooms'
       ? [['Room reached', String(game.mode.room)], ['Kills', String(game.kills)]]
       : [['Survived', clock(game.time)], ['Level', String(game.level)], ['Kills', String(game.kills)]];
+  const { hit } = game.player;
+  if (hit.type >= 0) {
+    const name = ENEMY_TYPES[hit.type].name;
+    rows.push(['Killed by', `${name[0].toUpperCase()}${name.slice(1)}${hit.shot ? ' shot' : ''} (-${Math.round(hit.dmg)})`]);
+  }
   const newBest: string[] = [];
   if (rec) {
     if (kind === 'rooms') {

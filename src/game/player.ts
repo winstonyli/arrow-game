@@ -41,7 +41,7 @@ export function baseStats() {
 }
 
 export function createPlayer(x: number, y: number) {
-  return { x, y, radius: 12, hp: 100, maxHp: 100, invuln: 0, cd: 0, moving: false, vx: 0, vy: 0, stats: baseStats() };
+  return { x, y, radius: 12, hp: 100, maxHp: 100, invuln: 0, cd: 0, moving: false, vx: 0, vy: 0, stats: baseStats(), hit: { type: -1, shot: false, dmg: 0 } };
 }
 
 export function movePlayer(p: Player, input: Vec, dt: number, bounds: Size): void {

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, choose } from '../src/game/game.ts';
+import { createGame, choose, tick } from '../src/game/game.ts';
+import { ENEMY, spawnEnemy } from '../src/game/enemies.ts';
 import { createArena, ARENA_BOUNDS, xpFor, clock } from '../src/modes/arena.ts';
 import { createRooms } from '../src/modes/rooms.ts';
 import { seeded } from '../src/core/math.ts';
@@ -163,4 +164,21 @@ test('importLabel keeps the replaced entry label; raceLabel drops "Imported"', (
   assert.equal(raceLabel({ label: 'Imported' }), '');
   assert.equal(raceLabel({ label: 'hello' }), 'hello');
   assert.match(importError('engine'), /another browser engine; it does not reproduce here/);
+});
+
+test('the game-over screen names the last hit that cost hp, touch or shot, with its damage', () => {
+  const g = arena();
+  assert.ok(!overModel(g, 'arena', null).rows.some(([k]) => k === 'Killed by'));
+  const e = spawnEnemy(g.world, ENEMY.BRUISER, g.player.x, g.player.y);
+  tick(g, 1 / 60);
+  assert.equal(g.world.damage[e], 18);
+  assert.deepEqual(overModel(g, 'arena', null).rows.at(-1), ['Killed by', 'Bruiser (-18)']);
+  g.player.invuln = 0;
+  const p = g.world.spawn(KIND.ENEMY_PROJECTILE, g.player.x, g.player.y, 0, 0, 5, 0);
+  g.world.type[p] = ENEMY.SHOOTER;
+  g.world.damage[p] = 8;
+  g.world.life[p] = 4; // a shot expires at life 0
+  g.world.despawn(e);
+  tick(g, 1 / 60);
+  assert.deepEqual(overModel(g, 'arena', null).rows.at(-1), ['Killed by', 'Shooter shot (-8)']);
 });

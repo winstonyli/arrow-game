@@ -80,10 +80,14 @@ export function projectileSystem(world: World, dt: number, bounds: Size, grid: G
   }
 }
 
-function hurt(player: Player, dmg: number): void {
+// `player.hit` remembers the last hit that cost hp (enemy type, shot or touch, damage) for the game-over screen; presentation only, not hashed.
+function hurt(player: Player, dmg: number, type: number, shot: boolean): void {
   if (player.invuln > 0) return;
   player.hp -= dmg;
   player.invuln = 0.5;
+  player.hit.type = type;
+  player.hit.shot = shot;
+  player.hit.dmg = dmg;
 }
 
 // A hit on enemy `j` for `dmg`, travelling along (dx, dy) (zero when it has no direction). Returns 1 for a kill. The
@@ -128,7 +132,7 @@ export function collisionSystem(
       const dy = player.y - world.y[i];
       const rr = player.radius + world.radius[i];
       if (dx * dx + dy * dy <= rr * rr) {
-        hurt(player, world.damage[i]);
+        hurt(player, world.damage[i], world.type[i], true);
         world.despawn(i);
       }
     }
@@ -140,7 +144,7 @@ export function collisionSystem(
     const dx = world.x[j] - player.x;
     const dy = world.y[j] - player.y;
     const rr = player.radius + world.radius[j];
-    if (dx * dx + dy * dy <= rr * rr) hurt(player, world.damage[j]);
+    if (dx * dx + dy * dy <= rr * rr) hurt(player, world.damage[j], world.type[j], false);
   }
   return kills;
 }
