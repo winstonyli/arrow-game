@@ -323,6 +323,7 @@ export function createUi(root: ParentNode, on: UiHandlers) {
 
   function show(name: Screen) {
     screen = name;
+    clearHit(); // a hidden element keeps its 'on' class, and the fade replayed when the next game showed the HUD again
     hud.hidden = name === 'none' || name === 'title' || name === 'over' || name === 'challenges';
     hud.dataset.watch = String(name === 'watch');
     watchbar.hidden = name !== 'watch';
@@ -391,6 +392,11 @@ export function createUi(root: ParentNode, on: UiHandlers) {
 
   // A hit shows its cost beside the hp number ("-60", rising and fading) so a big touch reads as one. hp only falls through damage.
   let lastHp = -1;
+  function clearHit() {
+    lastHp = -1;
+    el.hpD.classList.remove('on');
+    el.hpD.textContent = '';
+  }
   function update(m: HudModel, muted: boolean | undefined) {
     hud.dataset.kind = m.kind;
     if (lastHp >= 0 && m.hp < lastHp) {
