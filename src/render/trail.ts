@@ -6,6 +6,7 @@
 export type Tail = { mx: number; my: number; ex: number; ey: number };
 
 export const TRAIL_MAX = 80; // px cap on a tail's length
+export const SHAKE_PAD = 12; // cull pad when fx can shake the view (max offset is 10 px); a tail can also reach TRAIL_MAX further into the view
 export const TRAIL_PER_R = 8; // a mover's tail is also capped at this many of its radii, so small movers get short tails
 export const TRAIL_N = 10; // history samples per mover, one per sim tick (fx.sample)
 export const TRAIL_MID = 4; // age (in samples) of the tail's bend

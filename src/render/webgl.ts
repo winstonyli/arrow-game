@@ -13,7 +13,7 @@ import { METEOR_CAP, meteorRadius, meteorAlpha, type MeteorState } from '../game
 import { BEAM_MAX_DOTS, BEAM_ALPHA, beamDots, beamLength, type BeamState } from '../game/weapons/beam.ts';
 import { DRONE_MAX, DRONE_DOT_R, DRONE_TRACER, DRONE_TRACER_DOTS, DRONE_INSTANCES, droneAlpha, type DroneState } from '../game/weapons/drone.ts';
 import { DAGGER_CAP, DAGGER_DOT_R, DAGGER_TRAIL, DAGGER_INSTANCES, type DaggerState } from '../game/weapons/daggers.ts';
-import { TRAIL_MAX } from './trail.ts';
+import { TRAIL_MAX, SHAKE_PAD } from './trail.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World } from '../core/world.ts';
 import type { Size, Vec } from '../core/math.ts';
@@ -24,7 +24,6 @@ import { DANGER_ALPHA, DANGER_COLOR, DANGER_GAP, dangerLevel } from './danger.ts
 export const STRIDE = 9; // floats per instance: x, y, radius, palette index, fade, tail bend x, y, tail tip x, y
 // fade: SOLID = entity (outline + shadow); (0, 1] = dot particle alpha; [-1, 0) = ring particle, alpha -fade.
 const SOLID = 2;
-const SHAKE_PAD = 12; // cull pad when fx can shake the view (max offset is 10 px); a tail can also reach this far into the view
 
 // Palette index: enemy types 0..n-1, then these.
 const P_ENEMY_PROJECTILE = ENEMY_TYPES.length;

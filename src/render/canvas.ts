@@ -16,12 +16,14 @@ import { FROST_TINT, IGNITE_TINT } from '../game/modifiers.ts';
 import { drawGhost } from './ghost-marker.ts';
 import type { World, Kind } from '../core/world.ts';
 import { DANGER_ALPHA, DANGER_COLOR, DANGER_GAP, DANGER_LEVELS, dangerLevel } from './danger.ts';
+import { SHAKE_PAD, TRAIL_MAX } from './trail.ts';
 import type { Size, Vec } from '../core/math.ts';
 import type { Game, Mode } from '../game/game.ts';
 import type { Fx } from './fx.ts';
 
 const TAU = Math.PI * 2;
 const GEM_COLOR = '#f2cc60';
+const CULL_PAD = SHAKE_PAD + TRAIL_MAX;
 
 // The game as the renderers see it: fx (when present) is the render fx from createFx.
 export type RenderGame = Game<Mode, Fx>;
@@ -37,6 +39,14 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
   const cam = { x: 0, y: 0 }; // the camera plus the current shake offset
 
   const tv = { mx: 0, my: 0, ex: 0, ey: 0 };
+
+  // The visible box, padded so a tail or a shake offset reaching into view still draws; set each frame. The loops skip what is outside it (the
+  // fallback used to path every live entity), as webgl.ts does when packing.
+  const box = { x0: 0, x1: 0, y0: 0, y1: 0 };
+  const seen = (world: World, i: number): boolean => {
+    const r = world.radius[i];
+    return world.x[i] + r >= box.x0 && world.x[i] - r <= box.x1 && world.y[i] + r >= box.y0 && world.y[i] - r <= box.y1;
+  };
 
   // Tapered tails (see trail.ts): a smooth quadratic curve from the mover's centre through the tail's bend to its
   // tip, widest at the mover and tapering to a point, appended to the current path from the tail in `tv`.
@@ -64,7 +74,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     ctx.globalAlpha = 0.3;
     ctx.beginPath();
     for (let i = 0; i < world.high; i++) {
-      if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type) || (kind === KIND.GEM && gemBlinking(world, i))) continue;
+      if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type) || (kind === KIND.GEM && gemBlinking(world, i)) || !seen(world, i)) continue;
       fx.tail(world, i, tv);
       tailPath(world.x[i], world.y[i], world.radius[i]);
     }
@@ -88,7 +98,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     ctx.fillStyle = color;
     ctx.beginPath();
     for (let i = 0; i < world.high; i++) {
-      if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type) || (kind === KIND.GEM && gemBlinking(world, i))) continue;
+      if (world.kind[i] !== kind || (type >= 0 && world.type[i] !== type) || (kind === KIND.GEM && gemBlinking(world, i)) || !seen(world, i)) continue;
       const r = world.radius[i];
       ctx.moveTo(world.x[i] + r, world.y[i]);
       ctx.arc(world.x[i], world.y[i], r, 0, TAU);
@@ -103,7 +113,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       ctx.fillStyle = s ? IGNITE_TINT : FROST_TINT;
       ctx.beginPath();
       for (let i = 0; i < world.high; i++) {
-        if (world.kind[i] !== KIND.ENEMY || timer[i] <= 0) continue;
+        if (world.kind[i] !== KIND.ENEMY || timer[i] <= 0 || !seen(world, i)) continue;
         const r = world.radius[i];
         ctx.moveTo(world.x[i] + r, world.y[i]);
         ctx.arc(world.x[i], world.y[i], r, 0, TAU);
@@ -117,7 +127,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     for (let i = 0; i < world.high; i++) {
-      if (world.kind[i] !== KIND.ENEMY || !fx.flashing(i)) continue;
+      if (world.kind[i] !== KIND.ENEMY || !fx.flashing(i) || !seen(world, i)) continue;
       const r = world.radius[i];
       ctx.moveTo(world.x[i] + r, world.y[i]);
       ctx.arc(world.x[i], world.y[i], r, 0, TAU);
@@ -133,7 +143,7 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
       ctx.globalAlpha = DANGER_ALPHA[level];
       ctx.beginPath();
       for (let i = 0; i < world.high; i++) {
-        if (world.kind[i] !== KIND.ENEMY || dangerLevel(world.damage[i]) !== level) continue;
+        if (world.kind[i] !== KIND.ENEMY || dangerLevel(world.damage[i]) !== level || !seen(world, i)) continue;
         for (let k = 0; k < level; k++) {
           const r = world.radius[i] + 1 + k * DANGER_GAP;
           ctx.moveTo(world.x[i] + r, world.y[i]);
@@ -165,13 +175,16 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement, view: Size): Ren
     ctx.globalAlpha = 1;
   }
 
-  // The fallback renderer does not cull and draws no outline or shadow; the WebGL renderer is the one
-  // built for large counts and depth.
+  // The fallback renderer draws no outline or shadow; the WebGL renderer is the one built for large counts and depth.
   const bp = { x: 0, y: 0 };
   return function render(game: RenderGame, hud: string[], eased: Vec = game.camera): void {
     const { world, player, bounds, fx } = game;
     cam.x = eased.x + (fx ? fx.sx : 0);
     cam.y = eased.y + (fx ? fx.sy : 0);
+    box.x0 = cam.x - CULL_PAD;
+    box.x1 = cam.x + view.w + CULL_PAD;
+    box.y0 = cam.y - CULL_PAD;
+    box.y1 = cam.y + view.h + CULL_PAD;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#161b22';
     ctx.fillRect(0, 0, view.w, view.h);
