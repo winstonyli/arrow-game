@@ -3,8 +3,8 @@
 Versioning and what counts as a release: see "Versioning and commits" in the README. Each entry names the
 `SIM_VERSION` and `REPLAY_VERSION` it ships with.
 
-## v0.4.1 (unreleased)
-`SIM_VERSION` 17 (replays from v0.4.0 are flagged stale). Difficulty curve: a faster start and a steeper late game, and a balance pass on the branches.
+## v0.4.1 (2026-10-12)
+`SIM_VERSION` 17, `REPLAY_VERSION` 1 (replays from v0.4.0 are flagged stale). Difficulty curve: a faster start and a steeper late game, and a balance pass on the branches.
 
 - Enemy contact damage grows with the clock: x(1 + 1.5 t/60) at spawn (x2.5 at 1:00, x8.5 at 5:00), but a touch never costs more than 60 (`CONTACT_CAP`; you have 100 hp, so no more one-hit kills, which the cap reached at minute 3 for a boss touch and minute 6 for a chaser), and the hp curve is steeper (`HP_QUAD` 400 to 180: x14 at 10:00, x29 at 15:00). With the evolved bot (20 seeds) a build with no upgrades now dies at about 4.8 minutes and the branch builds at 6 to 15 (they all survived 15 minutes or more before). The HUD shows what a hit cost ("-12" under the hp number, fading) and the game-over screen names what killed you ("Killed by Chaser (-13)", "Shooter shot (-8)"); enemy shots now carry their shooter's type in `world.type` (hashed, so the rooms golden changed) and `player.hit` remembers the last hit. Enemies with contact damage wear 1 to 3 peach rings that thicken as their damage grows toward the cap, and turn white and pulse (4 Hz) when their touch would kill you at your current hp.
 - Balance pass, aiming every branch build at about 8 to 13 minutes against the evolved bot: Hornets damage -35% at every level; Aftershock damage 0.8 to 0.35 and echo share 0.6 to 0.4; Daisy Chain damage 0.85 to 0.7 and Corona Wire damage about -17%; Fissure damage 1.8 to 2.4 and crack width 60 to 110 px. Whirligig is untouched (see docs/DEVELOPMENT.md: the bot cannot measure it).
