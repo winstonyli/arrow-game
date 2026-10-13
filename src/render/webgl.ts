@@ -19,7 +19,7 @@ import type { World } from '../core/world.ts';
 import type { Size, Vec } from '../core/math.ts';
 import type { Player } from '../game/player.ts';
 import type { RenderGame } from './canvas.ts';
-import { DANGER_ALPHA, DANGER_COLOR, DANGER_GAP, dangerLevel } from './danger.ts';
+import { DANGER_ALPHA, DANGER_COLOR, DANGER_GAP, FATAL_COLOR, dangerLevel, fatalAlpha, isFatal } from './danger.ts';
 
 export const STRIDE = 9; // floats per instance: x, y, radius, palette index, fade, tail bend x, y, tail tip x, y
 // fade: SOLID = entity (outline + shadow); (0, 1] = dot particle alpha; [-1, 0) = ring particle, alpha -fade.
@@ -37,7 +37,8 @@ const P_WEAPON = P_BLADE + 1;
 const P_SLOW = P_WEAPON + 1;
 const P_BURN = P_SLOW + 1;
 const P_DANGER = P_BURN + 1;
-export const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9', '#ffa657', FROST_TINT, IGNITE_TINT, DANGER_COLOR];
+const P_FATAL = P_DANGER + 1;
+export const COLORS = [...ENEMY_TYPES.map((t) => t.color), '#ff7b72', '#58a6ff', '#3fb950', '#3fb950', '#f2cc60', '#ffffff', '#c9d1d9', '#ffa657', FROST_TINT, IGNITE_TINT, DANGER_COLOR, FATAL_COLOR];
 const DANGER_RESERVE = 3 * 1200; // instances for enemy danger rings: up to 3 each for 1200 enemies (the arena caps at 800); beyond that they are skipped
 const RING_LINES = 3; // concentric one-pixel rings make the shockwave's visible width
 export const BOLT_DOT_GAP = 10; // px between the dots a zap is drawn with
@@ -174,7 +175,8 @@ export function packInstances(world: World, player: Player, game: Pick<RenderGam
       put(out, n++ * STRIDE, x, y, r, pal, SOLID, tv.mx, tv.my, tv.ex, tv.ey);
       if (k === KIND.ENEMY) { // danger rings (danger.ts); skipped when the buffer is full
         const level = dangerLevel(world.damage[i]);
-        if (n + level <= out.length / STRIDE) for (let l = 0; l < level; l++) put(out, n++ * STRIDE, x, y, r + 2 + l * DANGER_GAP, P_DANGER, -DANGER_ALPHA[level], 0, 0, 0, 0);
+        const fatal = isFatal(world.damage[i], player.hp);
+        if (n + level <= out.length / STRIDE) for (let l = 0; l < level; l++) put(out, n++ * STRIDE, x, y, r + 2 + l * DANGER_GAP, fatal ? P_FATAL : P_DANGER, -(fatal ? fatalAlpha(game.time) : DANGER_ALPHA[level]), 0, 0, 0, 0);
       }
     }
   }

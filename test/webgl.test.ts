@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createWebGLRenderer, packInstances, STRIDE } from '../src/render/webgl.ts';
 import { World, KIND } from '../src/core/world.ts';
 import { spawnEnemy, ENEMY, ENEMY_TYPES } from '../src/game/enemies.ts';
-import { DANGER_ALPHA, DANGER_LEVELS, dangerLevel } from '../src/render/danger.ts';
+import { DANGER_ALPHA, DANGER_COLOR, DANGER_LEVELS, FATAL_COLOR, dangerLevel, fatalAlpha, isFatal } from '../src/render/danger.ts';
 import { CONTACT_CAP } from '../src/modes/arena.ts';
 import { createFx, POOL } from '../src/render/fx.ts';
 import type { Game } from '../src/game/game.ts';
@@ -21,11 +21,11 @@ import { DRONE_DOT_R, DRONE_TRACER, DRONE_TRACER_DOTS, droneAlpha } from '../src
 import { DAGGER_DOT_R } from '../src/game/weapons/daggers.ts';
 import { IGNITE_TINT } from '../src/game/modifiers.ts';
 
-type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons' | 'branches'> };
+type PlayerStub = Pick<Player, 'x' | 'y' | 'radius' | 'invuln' | 'hp'> & { stats: Pick<PlayerStats, 'orbit' | 'weapons' | 'branches'> };
 type PackGame = Pick<RenderGame, 'time' | 'camera' | 'view' | 'fx'> & Partial<Pick<RenderGame, 'wstate'>>;
 
 // Casts: packInstances reads only these player fields, and `fx` may be left out of a game (it reads undefined).
-const player = (over: Partial<PlayerStub> = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, stats: { orbit: 0, branches: {}, weapons: {} }, ...over }) as Player;
+const player = (over: Partial<PlayerStub> = {}) => ({ x: 5, y: 6, radius: 12, invuln: 0, hp: 100, stats: { orbit: 0, branches: {}, weapons: {} }, ...over }) as Player;
 const G = (o: Partial<PackGame> = {}) => ({ time: 0, camera: { x: 0, y: 0 }, view: { w: 900, h: 600 }, ...o }) as PackGame;
 
 test('packInstances writes live entities by layer, player last, skipping free slots', () => {
@@ -458,7 +458,7 @@ test('an enemy gets one ring per danger level, drawn right after it; a harmless 
   const out = new Float32Array(20 * STRIDE);
   assert.equal(packInstances(w, player(), G(), out), 1 + DANGER_LEVELS + 1 + 1); // enemy + rings, enemy, player
   for (let k = 1; k <= DANGER_LEVELS; k++) {
-    assert.equal(out[k * STRIDE + 3], COLORS.length - 1); // P_DANGER, the last palette entry
+    assert.equal(out[k * STRIDE + 3], COLORS.indexOf(DANGER_COLOR));
     assert.ok(Math.abs(out[k * STRIDE + 4] + DANGER_ALPHA[DANGER_LEVELS]) < 1e-6); // float32
     assert.ok(out[k * STRIDE + 2] > out[(k - 1) * STRIDE + 2], 'rings step outward');
   }
@@ -476,4 +476,22 @@ test('dangerLevel grows with damage, from 0 for none to DANGER_LEVELS at the cap
   assert.equal(dangerLevel(CONTACT_CAP), DANGER_LEVELS);
   let prev = 0;
   for (let d = 0; d <= CONTACT_CAP; d++) { assert.ok(dangerLevel(d) >= prev); prev = dangerLevel(d); }
+});
+
+test('a touch that would kill at the current hp gets white pulsing rings; a survivable one keeps the peach ones', () => {
+  const w = new World(10);
+  const e = spawnEnemy(w, ENEMY.CHASER, 100, 100);
+  w.damage[e] = 30;
+  const out = new Float32Array(10 * STRIDE);
+  const colorAt = (hp: number) => (packInstances(w, player({ hp }), G({ time: 0.0625 }), out), out[1 * STRIDE + 3]); // time 1/16: sin(2 pi 4 t) = 1
+  assert.equal(colorAt(31), COLORS.indexOf(DANGER_COLOR));
+  assert.equal(colorAt(30), COLORS.lastIndexOf(FATAL_COLOR));
+  assert.ok(Math.abs(out[1 * STRIDE + 4] + 1) < 1e-6);
+  packInstances(w, player({ hp: 20 }), G({ time: 0.1875 }), out); // sin = -1
+  assert.ok(Math.abs(out[1 * STRIDE + 4] + 0.4) < 1e-6);
+});
+
+test('isFatal needs damage at least hp and some damage; fatalAlpha stays within 0.4 to 1', () => {
+  assert.ok(isFatal(60, 60) && isFatal(60, 10) && !isFatal(59, 60) && !isFatal(0, 0));
+  for (let t = 0; t < 2; t += 0.01) assert.ok(fatalAlpha(t) >= 0.4 - 1e-9 && fatalAlpha(t) <= 1 + 1e-9);
 });
